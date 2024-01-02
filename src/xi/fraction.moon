@@ -191,18 +191,18 @@ class Fraction
       other = Fraction(other)
 
     if @ < other
-      @
+      return @
     else
-      other
+      return other
 
   max:(other) =>
     if type(other) == "number"
       other = Fraction(other)
 
     if @ > other
-      @
+      return @
     else
-      other
+      return other
   
   -- TODO: need test
   gcd:(other) =>
@@ -215,8 +215,6 @@ class Fraction
 
   show: =>
     @__tostring!
-
--- print Fraction(1,3):gcd(Fraction(1,6))
 
 -- TODO: asFloat, GCD, ...
 
