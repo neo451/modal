@@ -1,7 +1,8 @@
+--TODO: intersection, intersection_e
 Fraction = require "xi.fraction"
 
 class Timespan
-  new:(b, e) =>
+  new:(b = 1, e = 1) =>
     if type(b) == "number"
       b = Fraction(b)
     if type(e) == "number"
@@ -12,7 +13,6 @@ class Timespan
 
   type: => 'timespan'
 
--- HACK:
   spanCycles: =>
     spans = {}
 
@@ -21,15 +21,11 @@ class Timespan
 
     while @_end > @_begin
       if @_begin\sam! == @_end\sam!
-        spans:insert(Timsspan(@_begin, @_end))
+        table.insert(spans, Timespan(@_begin, @_end))
         break
 
-      begin = @_begin
-      next_begin = @_begin\nextSam!
-
-      spans:insert(Timespan(begin, next_begin))
-
-      begin = next_begin
+      table.insert(spans, Timespan(@_begin, @_begin\nextSam!))
+      @_begin = @_begin\nextSam!
 
     spans
 
@@ -37,7 +33,7 @@ class Timespan
 
   midpoint: => @_begin + (@duration! / Fraction(2))
 
-  cycleArc: => Timespan cyclePos(@_begin), cyclePos(@_begin) + @duration
+  cycleArc: => Timespan @cyclePos(@_begin), @cyclePos(@_begin) + @duration!
 
   __eq:(rhs) => @_begin == rhs.begin and @_end == rhs.end
 

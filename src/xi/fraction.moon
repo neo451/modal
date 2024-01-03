@@ -47,7 +47,7 @@ class Fraction
     @denominator = d
 
 
-  type: => 'xi.fraction'
+  type: => 'fraction'
 
   __add: (f2) =>
     if type(f2) == "number"
@@ -69,7 +69,7 @@ class Fraction
       Fraction(t, s * db, false)
 
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
-  
+
   __sub: (f2) =>
     if type(f2) == "number"
       f2 = Fraction(f2)
