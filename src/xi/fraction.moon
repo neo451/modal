@@ -180,6 +180,7 @@ class Fraction
   floor: =>
     math.floor @numerator / @denominator
 
+  -- TODO: need tests
   sam: =>
     Fraction @floor!
 

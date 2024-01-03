@@ -1,7 +1,7 @@
-busted = require("busted")
+busted = require "busted"
 describe = busted.describe
 it = busted.it
-Fraction = require("xi.fraction")
+Fraction = require "xi.fraction"
 
 describe("Fraction", ->
 	it("should new with arguments", ->
