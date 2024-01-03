@@ -1,4 +1,4 @@
 #!/bin/bash
 
-moonc .
+moonc src/xi
 luarocks build

@@ -1,8 +1,6 @@
+import type from require 'xi.utils'
+
 decimalToFraction = (x0, err) ->
-	-- tmp fix for compress
-	-- if Type(x0) == "tranquility.Fraction" then
-	-- 	x0 = x0:asFloat()
-	-- end
 	err = err or 0.0000000001
 	num, den
 	g = math.abs x0 -- or x0:abs()
@@ -20,9 +18,8 @@ decimalToFraction = (x0, err) ->
 		if err > math.abs sign * num / den - x0
 			return sign * num, den
 
-	error "failed to find a fraction for " .. x0
+	error "Fraction: failed to find a fraction for " .. x0
 	0, 1
-
 
 lcm = (a, b) ->
 	(a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
@@ -36,7 +33,7 @@ class Fraction
       n, d = decimalToFraction n
 
     if d == 0
-      error("divide by zero")
+      error("Fraction: divide by zero")
 
     if normalize and (n ~= 0)
       g = math.floor gcd(n, d)
@@ -45,7 +42,6 @@ class Fraction
 
     @numerator = n
     @denominator = d
-
 
   type: => 'fraction'
 
@@ -165,27 +161,20 @@ class Fraction
 
     Fraction (na * db) % (nb * da), da * db
 
-  __unm: =>
-    Fraction -@numerator, @denominator, false
+  __unm: => Fraction -@numerator, @denominator, false
 
-  __eq:(rhs) =>
-    @numerator / @denominator == rhs.numerator / rhs.denominator
+  __eq:(rhs) => @numerator / @denominator == rhs.numerator / rhs.denominator
 
-  __lt:(rhs) =>
-    @numerator / @denominator < rhs.numerator / rhs.denominator
+  __lt:(rhs) => @numerator / @denominator < rhs.numerator / rhs.denominator
 
-  __lte:(rhs) =>
-    @numerator / @denominator <= rhs.numerator / rhs.denominator
+  __lte:(rhs) => @numerator / @denominator <= rhs.numerator / rhs.denominator
 
-  floor: =>
-    math.floor @numerator / @denominator
+  floor: => math.floor @numerator / @denominator
 
   -- TODO: need tests
-  sam: =>
-    Fraction @floor!
+  sam: => Fraction @floor!
 
-  nextSam: =>
-    @sam! + 1
+  nextSam: => @sam! + 1
 
   min:(other) =>
     if type(other) == "number"
@@ -204,12 +193,14 @@ class Fraction
       return @
     else
       return other
-  
+
   -- TODO: need test
   gcd:(other) =>
     gcd_numerator = gcd @numerator, other.numerator
     lcm_denominator = lcm @denominator, other.denominator
     Fraction gcd_numerator, lcm_denominator
+
+  asFloat: => @numerator / @denominator
 
   __tostring: =>
   	string.format "%d/%d", @numerator, @denominator
@@ -217,6 +208,8 @@ class Fraction
   show: =>
     @__tostring!
 
--- TODO: asFloat, GCD, ...
+-- TODO: GCD, ...
+
+print type Fraction(0,1)
 
 return Fraction
