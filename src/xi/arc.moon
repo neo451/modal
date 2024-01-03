@@ -63,7 +63,6 @@ class Arc
 
   intersection_e:(other) =>
     result = @intersection(other)
-    print result
     if not result
       error("Arc: Arcs do not intersect")
     result

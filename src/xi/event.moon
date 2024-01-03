@@ -1,6 +1,6 @@
 Arc = require "xi.arc"
 
---TODO: context stuff, spanEquals? is it right?
+--TODO: context stuff, arcEquals? is it right?
 
 class Event
   new: (whole = nil, part = Arc(), value = nil, context = {}, stateful = false) =>
@@ -21,11 +21,9 @@ class Event
   hasWhole: => @whole != nil
 
   -- if EVENT is NIL?
-  withSpan:(func) =>
-    Event func(@whole), func(@part), @value, @context, @stateful
+  withArc:(func) => Event func(@whole), func(@part), @value, @context, @stateful
 
-  withValue:(func) =>
-    Event @whole, @part, func(@value), @context, @stateful
+  withValue:(func) => Event @whole, @part, func(@value), @context, @stateful
 
   show: => @__tostring!
 
@@ -45,7 +43,6 @@ class Event
 
     string.format "[%s | %s]", partString, @value
 
-    --TODO: CompareTables
   __eq:(other) =>
     @part == other.part and @whole == other.whole and @value == other.value and @context == other.context and @stateful == other.stateful
 

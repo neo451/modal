@@ -202,14 +202,10 @@ class Fraction
 
   asFloat: => @numerator / @denominator
 
-  __tostring: =>
-  	string.format "%d/%d", @numerator, @denominator
+  __tostring: => string.format "%d/%d", @numerator, @denominator
 
-  show: =>
-    @__tostring!
+  show: => @__tostring!
 
 -- TODO: GCD, ...
-
-print type Fraction(0,1)
 
 return Fraction
