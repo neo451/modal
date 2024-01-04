@@ -41,78 +41,78 @@ describe "Event", ->
 
 
 
-    -- describe("wholeOrPart", ->
-    --   it("should return whole if defined", ->
-    --     whole = Arc(Fraction(1, 2), Fraction(1, 1))
-    --         part = Arc(Fraction(1, 2), Fraction(3, 4))
-    --         event = Event(whole, part, 5, {}, false)
-    --         assert.are.equals(event:wholeOrPart(), whole)
-    --   )
-    --     it("should return part if whole is not defined", ->
-    --       part = Arc(Fraction(1, 2), Fraction(3, 4))
-    --         event = Event(nil, part, 5, {}, false)
-    --         assert.are.equals(event:wholeOrPart(), part)
-    --     )
-    -- )
-    --
-    -- describe("hasOnset", ->
-    --
-    --   it("should report onset true if part and whole begin together", ->
-    --     whole = Arc(Fraction(1, 2), Fraction(1, 1))
-    --         part = Arc(Fraction(1, 2), Fraction(3, 4))
-    --         event = Event(whole, part, 5, {}, false)
-    --         assert.is_true(event:hasOnset())
-    --
-    --         part = Arc(Fraction(2, 3), Fraction(1, 1))
-    --         event = Event(whole, part, 5, {}, false)
-    --         assert.is_false(event:hasOnset())
-    --
-    --         whole = Arc(Fraction(1, 2), Fraction(1, 1))
-    --         part = Arc(Fraction(2, 3), Fraction(3, 4))
-    --         event = Event(whole, part, 5, {}, false)
-    --         assert.is_false(event:hasOnset())
-    --
-    --         part = Arc(Fraction(2, 3), Fraction(3, 4))
-    --         event = Event(nil, part, 5, {}, false)
-    --         assert.is_false(event:hasOnset())
-    --   )
-    --
-    -- )
-    --
-    -- describe("withSpan", ->
-    --   it("should return new event with modified span",
-    --     ->
-    --       oldPart = Arc(Fraction(2, 3), Fraction(6, 5))
-    --             oldWhole = Arc(Fraction(1, 2), Fraction(7, 5))
-    --             newPartAndWhole = Arc(Fraction(1, 2), Fraction(3, 4))
-    --             changeSpan = function(_) return newPartAndWhole 
-    --             event = Event(oldWhole, oldPart, 5, {}, false)
-    --             newEvent = event:withSpan(changeSpan)
-    --             assert.are.equals(newEvent.part, newPartAndWhole)
-    --             assert.are.equals(newEvent.whole, newPartAndWhole)
-    --             assert.are.equals(event.part, oldPart)
-    --
-    --             event = Event(nil, oldPart, 5, {}, false)
-    --             newEvent = event:withSpan(changeSpan)
-    --             assert.are.equals(newEvent.part, newPartAndWhole)
-    --             assert.is_nil(newEvent.whole)
-    --             assert.are.equals(event.part, oldPart)
-    --   )
-    --
-    -- )
-    --
-    -- describe("withValue", ->
-    --   it("should return new event with modified value",
-    --     ->
-    --       oldValue = 5
-    --             add1 = function(v) return v + 1 
-    --             event = Event(nil, Arc(Fraction(1, 2), Fraction(1, 1)), oldValue)
-    --             newEvent = event:withValue(add1)
-    --             assert.are.equals(newEvent.value, 6)
-    --   )
-    --
-    -- )
-    --
+    describe "wholeOrPart", ->
+      it "should return whole if defined", ->
+        whole = Arc 1/2, 1
+        part = Arc 1/2, 3/4
+        event = Event whole, part, 5, {}, false
+        assert.are.equals whole, event\wholeOrPart!
+
+      it "should return part if whole is not defined", ->
+        part = Arc 1/2, 3/4
+        event = Event nil, part, 5, {}, false
+        assert.are.equals part, event\wholeOrPart!
+
+    describe "hasOnset", ->
+
+      it "should report onset true if part and whole begin together", ->
+        whole = Arc 1/2, 1
+        part = Arc 1/2, 3/4
+        event = Event whole, part, 5, {}, false
+        assert.is_true event\hasOnset!
+
+        whole = Arc 1/2, 1
+        part = Arc 2/3, 1
+        event = Event whole, part, 5, {}, false
+        assert.is_false event\hasOnset!
+
+        whole = Arc 1/2, 1
+        part = Arc 2/3, 3/4
+        event = Event whole, part, 5, {}, false
+        assert.is_false event\hasOnset!
+
+        part = Arc 2/3, 3/4
+        event = Event nil, part, 5, {}, false
+        assert.is_false event\hasOnset!
+
+  describe "withArc", ->
+    it "should return new event with modified span", ->
+      oldPart = Arc 2/3, 6/5
+      oldWhole = Arc 1/2, 7/5
+      newPartAndWhole = Arc 1/2, 3/4
+      changeArc = -> newPartAndWhole 
+      event = Event oldWhole, oldPart, 5, {}, false
+      newEvent = event\withArc changeArc
+      assert.are.equals newPartAndWhole, newEvent.part
+      assert.are.equals newPartAndWhole, newEvent.whole
+      assert.are.equals oldPart, event.part
+
+      event = Event nil, oldPart, 5, {}, false
+      newEvent = event\withArc changeArc
+      assert.are.equals newPartAndWhole, newEvent.part
+      assert.is_nil newEvent.whole
+      assert.are.equals oldPart, event.part
+
+  describe "show", ->
+    it "should produce string representation of event times", ->
+      event = Event Arc(1/2, 2), Arc(1/2, 1), 5
+      assert.are.equals(event\show!, "[(1/2 → 1/1) ⇝ | 5]")
+      event = Event Arc(1/2, 1), Arc(1/2, 1), 6
+      assert.are.equals(event\show!, "[1/2 → 1/1 | 6]")
+      event = Event Arc(1/2, 1), Arc(3/4, 1), 6
+      assert.are.equals(event\show!, "[(3/4 → 1/1) ⇜ | 6]")
+
+  describe "withValue", ->
+    it "should return new event with modified value", ->
+      oldValue = 5
+      add1 = (v) -> v + 1
+      event = Event(nil, Arc(1/2, 1), oldValue)
+      newEvent = event\withValue(add1)
+      assert.are.equals(newEvent.value, 6)
+
+
+
+
     -- describe("spanEquals", ->
     --   it("should report if events share a part",
     --     ->
@@ -148,51 +148,20 @@ describe "Event", ->
     --   )
     -- )
     --
-    -- describe("equals", ->
-    --   it("should compare all properties",
-    --     ->
-    --       event1 = Event(
-    --         Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 5,
-    --                 {},
-    --                 false
-    --       )
-    --             event2 = Event(
-    --               Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 5,
-    --                 {},
-    --                 false
-    --             )
-    --             assert.is_true(event1 == event2)
-    --             event3 = Event(
-    --               Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 6,
-    --                 {},
-    --                 false
-    --             )
-    --             assert.is_false(event1 == event3)
-    --             event4 = Event(
-    --               Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 Arc(Fraction(3, 4), Fraction(1, 1)),
-    --                 5,
-    --                 {},
-    --                 false
-    --             )
-    --             assert.is_false(event1 == event4)
-    --             event5 = Event(
-    --               Arc(Fraction(3, 4), Fraction(1, 1)),
-    --                 Arc(Fraction(1, 2), Fraction(1, 1)),
-    --                 5,
-    --                 {},
-    --                 false
-    --             )
-    --             assert.is_false(event1 == event5)
-    --   )
-    --
-    -- )
+    describe "equals", ->
+      it "should compare all properties", ->
+        event1 = Event Arc(1/2, 1), Arc(1/2, 1), 5, {}, false
+        event2 = Event Arc(1/2, 1), Arc(1/2, 1), 5, {}, false
+        assert.is_true event1 == event2
+        event3 = Event Arc(1/2, 1), Arc(1/2, 1), 6, {}, false
+        event4 = Event Arc(1/2, 1), Arc(3/4, 1), 5, {}, false
+        assert.is_false(event1 == event3)
+        assert.is_false(event1 == event4)
+        event5 = Event Arc(3/4, 1), Arc(1/2, 1), 5, {}, false
+        assert.is_false(event1 == event5)
+
+
+
     -- describe("combineContext", ->
     --   it("should return new event with merged context tables",
     --     ->
@@ -264,11 +233,3 @@ describe "Event", ->
     --
     -- )
     --
-describe "show", ->
-  it "should produce string representation of event times", ->
-    event = Event Arc(1/2, 2), Arc(1/2, 1), 5
-    assert.are.equals(event\show!, "[(1/2 → 1/1) ⇝ | 5]")
-    event = Event Arc(1/2, 1), Arc(1/2, 1), 6
-    assert.are.equals(event\show!, "[1/2 → 1/1 | 6]")
-    event = Event Arc(1/2, 1), Arc(3/4, 1), 6
-    assert.are.equals(event\show!, "[(3/4 → 1/1) ⇜ | 6]")

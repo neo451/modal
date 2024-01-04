@@ -23,7 +23,7 @@ utils.compare = (rhs, lhs) ->
 
 utils.type = (obj) -> is_object(obj) and obj\type! or type(obj)
 
-utils.map = (items, func) -> [func(item) for item in * items]
+utils.map = (items, func) -> [func(item) for item in *items]
 
 utils.filter = (items, func) -> [item for item in *items when func(item)]
 
