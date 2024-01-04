@@ -1,4 +1,6 @@
 require "moon.all"
+(require "fun")!
+
 utils = {}
 
 tsize = (t) ->
@@ -22,12 +24,6 @@ utils.compare = (rhs, lhs) ->
   return true
 
 utils.type = (obj) -> is_object(obj) and obj\type! or type(obj)
-
-utils.map = (items, func) -> [func(item) for item in *items]
-
-utils.filter = (items, func) -> [item for item in *items when func(item)]
-
-utils.fold = fold
 
 utils.flatten = (t) ->
   flat = {}

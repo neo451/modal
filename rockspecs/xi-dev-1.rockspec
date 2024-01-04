@@ -20,6 +20,7 @@ dependencies = {
 	"lpeg >= 1.1.0-1",
 	"ldoc >= 1.0.1-1",
 	"moonscript >= 0.5.0-1",
+	"fun >= 0.1.3-1",
 }
 build = {
 	type = "builtin",
