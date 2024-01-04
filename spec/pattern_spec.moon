@@ -34,16 +34,16 @@ describe "Pattern", ->
       assert.are.same { event1 }, filteredEvents
 
 
-  -- describe "withQueryTime", ->
-  --   it "should return new pattern whose query function will pass the query timespan through a function before mapping it to events", ->
-  --     pat = Pure(5)
-  --     add1 = (other) -> other + Fraction 1
-  --     newPat = pat\withQueryTime(add1)
-  --     expectedEvents = {
-  --       Event Arc(1, 2), Arc(2, 2), 5
-  --     }
-  --     actualEvents = newPat\queryArc(0, 1)
-  --     assert.are.equal expectedEvents, actualEvents
+  describe "withQueryTime", ->
+    it "should return new pattern whose query function will pass the query timespan through a function before mapping it to events", ->
+      pat = Pure(5)
+      add1 = (other) -> other + 1
+      newPat = pat\withQueryTime add1
+      expectedEvents = {
+        Event Arc(1, 2), Arc(2, 2), 5
+      }
+      actualEvents = newPat\queryArc(0, 1)
+      assert.are.equal expectedEvents, actualEvents
 
   describe "Pure", ->
     it "should create Pattern of a single value repeating once per cycle", ->
@@ -57,47 +57,41 @@ describe "Pattern", ->
       assert.are.same #expectedEvents, #actualEvents
       assert.are.same expectedEvents, actualEvents
 
--- 	describe("withQuerySpan", ->
--- 		it("should return new pattern with that modifies query span with function when queried", ->
--- 			 pat = Pure(5)
--- 			 newPat = pat:withQuerySpan(function(span)
--- 				return Arc(span:Time! + 0.5, span:Time! + 0.5)
--- 			)
--- 			 expectedEvents = List({
--- 				Event(Arc(0.5, 1.5), Arc(0.5, 1.5), 5),
--- 			})
--- 			assert.are.equal(expectedEvents, newPat:queryArc(Fraction(0), Fraction(1)))
--- 		)
--- 	)
---
--- 	describe("withEventTime", ->
--- 		it("should return new pattern with function mapped over event times", ->
--- 			 pat = Pure(5)
--- 			 newPat = pat:withEventTime(function(time)
--- 				return time + 0.5
--- 			)
--- 			 expectedEvents = List({
--- 				Event(Arc(0.5, 1.5), Arc(0.5, 1.5), 10),
--- 			})
--- 			assert.are.equal(expectedEvents, newPat:queryArc(0, 1))
--- 		)
--- 	)
---
--- 	describe("splitQueries", ->
--- 		it("should break a query that spans multiple cycles into multiple queries each spanning one cycle", ->
--- 			 pat = Pattern(function(state)
--- 				return List({ Event(state.span, state.span, "a") })
--- 			)
--- 			 splitPat = pat:splitQueries!
--- 			 expectedEventsPat = List({ Event(Arc(0, 2), Arc(0, 2), "a") })
--- 			 expectedEventsSplit = List({
--- 				Event(Arc(0, 1), Arc(0, 2), "a"),
--- 				Event(Arc(1, 2), Arc(0, 2), "a"),
--- 			})
--- 			assert.are.equal(expectedEventsPat, pat:queryArc(0, 2))
--- 			assert.are.equal(expectedEventsSplit, splitPat:queryArc(0, 2))
--- 		)
--- 	)
+  describe "withQuerySpan", ->
+    it "should return new pattern with that modifies query span with function when queried", ->
+      pat = Pure(5)
+      func = (arc) -> Arc arc._end + 0.5, arc._end + 0.5
+      newPat = pat\withQuerySpan func
+      expectedEvents = { Event Arc(0.5, 1.5), Arc(0.5, 1.5), 5 }
+      assert.are.equal expectedEvents, newPat\firstCycle!
+
+  -- describe "withEventTime", ->
+  --   it "should return new pattern with function mapped over event times", ->
+  --     pat = Pure(5)
+  --      newPat = pat:withEventTime(function(time)
+  --       return time + 0.5
+  --      )
+  --      expectedEvents = List({
+  --        Event(Arc(0.5, 1.5), Arc(0.5, 1.5), 10),
+  --      })
+  --     assert.are.equal(expectedEvents, newPat:queryArc(0, 1))
+
+
+
+  describe "splitQueries", ->
+    it "should break a query that spans multiple cycles into multiple queries each spanning one cycle", ->
+      query = (_, state) -> { Event state.arc, state.arc, "a" }
+      pat = Pattern query
+      splitPat = pat\splitQueries!
+      expectedEventsPat = { Event Arc(0, 2), Arc(0, 2), "a" }
+      expectedEventsSplit = {
+        Event Arc(0, 1), Arc(0, 2), "a",
+        Event Arc(1, 2), Arc(0, 2), "a",
+      }
+      assert.are.same expectedEventsPat, pat\queryArc 0, 2
+      assert.are.same expectedEventsSplit, splitPat\queryArc 0, 2
+
+
 -- 	-- TODO: what is a more realistic test case than this?
 -- 	--describe("outerJoin", ->
 -- 	--    it("it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern"
@@ -123,26 +117,22 @@ describe "Pattern", ->
       assert.are.same expectedEvents, newPat\firstCycle!
 
 
--- 	describe("onsetsOnly", ->
--- 		it("should return only events where the start of the whole equals the start of the part", ->
--- 			 whole1 = Arc(Fraction(1, 2), Fraction(2, 1))
--- 			 part1 = Arc(Fraction(1, 2), Fraction(1, 1))
--- 			 event1 = Event(whole1, part1, 1, {}, false)
--- 			 whole2 = Arc(Fraction(2, 3), Fraction(3, 1))
--- 			 part2 = Arc(Fraction(5, 6), Fraction(1, 1))
--- 			 event2 = Event(whole2, part2, 2, {}, false)
--- 			 events = List({ event1, event2 })
--- 			 p = Pattern(function(_)
--- 				return events
--- 			)
---
--- 			 patternWithOnsetsOnly = p:onsetsOnly!
---
--- 			assert.are.same(
--- 				patternWithOnsetsOnly:query(State(Arc(Fraction(0), Fraction(3)))),
--- 				List({ event1 })
--- 			)
--- 		)
+  describe "onsetsOnly", ->
+    it "should return only events where the start of the whole equals the start of the part", ->
+      whole1 = Arc(1/2, 2)
+      part1 = Arc(1/2, 1)
+      event1 = Event(whole1, part1, 1, {}, false)
+      whole2 = Arc(2/3, 3)
+      part2 = Arc(5/6, 1)
+      event2 = Event(whole2, part2, 2, {}, false)
+      events = { event1, event2 }
+      query = -> events
+      p = Pattern query
+      patternWithOnsetsOnly = p\onsetsOnly!
+
+      actualEvents = patternWithOnsetsOnly\queryArc(0,3)
+      assert.are.same { event1 }, actualEvents
+
 --
 -- 		it("pure patterns should not behave like continuous signals... they should have discrete onsets", ->
 -- 			 p = Pure("bd")
@@ -159,7 +149,7 @@ describe "Pattern", ->
 -- 			actualEvents = patternWithOnsetsOnly:query(state)
 -- 			assert.are.equal(actualEvents, List({}))
 -- 		)
--- 	)
+-- 	
 -- 	describe("Slowcat", ->
 -- 		it("should alternate between the patterns in the list, one pattern per cycle", ->
 -- 			 cattedPats = Slowcat({ Pure(1), Pure(2), 3 })
