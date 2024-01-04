@@ -42,10 +42,10 @@ describe "Arc", ->
       t = Arc!
       assert.are.same 'arc', t\type!
 
-  describe "spanCycles", ->
+  describe "cycles", ->
     it "should break multi cycle span into pieces", ->
       t = Arc 3/4, 7/2
-      spans = t\spanCycles!
+      spans = t\cycles!
       assert.are.same 4, #spans
       assert.are.same Fraction(3, 4), spans[1]._begin
       assert.are.same Fraction(1, 1), spans[1]._end
@@ -57,10 +57,10 @@ describe "Arc", ->
       assert.are.same Fraction(7, 2), spans[4]._end
     it "should preserve subcycle length spans", -> 
       t = Arc 1/16, 1
-      spans = t\spanCycles!
-      assert.are.same 1, #spans
-      assert.are.same Fraction(1, 16), spans[1]._begin
-      assert.are.same Fraction(1, 1), spans[1]._end
+      arcs = t\cycles!
+      assert.are.same 1, #arcs
+      assert.are.same Fraction(1, 16), arcs[1]._begin
+      assert.are.same Fraction(1, 1), arcs[1]._end
 
   describe "duration", ->
     it "should return duration of the span", ->

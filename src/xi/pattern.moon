@@ -2,8 +2,10 @@ Fraction = require "xi.fraction"
 Arc = require "xi.arc"
 Event = require "xi.event"
 State = require "xi.state"
+import map, filter, reduce, type from require "xi.utils"
 
-class Pattern
+
+export class Pattern
   new:(query = -> {}) =>
     @query = query
 
@@ -12,24 +14,26 @@ class Pattern
   queryArc:(b, e) =>
     arc = Arc b, e
     state = State arc
-    @query(state)
+    @query state
+
+  firstCycle: => @queryArc 0, 1
+
+  __tostring: => @firstCycle!
+
+  show: => @__tostring!
 
   filterEvents:(func) =>
-    query = (state) -> filter func @query, state
+    query = (state) -> filter func, @query state
     Pattern query
 
-  onsetsOnly: => @filterEvents (event) -> event\hasOnset!
+  onsetsOnly: =>
+    @filterEvents (event) -> event\hasOnset!
 
-  withQueryArc:(func) =>
-    query = (state) -> @query state\withArc func
-    Pattern query
-
-  -- TODO: withQueryTime, withEventTime
-  withValue:(func) => Pattern (state) -> map @query state ((e, _) -> e:withValue(func))
-
-  fmap:(func) => @withValue(func)
-
-  splitQueries: =>
-    (state) =>
-      cycles = state.span\spanCycles!
-      flatten map cyles (subspan) => @query state\setSpan subspan
+export Pure = (value) ->
+  query = (_, state) ->
+    cycles = state.arc\cycles!
+    func = (subspan) ->
+      whole = Arc\wholeCycle subspan._begin
+      Event whole, subspan, value
+    map func, cycles
+  Pattern query

@@ -35,4 +35,10 @@ utils.flatten = (t) ->
         table.insert flat, value
   flat
 
+utils.filter = (func, table) -> totable filter func, table
+
+utils.map = (func, table) -> totable map func, table
+
+utils.reduce = (func, init, table) -> reduce func, init, table
+
 return utils

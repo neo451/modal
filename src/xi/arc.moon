@@ -12,21 +12,21 @@ class Arc
 
   type: -> 'arc'
 
-  spanCycles: =>
-    spans = {}
+  cycles: =>
+    arcs = {}
 
     if @_begin == @_end
       { Arc(@_begin, @_end) }
 
     while @_end > @_begin
       if @_begin\sam! == @_end\sam!
-        table.insert(spans, Arc(@_begin, @_end))
+        table.insert(arcs, Arc(@_begin, @_end))
         break
 
-      table.insert(spans, Arc(@_begin, @_begin\nextSam!))
+      table.insert(arcs, Arc(@_begin, @_begin\nextSam!))
       @_begin = @_begin\nextSam!
 
-    spans
+    arcs
 
   duration: => @_end - @_begin
 

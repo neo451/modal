@@ -1,8 +1,7 @@
-Pattern = require "xi.pattern"
+require "xi.pattern"
 State = require "xi.state"
 Event = require "xi.event"
 Arc = require "xi.arc"
-
 
 describe "Pattern", ->
   describe "new", ->
@@ -19,48 +18,53 @@ describe "Pattern", ->
       pattern = Pattern!
       assert.are.equal "pattern", pattern\type!
 
-describe "filterEvents", ->
-  it "should return new pattern with events removed based on filter func", ->
-    whole1 = Arc 1/2, 2
-    part1 = Arc 1/2, 1
-    event1 = Event whole1, part1, 1, {}, false
-    whole2 = Arc 2/3, 3
-    part2 = Arc 2/3, 1
-    event2 = Event whole2, part2, 2, {}, false
-    events = { event1, event2 }
-    pattern = Pattern -> events
-    filterFunction = (e) -> e.value != 1
-    filteredPattern = pattern\filterEvents filterFunction
-    filteredEvents = filteredPattern\query!
-    assert.are.equal filteredEvents, { event1 }
+  describe "filterEvents", ->
+    it "should return new pattern with events removed based on filter func", ->
+      whole1 = Arc 1/2, 2
+      part1 = Arc 1/2, 1
+      event1 = Event whole1, part1, 1, {}, false
+      whole2 = Arc 2/3, 3
+      part2 = Arc 2/3, 1
+      event2 = Event whole2, part2, 2, {}, false
+      events = { event1, event2 }
+      pattern = Pattern -> events
+      filterFunction = (e) -> e.value == 1
+      filteredPattern = pattern\filterEvents filterFunction
+      filteredEvents = filteredPattern\query!
+      assert.are.same { event1 }, filteredEvents
 
 
--- 	describe("withQueryTime", ->
--- 		it(
--- 			"should return new pattern whose query function will pass the query timespan through a function before mapping it to events",
--- 			->
--- 				 pat = Pure(5)
--- 				 add1 = function(other)
--- 					return other + Fraction(1)
--- 				
---
--- 				 newPat = pat:withQueryTime(add1)
--- 				 expectedEvents = List({
--- 					Event(TimeSpan(1, 2), TimeSpan(2, 2), 5),
--- 				})
--- 				 actualEvents = newPat:queryArc(Fraction(0), Fraction(1))
--- 				assert.are.equal(expectedEvents, actualEvents)
--- 			
--- 		)
--- 	)
+  -- describe "withQueryTime", ->
+  --   it "should return new pattern whose query function will pass the query timespan through a function before mapping it to events", ->
+  --     pat = Pure(5)
+  --     add1 = (other) -> other + Fraction 1
+  --     newPat = pat\withQueryTime(add1)
+  --     expectedEvents = {
+  --       Event Arc(1, 2), Arc(2, 2), 5
+  --     }
+  --     actualEvents = newPat\queryArc(0, 1)
+  --     assert.are.equal expectedEvents, actualEvents
+
+  describe "Pure", ->
+    it "should create Pattern of a single value repeating once per cycle", ->
+      atom = Pure(5)
+      expectedEvents = { Event Arc(0, 1), Arc(0, 1), 5, {}, false }
+      actualEvents = atom\queryArc 0, 1
+      assert.are.same #expectedEvents, #actualEvents
+      assert.are.same expectedEvents, actualEvents
+      expectedEvents = { Event Arc(0, 1), Arc(1/2, 1), 5, {}, false }
+      actualEvents = atom\query State Arc 1/2, 1
+      assert.are.same #expectedEvents, #actualEvents
+      assert.are.same expectedEvents, actualEvents
+
 -- 	describe("withQuerySpan", ->
 -- 		it("should return new pattern with that modifies query span with function when queried", ->
 -- 			 pat = Pure(5)
 -- 			 newPat = pat:withQuerySpan(function(span)
--- 				return TimeSpan(span:Time! + 0.5, span:Time! + 0.5)
+-- 				return Arc(span:Time! + 0.5, span:Time! + 0.5)
 -- 			)
 -- 			 expectedEvents = List({
--- 				Event(TimeSpan(0.5, 1.5), TimeSpan(0.5, 1.5), 5),
+-- 				Event(Arc(0.5, 1.5), Arc(0.5, 1.5), 5),
 -- 			})
 -- 			assert.are.equal(expectedEvents, newPat:queryArc(Fraction(0), Fraction(1)))
 -- 		)
@@ -73,7 +77,7 @@ describe "filterEvents", ->
 -- 				return time + 0.5
 -- 			)
 -- 			 expectedEvents = List({
--- 				Event(TimeSpan(0.5, 1.5), TimeSpan(0.5, 1.5), 10),
+-- 				Event(Arc(0.5, 1.5), Arc(0.5, 1.5), 10),
 -- 			})
 -- 			assert.are.equal(expectedEvents, newPat:queryArc(0, 1))
 -- 		)
@@ -85,10 +89,10 @@ describe "filterEvents", ->
 -- 				return List({ Event(state.span, state.span, "a") })
 -- 			)
 -- 			 splitPat = pat:splitQueries!
--- 			 expectedEventsPat = List({ Event(TimeSpan(0, 2), TimeSpan(0, 2), "a") })
+-- 			 expectedEventsPat = List({ Event(Arc(0, 2), Arc(0, 2), "a") })
 -- 			 expectedEventsSplit = List({
--- 				Event(TimeSpan(0, 1), TimeSpan(0, 2), "a"),
--- 				Event(TimeSpan(1, 2), TimeSpan(0, 2), "a"),
+-- 				Event(Arc(0, 1), Arc(0, 2), "a"),
+-- 				Event(Arc(1, 2), Arc(0, 2), "a"),
 -- 			})
 -- 			assert.are.equal(expectedEventsPat, pat:queryArc(0, 2))
 -- 			assert.are.equal(expectedEventsSplit, splitPat:queryArc(0, 2))
@@ -101,8 +105,8 @@ describe "filterEvents", ->
 -- 	--         patOfPats = Pure(Fastcat(List({ Pure("a"), Pure("b") })))
 -- 	--         expectedEvents = List({
 -- 	--            Event(
--- 	--                TimeSpan(0, 1),
--- 	--                TimeSpan(0, 1),
+-- 	--                Arc(0, 1),
+-- 	--                Arc(0, 1),
 -- 	--                "a"
 -- 	--            )
 -- 	--        })
@@ -110,29 +114,22 @@ describe "filterEvents", ->
 -- 	--        assert.are.equal(expectedEvents, actualEvents:queryArc(0, 1))
 -- 	--    )
 -- 	--)
--- 	describe("withValue", ->
--- 		it("should return new pattern with function mapped over event values on query", ->
--- 			 pat = Pure(5)
--- 			 newPat = pat:withValue(function(v)
--- 				return v + 5
--- 			)
--- 			 expectedEvents = List({
--- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(1)),
--- 					TimeSpan(Fraction(0), Fraction(1)),
--- 					10
--- 				),
--- 			})
--- 			assert.are.equal(expectedEvents, newPat:queryArc(Fraction(0), Fraction(1)))
--- 		)
--- 	)
+  describe "withValue", ->
+    it "should return new pattern with function mapped over event values on query", ->
+      pat = Pure(5)
+      func = (v) -> v + 5
+      newPat = pat\withValue func
+      expectedEvents = { Event Arc(0, 1), Arc(0, 1), 10 }
+      assert.are.same expectedEvents, newPat\firstCycle!
+
+
 -- 	describe("onsetsOnly", ->
 -- 		it("should return only events where the start of the whole equals the start of the part", ->
--- 			 whole1 = TimeSpan(Fraction(1, 2), Fraction(2, 1))
--- 			 part1 = TimeSpan(Fraction(1, 2), Fraction(1, 1))
+-- 			 whole1 = Arc(Fraction(1, 2), Fraction(2, 1))
+-- 			 part1 = Arc(Fraction(1, 2), Fraction(1, 1))
 -- 			 event1 = Event(whole1, part1, 1, {}, false)
--- 			 whole2 = TimeSpan(Fraction(2, 3), Fraction(3, 1))
--- 			 part2 = TimeSpan(Fraction(5, 6), Fraction(1, 1))
+-- 			 whole2 = Arc(Fraction(2, 3), Fraction(3, 1))
+-- 			 part2 = Arc(Fraction(5, 6), Fraction(1, 1))
 -- 			 event2 = Event(whole2, part2, 2, {}, false)
 -- 			 events = List({ event1, event2 })
 -- 			 p = Pattern(function(_)
@@ -142,7 +139,7 @@ describe "filterEvents", ->
 -- 			 patternWithOnsetsOnly = p:onsetsOnly!
 --
 -- 			assert.are.same(
--- 				patternWithOnsetsOnly:query(State(TimeSpan(Fraction(0), Fraction(3)))),
+-- 				patternWithOnsetsOnly:query(State(Arc(Fraction(0), Fraction(3)))),
 -- 				List({ event1 })
 -- 			)
 -- 		)
@@ -151,64 +148,32 @@ describe "filterEvents", ->
 -- 			 p = Pure("bd")
 --
 -- 			 patternWithOnsetsOnly = p:onsetsOnly!
--- 			 expectedWhole = TimeSpan(Fraction(0), Fraction(1))
--- 			 expectedPart = TimeSpan(Fraction(0), Fraction(1))
+-- 			 expectedWhole = Arc(Fraction(0), Fraction(1))
+-- 			 expectedPart = Arc(Fraction(0), Fraction(1))
 -- 			 expectedEvent = Event(expectedWhole, expectedPart, "bd")
--- 			 actualEvents = patternWithOnsetsOnly:query(State(TimeSpan(Fraction(0), Fraction(1))))
+-- 			 actualEvents = patternWithOnsetsOnly:query(State(Arc(Fraction(0), Fraction(1))))
 -- 			assert.are.equal(actualEvents, List({ expectedEvent }))
--- 			 querySpan = TimeSpan(Fraction(1, 16), Fraction(1))
+-- 			 querySpan = Arc(Fraction(1, 16), Fraction(1))
 -- 			 state = State(querySpan)
 -- 			assert.are.equal(querySpan, state:span!)
 -- 			actualEvents = patternWithOnsetsOnly:query(state)
 -- 			assert.are.equal(actualEvents, List({}))
 -- 		)
 -- 	)
--- 	describe("Pure", ->
--- 		it("should create Pattern of a single value repeating once per cycle", ->
--- 			 atom = Pure(5)
--- 			 expectedEvents = List({
--- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(1)),
--- 					TimeSpan(Fraction(0), Fraction(1)),
--- 					5,
--- 					{},
--- 					false
--- 				),
--- 			})
--- 			 actualEvents = atom:queryArc(Fraction(0), Fraction(1))
--- 			assert.are.equal(actualEvents:length!, expectedEvents:length!)
--- 			assert.are.equal(actualEvents:at(1), expectedEvents:at(1))
--- 			assert.are.same(actualEvents:at(1)._whole, expectedEvents:at(1)._whole)
--- 			assert.are.same(actualEvents:at(1)._part, expectedEvents:at(1)._part)
--- 			assert.are.same(actualEvents:at(1)._value, expectedEvents:at(1)._value)
--- 			 expectedEvent = Event(
--- 				TimeSpan(Fraction(0), Fraction(1)),
--- 				TimeSpan(Fraction(1, 2), Fraction(1, 1)),
--- 				5,
--- 				{},
--- 				false
--- 			)
--- 			actualEvents = atom:query(State(TimeSpan(Fraction(1, 2), Fraction(1, 1))))
--- 			assert.are.same(actualEvents, List({ expectedEvent }))
--- 			assert.are.same(actualEvents:at(1)._part, expectedEvent._part)
--- 			assert.are.same(actualEvents:at(1)._whole, expectedEvent._whole)
--- 			assert.are.same(actualEvents:at(1)._value, expectedEvent._value)
--- 		)
--- 	)
 -- 	describe("Slowcat", ->
 -- 		it("should alternate between the patterns in the list, one pattern per cycle", ->
 -- 			 cattedPats = Slowcat({ Pure(1), Pure(2), 3 })
 -- 			 expectedEventsCycle1 = List({
--- 				Event(TimeSpan(0, 1), TimeSpan(0, 1), 1),
+-- 				Event(Arc(0, 1), Arc(0, 1), 1),
 -- 			})
 -- 			assert.are.equal(expectedEventsCycle1, cattedPats:queryArc(0, 1))
 -- 			 expectedEventsCycle2 = List({
--- 				Event(TimeSpan(1, 2), TimeSpan(1, 2), 2),
+-- 				Event(Arc(1, 2), Arc(1, 2), 2),
 -- 			})
 -- 			assert.are.equal(expectedEventsCycle2, cattedPats:queryArc(1, 2))
 --
 -- 			 expectedEventsCycle3 = List({
--- 				Event(TimeSpan(0, 1), TimeSpan(0, 1), 3),
+-- 				Event(Arc(0, 1), Arc(0, 1), 3),
 -- 			})
 -- 			assert.are.equal(expectedEventsCycle3, cattedPats:queryArc(2, 3))
 -- 			assert.are.equal(expectedEventsCycle1, cattedPats:queryArc(3, 4))
@@ -219,13 +184,13 @@ describe "filterEvents", ->
 -- 			 pat = Pure("bd")
 -- 			 expectedEvents = List({
 -- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(0.5)),
--- 					TimeSpan(Fraction(0), Fraction(0.5)),
+-- 					Arc(Fraction(0), Fraction(0.5)),
+-- 					Arc(Fraction(0), Fraction(0.5)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(0.5), Fraction(1)),
--- 					TimeSpan(Fraction(0.5), Fraction(1)),
+-- 					Arc(Fraction(0.5), Fraction(1)),
+-- 					Arc(Fraction(0.5), Fraction(1)),
 -- 					"bd"
 -- 				),
 -- 			})
@@ -239,15 +204,15 @@ describe "filterEvents", ->
 -- 			 pat = Fastcat({ Pure("bd"), Pure("sd") })
 -- 			 expectedEvents_0to1 = List({
 -- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(1)),
--- 					TimeSpan(Fraction(0), Fraction(1)),
+-- 					Arc(Fraction(0), Fraction(1)),
+-- 					Arc(Fraction(0), Fraction(1)),
 -- 					"bd"
 -- 				),
 -- 			})
 -- 			 expectedEvents_1to2 = List({
 -- 				Event(
--- 					TimeSpan(Fraction(1), Fraction(2)),
--- 					TimeSpan(Fraction(1), Fraction(2)),
+-- 					Arc(Fraction(1), Fraction(2)),
+-- 					Arc(Fraction(1), Fraction(2)),
 -- 					"sd"
 -- 				),
 -- 			})
@@ -264,13 +229,13 @@ describe "filterEvents", ->
 --
 -- 			 expectedEvents = List({
 -- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(1, 8)),
--- 					TimeSpan(Fraction(0), Fraction(1, 8)),
+-- 					Arc(Fraction(0), Fraction(1, 8)),
+-- 					Arc(Fraction(0), Fraction(1, 8)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(1, 8), Fraction(1, 4)),
--- 					TimeSpan(Fraction(1, 8), Fraction(1, 4)),
+-- 					Arc(Fraction(1, 8), Fraction(1, 4)),
+-- 					Arc(Fraction(1, 8), Fraction(1, 4)),
 -- 					"sd"
 -- 				),
 -- 			})
@@ -283,13 +248,13 @@ describe "filterEvents", ->
 -- 			 actualEvents = Fastcat({ Pure("bd"), Pure("sd") }):compress(1 / 4, 3 / 4):firstCycle!
 -- 			 expectedEvents = List({
 -- 				Event(
--- 					TimeSpan(Fraction(1, 4), Fraction(1, 2)),
--- 					TimeSpan(Fraction(1, 4), Fraction(1, 2)),
+-- 					Arc(Fraction(1, 4), Fraction(1, 2)),
+-- 					Arc(Fraction(1, 4), Fraction(1, 2)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(1, 2), Fraction(3, 4)),
--- 					TimeSpan(Fraction(1, 2), Fraction(3, 4)),
+-- 					Arc(Fraction(1, 2), Fraction(3, 4)),
+-- 					Arc(Fraction(1, 2), Fraction(3, 4)),
 -- 					"sd"
 -- 				),
 -- 			})
@@ -302,63 +267,63 @@ describe "filterEvents", ->
 -- 			 actualEvents = Timecat({ { 3, Pure("bd"):fast(4) }, { 1, Pure("hh"):fast(8) } }):firstCycle!
 -- 			 expectedEvents = List({
 -- 				Event(
--- 					TimeSpan(Fraction(0), Fraction(3, 16)),
--- 					TimeSpan(Fraction(0), Fraction(3, 16)),
+-- 					Arc(Fraction(0), Fraction(3, 16)),
+-- 					Arc(Fraction(0), Fraction(3, 16)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(3, 16), Fraction(3, 8)),
--- 					TimeSpan(Fraction(3, 16), Fraction(3, 8)),
+-- 					Arc(Fraction(3, 16), Fraction(3, 8)),
+-- 					Arc(Fraction(3, 16), Fraction(3, 8)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(3, 8), Fraction(9, 16)),
--- 					TimeSpan(Fraction(3, 8), Fraction(9, 16)),
+-- 					Arc(Fraction(3, 8), Fraction(9, 16)),
+-- 					Arc(Fraction(3, 8), Fraction(9, 16)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(9, 16), Fraction(3, 4)),
--- 					TimeSpan(Fraction(9, 16), Fraction(3, 4)),
+-- 					Arc(Fraction(9, 16), Fraction(3, 4)),
+-- 					Arc(Fraction(9, 16), Fraction(3, 4)),
 -- 					"bd"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(3, 4), Fraction(25, 32)),
--- 					TimeSpan(Fraction(3, 4), Fraction(25, 32)),
+-- 					Arc(Fraction(3, 4), Fraction(25, 32)),
+-- 					Arc(Fraction(3, 4), Fraction(25, 32)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(25, 32), Fraction(13, 16)),
--- 					TimeSpan(Fraction(25, 32), Fraction(13, 16)),
+-- 					Arc(Fraction(25, 32), Fraction(13, 16)),
+-- 					Arc(Fraction(25, 32), Fraction(13, 16)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(13, 16), Fraction(27, 32)),
--- 					TimeSpan(Fraction(13, 16), Fraction(27, 32)),
+-- 					Arc(Fraction(13, 16), Fraction(27, 32)),
+-- 					Arc(Fraction(13, 16), Fraction(27, 32)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(27, 32), Fraction(7, 8)),
--- 					TimeSpan(Fraction(27, 32), Fraction(7, 8)),
+-- 					Arc(Fraction(27, 32), Fraction(7, 8)),
+-- 					Arc(Fraction(27, 32), Fraction(7, 8)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(7, 8), Fraction(29, 32)),
--- 					TimeSpan(Fraction(7, 8), Fraction(29, 32)),
+-- 					Arc(Fraction(7, 8), Fraction(29, 32)),
+-- 					Arc(Fraction(7, 8), Fraction(29, 32)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(29, 32), Fraction(15, 16)),
--- 					TimeSpan(Fraction(29, 32), Fraction(15, 16)),
+-- 					Arc(Fraction(29, 32), Fraction(15, 16)),
+-- 					Arc(Fraction(29, 32), Fraction(15, 16)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(15, 16), Fraction(31, 32)),
--- 					TimeSpan(Fraction(15, 16), Fraction(31, 32)),
+-- 					Arc(Fraction(15, 16), Fraction(31, 32)),
+-- 					Arc(Fraction(15, 16), Fraction(31, 32)),
 -- 					"hh"
 -- 				),
 -- 				Event(
--- 					TimeSpan(Fraction(31, 32), Fraction(1)),
--- 					TimeSpan(Fraction(31, 32), Fraction(1)),
+-- 					Arc(Fraction(31, 32), Fraction(1)),
+-- 					Arc(Fraction(31, 32), Fraction(1)),
 -- 					"hh"
 -- 				),
 -- 			})
@@ -366,17 +331,17 @@ describe "filterEvents", ->
 -- 		)
 -- 	)
 -- 	-- def test_choose_cycles!:
--- 	--   assert choose_cycles("bd", "sd", "hh").query(TimeSpan(0, 10)) == [
--- 	--       Event(TimeSpan(0, 1), TimeSpan(0, 1), "bd"),
--- 	--       Event(TimeSpan(1, 2), TimeSpan(1, 2), "sd"),
--- 	--       Event(TimeSpan(2, 3), TimeSpan(2, 3), "sd"),
--- 	--       Event(TimeSpan(3, 4), TimeSpan(3, 4), "sd"),
--- 	--       Event(TimeSpan(4, 5), TimeSpan(4, 5), "hh"),
--- 	--       Event(TimeSpan(5, 6), TimeSpan(5, 6), "bd"),
--- 	--       Event(TimeSpan(6, 7), TimeSpan(6, 7), "bd"),
--- 	--       Event(TimeSpan(7, 8), TimeSpan(7, 8), "sd"),
--- 	--       Event(TimeSpan(8, 9), TimeSpan(8, 9), "sd"),
--- 	--       Event(TimeSpan(9, 10), TimeSpan(9, 10), "bd"),
+-- 	--   assert choose_cycles("bd", "sd", "hh").query(Arc(0, 10)) == [
+-- 	--       Event(Arc(0, 1), Arc(0, 1), "bd"),
+-- 	--       Event(Arc(1, 2), Arc(1, 2), "sd"),
+-- 	--       Event(Arc(2, 3), Arc(2, 3), "sd"),
+-- 	--       Event(Arc(3, 4), Arc(3, 4), "sd"),
+-- 	--       Event(Arc(4, 5), Arc(4, 5), "hh"),
+-- 	--       Event(Arc(5, 6), Arc(5, 6), "bd"),
+-- 	--       Event(Arc(6, 7), Arc(6, 7), "bd"),
+-- 	--       Event(Arc(7, 8), Arc(7, 8), "sd"),
+-- 	--       Event(Arc(8, 9), Arc(8, 9), "sd"),
+-- 	--       Event(Arc(9, 10), Arc(9, 10), "bd"),
 -- 	--   ]
 -- 	-- def test_degrade!:
 -- 	--     assert_equal_patterns(
@@ -386,8 +351,8 @@ describe "filterEvents", ->
 -- 	--
 -- 	-- def test_degrade_by!:
 -- 	--     assert pure("sd").fast(8).degrade_by(0.75).first_cycle! == [
--- 	--         Event(TimeSpan(1 / 8, 1 / 4), TimeSpan(1 / 8, 1 / 4), "sd"),
--- 	--         Event(TimeSpan(1 / 2, 5 / 8), TimeSpan(1 / 2, 5 / 8), "sd"),
--- 	--         Event(TimeSpan(3 / 4, 7 / 8), TimeSpan(3 / 4, 7 / 8), "sd"),
+-- 	--         Event(Arc(1 / 8, 1 / 4), Arc(1 / 8, 1 / 4), "sd"),
+-- 	--         Event(Arc(1 / 2, 5 / 8), Arc(1 / 2, 5 / 8), "sd"),
+-- 	--         Event(Arc(3 / 4, 7 / 8), Arc(3 / 4, 7 / 8), "sd"),
 -- 	--     ]
 -- )
