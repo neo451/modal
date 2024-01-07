@@ -1,10 +1,8 @@
-Arc = require "xi.arc"
+require "xi.span"
 import compare from require "xi.utils"
 
---TODO: context stuff, arcEquals? is it right?
-
-class Event
-  new: (whole = nil, part = Arc(), value = nil, context = {}, stateful = false) =>
+export class Event
+  new: (whole = nil, part = Span!, value = nil, context = {}, stateful = false) =>
     if stateful and type(value) ~= "function"
       error("Event: stateful event values must be of type function")
 
@@ -23,11 +21,11 @@ class Event
 
   hasOnset: => @whole != nil and @whole._begin == @part._begin
 
-  withArc:(func) =>
-    if @whole != nil
-      Event func(@whole), func(@part), @value, @context, @stateful
-    else
-      Event nil, func(@part), @value, @context, @stateful
+  withSpan:(func) =>
+    whole = @whole
+    if whole != nil
+      whole = func whole
+    Event whole, func(@part), @value, @context, @stateful
 
   withValue:(func) => Event @whole, @part, func(@value), @context, @stateful
 
@@ -49,7 +47,27 @@ class Event
 
     string.format "[%s | %s]", partString, @value
 
+  spanEquals: (other) =>
+    ((other.whole == nil) and (@whole == nil)) or (other.whole == @whole)
+
   __eq:(other) =>
     (@part == other.part) and (@whole == other.whole) and (@value == other.value) and (compare @context, other.context) and (@stateful == other.stateful)
 
-return Event
+  setContext:(newContext) =>
+    Event @whole, @part, @value, newContext, @stateful
+
+  combineContext:(other) =>
+    newContext = {}
+    for key, value in pairs @context
+      newContext[key] = value
+    for key, value in pairs other.context
+      newContext[key] = value
+    loc1 = @context.locations or {}
+    loc2 = other.context.locations or {}
+    newloc = {}
+    for _, value in pairs loc1
+      table.insert newloc, value
+    for _, value in pairs loc2
+      table.insert newloc, value
+    newContext.locations = newloc
+    newContext

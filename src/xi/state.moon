@@ -1,19 +1,17 @@
-Arc = require "xi.arc"
-import compare, type from require "xi.utils"
+import compare from require "xi.utils"
+require "xi.span"
 
-class State
-  new:(arc = Arc(), controls = {}) =>
-    @arc = arc
+export class State
+  new:(span = Span!, controls = {}) =>
+    @span = span
     @controls = controls
 
   type: -> "state"
 
-  setArc:(arc) => State arc, @controls
+  setSpan:(span) => State span, @controls
 
-  withArc:(func) => @setArc(func @arc)
+  withSpan:(func) => @setSpan(func @span)
 
-  setControls:(controls) => State @arc, controls
+  setControls:(controls) => State @span, controls
 
-  __eq:(other) => @arc == other.arc and compare @controls, other.controls
-
-return State
+  __eq:(other) => @span == other.span and compare @controls, other.controls

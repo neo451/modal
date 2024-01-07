@@ -1,11 +1,8 @@
-busted = require "busted"
-describe = busted.describe
-it = busted.it
-Fraction = require "xi.fraction"
+require "xi.fraction"
 
 describe("Fraction", ->
 	it("should new with arguments", ->
-		f = Fraction()
+		f = Fraction!
 		assert.are.equal(f.numerator, 0)
 		assert.are.equal(f.denominator, 1)
 		f = Fraction(3, 4)

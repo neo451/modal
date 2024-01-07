@@ -27,7 +27,7 @@ lcm = (a, b) ->
 gcd = (a, b) ->
 	(b == 0) and a or gcd(b, a % b)
 
-class Fraction
+export class Fraction
   new: (n = 0, d = 1, normalize = true) =>
     if n % 1 ~= 0
       n, d = decimalToFraction n
@@ -207,5 +207,3 @@ class Fraction
   show: => @__tostring!
 
 -- TODO: GCD, ...
-
-return Fraction
