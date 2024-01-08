@@ -1,4 +1,4 @@
-import type from require 'xi.utils'
+import reduce, type from require 'xi.utils'
 
 decimalToFraction = (x0, err) ->
 	err = err or 0.0000000001
@@ -21,11 +21,11 @@ decimalToFraction = (x0, err) ->
 	error "Fraction: failed to find a fraction for " .. x0
 	0, 1
 
-lcm = (a, b) ->
-	(a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
-
 gcd = (a, b) ->
 	(b == 0) and a or gcd(b, a % b)
+
+lcm = (a, b) ->
+	(a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
 
 export class Fraction
   new: (n = 0, d = 1, normalize = true) =>
@@ -206,4 +206,5 @@ export class Fraction
 
   show: => @__tostring!
 
--- TODO: GCD, ...
+export gcd_reduce = (table) ->
+  reduce ((acc, value) -> acc\gcd value), table[1], table

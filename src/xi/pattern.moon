@@ -1,4 +1,4 @@
-import map, filter, reduce, flatten, type from require "xi.utils"
+import map, filter, reduce, flatten, dump, type from require "xi.utils"
 require "xi.fraction"
 require "xi.span"
 require "xi.event"
@@ -19,7 +19,9 @@ export class Pattern
 
   firstCycle: => @querySpan 0, 1
 
-  __tostring: => @firstCycle!
+  __tostring: =>
+    func = (event) -> event\show!
+    dump map func, @firstCycle!
 
   show: => @__tostring!
 
