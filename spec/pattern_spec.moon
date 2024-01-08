@@ -215,45 +215,25 @@ describe "Pattern", ->
 -- 		)
 -- 	)
 --
--- 	describe("fastgap", ->
--- 		it("should bring pattern closer together", ->
--- 			 actualEvents = Fastcat({ pure("bd"), pure("sd") }):fastgap(4):firstCycle!
---
--- 			 expectedEvents = List({
--- 				Event(
--- 					Span(Fraction(0), Fraction(1, 8)),
--- 					Span(Fraction(0), Fraction(1, 8)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(1, 8), Fraction(1, 4)),
--- 					Span(Fraction(1, 8), Fraction(1, 4)),
--- 					"sd"
--- 				),
--- 			})
--- 			assert.are.same(expectedEvents, actualEvents)
--- 		)
--- 	)
---
--- 	describe("compress", ->
--- 		it("should bring pattern closer together", ->
--- 			 actualEvents = Fastcat({ pure("bd"), pure("sd") }):compress(1 / 4, 3 / 4):firstCycle!
--- 			 expectedEvents = List({
--- 				Event(
--- 					Span(Fraction(1, 4), Fraction(1, 2)),
--- 					Span(Fraction(1, 4), Fraction(1, 2)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(1, 2), Fraction(3, 4)),
--- 					Span(Fraction(1, 2), Fraction(3, 4)),
--- 					"sd"
--- 				),
--- 			})
--- 			assert.are.same(expectedEvents, actualEvents)
--- 		)
--- 	)
---
+  describe "fastgap", ->
+    it "should bring pattern closer together", ->
+      actualEvents = fastcat(pure("bd"), pure("sd"))\fastgap(4)\firstCycle!
+      expectedEvents = {
+         Event Span(0, 1/8), Span(0, 1/8), "bd",
+         Event Span(1/8, 1/4), Span(1/8, 1/4), "sd",
+      }
+      assert.are.same expectedEvents, actualEvents
+
+  describe "compress", ->
+    it "should bring pattern closer together", ->
+      actualEvents = fastcat(pure("bd"), pure("sd"))\compress(1/4, 3/4)\firstCycle!
+      expectedEvents = {
+        Event Span(1/4, 1/2), Span(1/4, 1/2), "bd",
+        Event Span(1/2, 3/4), Span(1/2, 3/4), "sd",
+      }
+      assert.are.same expectedEvents, actualEvents
+
+
 -- 	describe("timecat", ->
 -- 		it("should return a pattern based one the time-pat 'tuples' passed in", ->
 -- 			 actualEvents = Timecat({ { 3, pure("bd"):fast(4) }, { 1, pure("hh"):fast(8) } }):firstCycle!

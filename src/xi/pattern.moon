@@ -69,13 +69,59 @@ export class Pattern
       map event_func, events
     Pattern query
 
+  onsetsOnly: =>
+    @filterEvents (event) -> event\hasOnset!
+
   _fast:(factor) =>
     fastQuery = @withQueryTime (t) -> t * factor
     fastPattern = fastQuery\withEventTime (t) -> t / factor
     fastPattern
 
-  onsetsOnly: =>
-    @filterEvents (event) -> event\hasOnset!
+  _early:(offset) =>
+    earlyQuery = @withQueryTime (t) -> t + offset
+    earlyPattern = earlyQuery\withEventTime (t) -> t - offset
+    earlyPattern
+
+  _slow:(value) => @_fast 1 / value
+
+  _late:(offset) => @_early -offset
+  -- need patternify
+  fastgap:(factor) =>
+    if type(factor) != "fraction"
+      factor = Fraction(factor)
+
+    if factor <= Fraction(0)
+      silence!
+
+    factor = factor\max(1)
+
+    mungeQuery = (t) ->
+      t\sam! + ((t - t\sam!) * factor)\min(1)
+
+    eventSpanFunc = (span) ->
+      b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
+      e = span._begin\sam! + (span._end - span._begin\sam!) / factor
+      Span b, e
+
+    query = (_, state) ->
+      span = state.span
+      new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
+      if new_span._begin == new_span._begin\nextSam!
+        return {}
+      new_state = State new_span
+      events = @query new_state
+      m_func = (event) ->
+        event\withSpan eventSpanFunc
+      map m_func, events
+    Pattern(query)\splitQueries!
+
+  compress:(b, e) =>
+    if type(b) != "fraction" and type(e) != "fraction"
+      b, e = Fraction(b), Fraction(e)
+    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
+      silence!
+    @fastgap(Fraction(1) / (e - b))\_late(b)
+
 
   -- _patternify:(method) =>
 
@@ -87,12 +133,13 @@ reify = (pat) ->
 	-- end
 	return pure(pat)
 
+export silence = -> Pattern()
+
 export pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
     m_func = (span) ->
       whole = span\wholeCycle span._begin
-      print span, whole
       Event whole, span, value
     map m_func, cycles
   Pattern query
@@ -105,6 +152,7 @@ export stack = (...) ->
     flatten events
   Pattern query
 
+-- is prime
 export slowcat = (...) ->
   pats = { ... }
   pats = map reify, pats
@@ -115,7 +163,13 @@ export slowcat = (...) ->
     pat\query state
   Pattern(query)\splitQueries!
 
-export fastcat = (...) -> 
+export fastcat = (...) ->
   pats = { ... }
   pats = map reify, pats
   slowcat(...)\_fast(#pats)
+
+--- tabke a table of key-value pairs
+-- export timecat = (table) ->
+
+
+
