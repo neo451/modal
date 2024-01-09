@@ -18,7 +18,7 @@ GenerateTypesString = (msg) ->
       types = types .. "b"
   return types
 
-export class Stream
+class Stream
   new:(target = StreamTarget) =>
     @target = target
     @osc = losc.new({
@@ -68,3 +68,4 @@ export class Stream
 
       @osc\send b
 
+return { Stream: Stream }

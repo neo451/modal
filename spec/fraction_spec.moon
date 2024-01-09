@@ -1,4 +1,4 @@
-require "xi.fraction"
+import Fraction from require "xi.fraction"
 
 describe("Fraction", ->
 	it("should new with arguments", ->

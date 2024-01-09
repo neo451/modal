@@ -1,7 +1,8 @@
-require "xi.pattern"
-require "xi.state"
-require "xi.event"
-require "xi.span"
+import Span from require "xi.span"
+import Fraction from require "xi.fraction"
+import Event from require "xi.event"
+import State from require "xi.state"
+import Pattern, pure, stack, slowcat, fastcat from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -155,7 +156,7 @@ describe "Pattern", ->
 
   describe "slowcat", ->
     it "should alternate between the patterns in the list, one pattern per cycle", ->
-      cattedPats = slowcat pure(1), pure(2), 3
+      cattedPats = slowcat 1, 2, 3
       expectedEventsCycle1 = { Event Span(0, 1), Span(0, 1), 1 }
       assert.are.same expectedEventsCycle1, cattedPats\querySpan(0, 1)
       expectedEventsCycle2 = { Event Span(1, 2), Span(1, 2), 2 }

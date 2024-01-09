@@ -1,6 +1,6 @@
-require 'xi.event'
-require 'xi.span'
-require 'xi.fraction'
+import Fraction from require "xi.fraction"
+import Span from require "xi.span"
+import Event from require "xi.event"
 
 describe "Event", ->
   describe "constructors", ->

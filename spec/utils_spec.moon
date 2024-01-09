@@ -1,6 +1,5 @@
 import compare, type from require("xi.utils")
-
-require "xi.fraction"
+import Fraction from require "xi.fraction"
 
 describe "compare", ->
   it "should deeply compare table values", ->

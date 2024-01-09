@@ -1,7 +1,7 @@
 import compare from require "xi.utils"
-require "xi.span"
+import Span from require "xi.span"
 
-export class State
+class State
   new:(span = Span!, controls = {}) =>
     @span = span
     @controls = controls
@@ -15,3 +15,5 @@ export class State
   setControls:(controls) => State @span, controls
 
   __eq:(other) => @span == other.span and compare @controls, other.controls
+
+return { State: State }

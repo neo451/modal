@@ -1,14 +1,12 @@
-require "xi.fraction"
+import Fraction from require "xi.fraction"
 
-export class Span
+class Span
   new:(b = 1, e = 1) =>
     if type(b) == "number"
       b = Fraction(b)
     if type(e) == "number"
       e = Fraction(e)
-
-    @_begin = b
-    @_end = e
+    @_begin, @_end = b, e
 
   type: -> 'span'
 
@@ -66,3 +64,5 @@ export class Span
     if not result
       error("Span: Arcs do not intersect")
     result
+
+return { Span: Span }

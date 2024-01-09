@@ -27,7 +27,7 @@ gcd = (a, b) ->
 lcm = (a, b) ->
 	(a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
 
-export class Fraction
+class Fraction
   new: (n = 0, d = 1, normalize = true) =>
     if n % 1 ~= 0
       n, d = decimalToFraction n
@@ -206,5 +206,10 @@ export class Fraction
 
   show: => @__tostring!
 
-export gcd_reduce = (table) ->
+gcd_reduce = (table) ->
   reduce ((acc, value) -> acc\gcd value), table[1], table
+
+return {
+  Fraction: Fraction
+  gcd: gcd_reduce
+}

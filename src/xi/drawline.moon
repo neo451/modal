@@ -2,8 +2,8 @@
 -- @module drawline
 
 import filter, reduce, flatten, dump, type from require "xi.utils"
-require("xi.fraction")
-require("xi.pattern")
+import Fraction from require "xi.fraction"
+import Pattern from require "xi.pattern"
 
 --- intended for debugging, drawline renders the pattern as a string, where each character represents the same time span.
 -- should only be used with single characters as values, otherwise the character slots will be messed up.

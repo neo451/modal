@@ -1,6 +1,5 @@
---TODO: intersection, intersection_e
-require "xi.fraction"
-require "xi.span"
+import Span from require "xi.span"
+import Fraction from require "xi.fraction"
 
 describe "Span", ->
   describe "wholeCycle", ->

@@ -1,5 +1,5 @@
-require "xi.state"
-require "xi.span"
+import Span from require "xi.span"
+import State from require "xi.state"
 
 describe "State", ->
   describe "new", ->

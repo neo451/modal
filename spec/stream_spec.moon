@@ -1,5 +1,5 @@
-require "xi.stream"
-require "xi.pattern"
+import Stream from require "xi.stream"
+import Pattern from require "xi.pattern"
 require "xi.control"
 losc = require('losc')
 abletonlink = require("abletonlink")

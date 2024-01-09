@@ -52,4 +52,6 @@ utils.dump = (o) ->
     else
         return tostring(o)
 
+utils.id = (x) -> x
+
 return utils

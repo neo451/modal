@@ -1,14 +1,11 @@
-import map, filter, reduce, flatten, dump, type from require "xi.utils"
-require "xi.fraction"
-require "xi.span"
-require "xi.event"
-require "xi.state"
-
-require "moon.all"
-
-id = (a) -> a
-
-export class Pattern
+import map, filter, id, flatten, dump, type from require "xi.utils"
+import Span from require "xi.span"
+import Fraction from require "xi.fraction"
+import Event from require "xi.event"
+import State from require "xi.state"
+-- TODO: maybe rename m_func
+-- TODO: do patternify the strudel & tidal way
+class Pattern
   new:(query = -> {}) =>
     @query = query
 
@@ -27,14 +24,12 @@ export class Pattern
 
   show: => @__tostring!
 
-
-  -- TODO: bind
   bindWhole: (choose_whole, func) =>
     print func
     pat_val = @
     query = (_, state) ->
       withWhole = (a, b) ->
-        Event (choose_whole a.whole, b.whole), b.part, b.value --context???
+        Event (choose_whole a.whole, b.whole), b.part, b.value --context?
       match = (a) ->
         events = func(a.value)\query(state\setSpan a.part)
         map ((b) -> withWhole a, b), events
@@ -42,14 +37,11 @@ export class Pattern
       flatten (map ((a) -> match a), events)
     Pattern query
 
-  outerBind:(func) =>
-    @bindWhole ((a) -> a), func
+  outerBind:(func) => @bindWhole ((a) -> a), func
 
-  outerJoin: =>
-    @outerBind id
+  innerBind:(func) => @bindWhole((_, b) -> b, func)
 
-  innerBind:(func) =>
-    @bindWhole((_, b) -> b, func)
+  outerJoin: => @outerBind id
 
   innerJoin: => @innerBind id
 
@@ -84,14 +76,13 @@ export class Pattern
       @query new_state
     Pattern query
 
-  -- withTime fa fb pat = withEventTime fa $ withQueryTime fb pat
-  -- withTime:(q_func, e_func) =>
-  --   query = @withQueryTime q_func
-  --   pattern = query\withEventTime e_func
-
   withQueryTime:(func) =>
     @withQuerySpan (span) ->span\withTime func
 
+  withTime:(q_func, e_func) =>
+    query = @withQueryTime q_func
+    pattern = query\withEventTime e_func
+    pattern
 
   withEventTime:(func) =>
     query = (_, state) ->
@@ -101,22 +92,17 @@ export class Pattern
       map event_func, events
     Pattern query
 
-  onsetsOnly: =>
-    @filterEvents (event) -> event\hasOnset!
+  onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
-  _fast:(factor) =>
-    fastQuery = @withQueryTime (t) -> t * factor
-    fastPattern = fastQuery\withEventTime (t) -> t / factor
-    fastPattern
+  _fast:(factor) => @withTime ((t) -> t * factor), ((t) -> t / factor)
 
-  _early:(offset) =>
-    earlyQuery = @withQueryTime (t) -> t + offset
-    earlyPattern = earlyQuery\withEventTime (t) -> t - offset
-    earlyPattern
+  -- offset might be fraction?
+  _early:(offset) => @withTime ((t) -> t + offset), ((t) -> t - offset)
 
   _slow:(value) => @_fast 1 / value
 
   _late:(offset) => @_early -offset
+
   -- need patternify
   fastgap:(factor) =>
     if type(factor) != "fraction"
@@ -160,17 +146,9 @@ export class Pattern
   --     return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
   --   return patterned
 
-reify = (pat) ->
-	if type(pat) == "pattern"
-	  return pat
-	-- if Type(pat) == "string"
-	-- 	parser.mini(pat)
-	-- end
-	pure(pat)
+silence = -> Pattern()
 
-export silence = -> Pattern()
-
-export pure = (value) ->
+pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
     m_func = (span) ->
@@ -179,7 +157,15 @@ export pure = (value) ->
     map m_func, cycles
   Pattern query
 
-export stack = (...) ->
+reify = (pat) ->
+  if type(pat) == "pattern"
+    return pat
+  -- if Type(pat) == "string"
+  -- 	parser.mini(pat)
+  -- end
+  pure pat
+
+stack = (...) ->
   pats = { ... }
   pats = map reify, pats
   query = (state) =>
@@ -188,7 +174,7 @@ export stack = (...) ->
   Pattern query
 
 -- is prime
-export slowcat = (...) ->
+slowcat = (...) ->
   pats = { ... }
   pats = map reify, pats
   query = (state) =>
@@ -198,7 +184,7 @@ export slowcat = (...) ->
     pat\query state
   Pattern(query)\splitQueries!
 
-export fastcat = (...) ->
+fastcat = (...) ->
   pats = { ... }
   pats = map reify, pats
   slowcat(...)\_fast(#pats)
@@ -226,3 +212,16 @@ export fastcat = (...) ->
 -- export sequence = (x) ->
 --   seq, _ = seq_count(x)
 --   seq
+
+return {
+  Pattern: Pattern
+  reify: reify
+  silence: silence
+  pure: pure
+  stack: stack
+  slowcat: slowcat
+  fastcat: fastcat
+  -- timecat: timecat
+  -- seq_count: seq_count
+  -- sequence: sequence
+  }

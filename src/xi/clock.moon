@@ -3,7 +3,7 @@ abletonlink = require "abletonlink"
 import type from require "xi.utils"
 sleep = (sec) -> socket.sleep sec
 
-export class Clock
+class Clock
   new:(bpm = 120, sampleRate = 1/20, beatsPerCycle = 4) =>
     @bpm, @sampleRate, @beatsPerCycle = bpm, sampleRate, beatsPerCycle
     -- . ?
@@ -81,3 +81,5 @@ export class Clock
         print("the coroutine is running? ... ", coroutine.running!)
         coroutine.yield!
       @linkEnabled = false --?
+
+return { Clock: Clock }

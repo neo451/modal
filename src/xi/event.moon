@@ -1,7 +1,7 @@
-require "xi.span"
 import compare from require "xi.utils"
+import Span from require "xi.span"
 
-export class Event
+class Event
   new: (whole = nil, part = Span!, value = nil, context = {}, stateful = false) =>
     if stateful and type(value) ~= "function"
       error("Event: stateful event values must be of type function")
@@ -71,3 +71,5 @@ export class Event
       table.insert newloc, value
     newContext.locations = newloc
     newContext
+
+return { Event: Event }

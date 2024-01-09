@@ -1,8 +1,8 @@
-require "xi.clock"
-require "xi.pattern"
-require "xi.stream"
+import Clock from require "xi.clock"
+import Stream from require "xi.stream"
+import Event from require "xi.event"
 
-describe "LinkClock", ->
+describe "Clock", ->
   describe "construction", ->
     it "should create with defaults", ->
       clock = Clock!
