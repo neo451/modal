@@ -21,8 +21,8 @@ GenerateTypesString = (msg) ->
 export class Stream
   new:(target = StreamTarget) =>
     @target = target
-    @osc = losc\new({
-      plugin: plugin\new({
+    @osc = losc.new({
+      plugin: plugin.new({
         sendPort: target.port
         sendAddr: target.address 
       })})
@@ -51,14 +51,14 @@ export class Stream
 
       value = event.value
       value.cps = cps
-      value.cycle = cycleOn:asFloat!
+      value.cycle = cycleOn\asFloat!
       value.delta = deltaSeconds
 
       msg = {}
       for key, val in pairs value do
         table.insert msg, key
         table.insert msg, val
-      print "send", utils.dump value
+      -- print "send", dump value
       msg.types = GenerateTypesString msg
       msg.address = "/dirt/play"
 
@@ -67,6 +67,4 @@ export class Stream
       print dump b
 
       @osc\send b
-
-
 

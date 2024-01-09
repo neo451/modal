@@ -42,6 +42,15 @@ describe "Pattern", ->
       actualEvents = patternWithOnsetsOnly\querySpan(0,3)
       assert.are.same { event1 }, actualEvents
 
+    it "pure patterns should not behave like continuous signals... they should have discrete onsets", ->
+      p = pure "bd"
+      patternWithOnsetsOnly = p\onsetsOnly!
+      expectedEvents = { Event Span(0, 1), Span(0, 1), "bd" }
+      actualEvents = patternWithOnsetsOnly\firstCycle!
+      assert.are.same expectedEvents, actualEvents
+      actualEvents = patternWithOnsetsOnly\querySpan(1/16, 1)
+      assert.are.same {}, actualEvents
+
   describe "filterEvents", ->
     it "should return new pattern with events removed based on filter func", ->
       whole1 = Span 1/2, 2
@@ -69,13 +78,16 @@ describe "Pattern", ->
       assert.are.same #expectedEvents, #actualEvents
       assert.are.same expectedEvents, actualEvents
 
-  -- describe "withQuerySpan", ->
-  --   it "should return new pattern with that modifies query span with function when queried", ->
-  --     pat = pure 5
-  --     func = (span) -> Span span._end + 0.5, span._end + 0.5
-  --     newPat = pat\withQuerySpan func
-  --     expectedEvents = { Event Span(0.5, 1.5), Span(0.5, 1.5), 5 }
-  --     assert.are.equal expectedEvents, newPat\firstCycle!
+  describe "withQuerySpan", ->
+    it "should return new pattern with that modifies query span with function when queried", ->
+      pat = pure 5
+      func = (span) -> Span span._begin + 0.5, span._end + 0.5
+      newPat = pat\withQuerySpan func
+      expectedEvents = {
+        Event Span(0, 1), Span(0.5, 1), 5
+        Event Span(1, 2), Span(1, 1.5), 5
+      }
+      assert.are.same expectedEvents, newPat\querySpan 0, 1
 
   describe "splitQueries", ->
     it "should break a query that spans multiple cycles into multiple queries each spanning one cycle", ->
@@ -84,49 +96,40 @@ describe "Pattern", ->
       splitPat = pat\splitQueries!
       expectedEventsPat = { Event Span(0, 2), Span(0, 2), "a" }
       expectedEventsSplit = {
-        Event Span(0, 1), Span(0, 2), "a",
-        Event Span(1, 2), Span(0, 2), "a",
+        Event Span(0, 1), Span(0, 1), "a",
+        Event Span(1, 2), Span(1, 2), "a",
       }
       assert.are.same expectedEventsPat, pat\querySpan 0, 2
       assert.are.same expectedEventsSplit, splitPat\querySpan 0, 2
 
-  -- describe "withQueryTime", ->
-  --   it "should return new pattern whose query function will pass the query timespan through a function before mapping it to events", ->
-  --     pat = pure 5
-  --     add1 = (other) -> other + 1
-  --     newPat = pat\withQueryTime add1
-  --     expectedEvents = { Event Span(1, 2), Span(2, 2), 5 }
-  --     actualEvents = newPat\firstCycle!
-  --     assert.are.same expectedEvents, actualEvents
-  --
-  --
-  -- describe "withEventTime", ->
-  --   it "should return new pattern with function mapped over event times", ->
-  --     pat = pure 5
-  --     func = (time) -> time + 0.5
-  --     newPat = pat\withEventTime func
-  --     expectedEvents = { Event Span(0.5, 1.5), Span(0.5, 1.5), 10 }
-  --     actualEvents = newPat\firstCycle!
-  --     assert.are.same expectedEvents, actualEvents
+  describe "withQueryTime", ->
+    it "should return new pattern whose query function will pass the query timespan through a function before mapping it to events", ->
+      pat = pure 5
+      add1 = (other) -> other + 1
+      newPat = pat\withQueryTime add1
+      expectedEvents = { Event Span(1, 2), Span(1, 2), 5 }
+      actualEvents = newPat\firstCycle!
+      assert.are.same expectedEvents, actualEvents
 
+  describe "withEventTime", ->
+    it "should return new pattern with function mapped over event times", ->
+      pat = pure 5
+      func = (time) -> time + 0.5
+      newPat = pat\withEventTime func
+      expectedEvents = { Event Span(0.5, 1.5), Span(0.5, 1.5), 5 }
+      actualEvents = newPat\firstCycle!
+      assert.are.same expectedEvents, actualEvents
 
-
--- 	-- TODO: what is a more realistic test case than this?
--- 	--describe("outerJoin", ->
--- 	--    it("it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern"
--- 	--        , ->
--- 	--         patOfPats = pure(Fastcat(List({ pure("a"), pure("b") })))
--- 	--         expectedEvents = List({
--- 	--            Event(
--- 	--                Span(0, 1),
--- 	--                Span(0, 1),
--- 	--                "a"
--- 	--            )
--- 	--        })
--- 	--         actualEvents = patOfPats:outerJoin!
--- 	--        assert.are.equal(expectedEvents, actualEvents:queryspan(0, 1))
--- 	--    )
--- 	--)
+-- TODO: what is a more realistic test case than this?
+  describe "outerJoin", ->
+    it "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern" , ->
+      patOfPats = pure(fastcat(pure("a"), pure("b")))
+      expectedEvents = {
+        Event Span(0, 1), Span(0, 1/2), "a"
+        Event Span(0, 1), Span(1/2, 1), "b"
+      }
+      actualEvents = patOfPats\outerJoin!\firstCycle!
+      assert.are.same expectedEvents, actualEvents
 
 -- 	describe("onsetsOnly", ->
 -- 		it("should return only events where the start of the whole equals the start of the part", ->
@@ -149,22 +152,6 @@ describe "Pattern", ->
 -- 			)
 -- 		)
 --
--- 		it("pure patterns should not behave like continuous signals... they should have discrete onsets", ->
--- 			 p = pure("bd")
---
--- 			 patternWithOnsetsOnly = p:onsetsOnly!
--- 			 expectedWhole = Span(Fraction(0), Fraction(1))
--- 			 expectedPart = Span(Fraction(0), Fraction(1))
--- 			 expectedEvent = Event(expectedWhole, expectedPart, "bd")
--- 			 actualEvents = patternWithOnsetsOnly:query(State(Span(Fraction(0), Fraction(1))))
--- 			assert.are.equal(actualEvents, List({ expectedEvent }))
--- 			 querySpan = Span(Fraction(1, 16), Fraction(1))
--- 			 state = State(querySpan)
--- 			assert.are.equal(querySpan, state:span!)
--- 			actualEvents = patternWithOnsetsOnly:query(state)
--- 			assert.are.equal(actualEvents, List({}))
--- 		)
--- 	)
 
   describe "slowcat", ->
     it "should alternate between the patterns in the list, one pattern per cycle", ->
@@ -173,8 +160,7 @@ describe "Pattern", ->
       assert.are.same expectedEventsCycle1, cattedPats\querySpan(0, 1)
       expectedEventsCycle2 = { Event Span(1, 2), Span(1, 2), 2 }
       assert.are.same expectedEventsCycle2, cattedPats\querySpan(1, 2)
-      --HACK: ??? og test different
-      -- expectedEventsCycle3 = { Event Span(0, 1), Span(0, 1), 3 }
+      expectedEventsCycle3 = { Event Span(2, 3), Span(2, 3), 3 }
       -- assert.are.same expectedEventsCycle3, cattedPats\querySpan(2, 3)
       -- assert.are.same expectedEventsCycle1, cattedPats\querySpan(3, 4)
 

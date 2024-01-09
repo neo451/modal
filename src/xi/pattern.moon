@@ -6,6 +6,8 @@ require "xi.state"
 
 require "moon.all"
 
+id = (a) -> a
+
 export class Pattern
   new:(query = -> {}) =>
     @query = query
@@ -25,8 +27,36 @@ export class Pattern
 
   show: => @__tostring!
 
+
+  -- TODO: bind
+  bindWhole: (choose_whole, func) =>
+    print func
+    pat_val = @
+    query = (_, state) ->
+      withWhole = (a, b) ->
+        Event (choose_whole a.whole, b.whole), b.part, b.value --context???
+      match = (a) ->
+        events = func(a.value)\query(state\setSpan a.part)
+        map ((b) -> withWhole a, b), events
+      events = pat_val\query(state)
+      flatten (map ((a) -> match a), events)
+    Pattern query
+
+  outerBind:(func) =>
+    @bindWhole ((a) -> a), func
+
+  outerJoin: =>
+    @outerBind id
+
+  innerBind:(func) =>
+    @bindWhole((_, b) -> b, func)
+
+  innerJoin: => @innerBind id
+
   filterEvents:(func) =>
-    query = (state) -> filter func, @query state
+    query = (_, state) ->
+      events = @query state
+      filter func, events
     Pattern query
 
   splitQueries: =>
@@ -46,6 +76,8 @@ export class Pattern
       map m_func, events
     Pattern query
 
+  fmap:(func) => @withValue(func)
+
   withQuerySpan:(func) =>
     query = (_, state) ->
       new_state = state\withSpan func
@@ -58,10 +90,8 @@ export class Pattern
   --   pattern = query\withEventTime e_func
 
   withQueryTime:(func) =>
-    query = (_, state) ->
-      m_func = (span) -> span\withTime func
-      @query state\withSpan m_func
-    Pattern query
+    @withQuerySpan (span) ->span\withTime func
+
 
   withEventTime:(func) =>
     query = (_, state) ->
@@ -124,8 +154,11 @@ export class Pattern
       silence!
     @fastgap(Fraction(1) / (e - b))\_late(b)
 
-
   -- _patternify:(method) =>
+  --   patterned = (patSelf, ...)
+  --     patArg = sequence ...
+  --     return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
+  --   return patterned
 
 reify = (pat) ->
 	if type(pat) == "pattern"
@@ -133,7 +166,7 @@ reify = (pat) ->
 	-- if Type(pat) == "string"
 	-- 	parser.mini(pat)
 	-- end
-	return pure(pat)
+	pure(pat)
 
 export silence = -> Pattern()
 
@@ -173,5 +206,23 @@ export fastcat = (...) ->
 --- tabke a table of key-value pairs
 -- export timecat = (table) ->
 
-
-
+-- export seq_count = (x) ->
+--   if type(x) == "table"
+--     print "1"
+--     if #x == 1
+--       print "2"
+--       seq_count x[1]
+--     else
+--       print "3"
+--       pats = map sequence, x ---???
+--       fastcat(pats), #x
+--   elseif type(x) == "pattern"
+--     print "4"
+--     x, 1
+--   else
+--     print "5"
+--     pure(x), 1
+--
+-- export sequence = (x) ->
+--   seq, _ = seq_count(x)
+--   seq

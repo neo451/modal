@@ -37,8 +37,8 @@ build = {
 		["xi.clock"] = "src/xi/clock.lua",
 		-- ["xi.pattern_factory"] = "src/xi/pattern_factory.lua",
 		-- ["xi.mini"] = "src/xi/mini/init.lua",
-		-- ["xi.mini.grammar"] = "src/xi/mini/grammar.lua",
-		-- ["xi.mini.visitor"] = "src/xi/mini/visitor.lua",
+		["xi.mini.grammar"] = "src/xi/mini/grammar.lua",
+		["xi.mini.visitor"] = "src/xi/mini/visitor.lua",
 		-- ["xi.mini.interpreter"] = "src/xi/mini/interpreter.lua",
 	},
 	-- install = {

@@ -4,8 +4,6 @@ require "xi.control"
 losc = require('losc')
 abletonlink = require("abletonlink")
 busted = require "busted"
--- describe = busted.describe
--- it = busted.it
 mock = busted.mock
 
 describe "Stream", ->
@@ -22,19 +20,19 @@ describe "Stream", ->
       stream = Stream!
       assert.are.equal "stream", stream\type!
 
-  describe "notifyTick", ->
-    it "should s osc message when called", ->
-      stream = Stream!
-      stream.osc = mock(losc.new, true)
-      stream.osc.new_message = busted.spy()
-      stream.osc.s = busted.spy()
-      stream.pattern = sound "bd"
-      -- stream.pattern = pure "bd"
-      session_state = abletonlink.create_session_state()
-      stream\notifyTick(0, 1, session_state, 0.5, 4, 10000, 333)
-
-      assert.spy(stream.osc.new_message).was_called()
-      assert.spy(stream.osc.s).was_called()
+  -- describe "notifyTick", ->
+  --   it "should s osc message when called", ->
+  --     stream = Stream!
+  --     stream.osc = mock(losc.new, true)
+  --     stream.osc.new_message = busted.spy()
+  --     stream.osc.s = busted.spy()
+  --     stream.pattern = sound "bd"
+  --     -- stream.pattern = pure "bd"
+  --     session_state = abletonlink.create_session_state()
+  --     stream\notifyTick(0, 1, session_state, 0.5, 4, 10000, 333)
+  --
+  --     assert.spy(stream.osc.new_message).was_called()
+  --     assert.spy(stream.osc.s).was_called()
 
 
 

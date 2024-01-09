@@ -31,7 +31,7 @@ export class Clock
   unsubscribe:(subscriber) =>
     position
     for i, sub in pairs @subscribers
-      p type sub
+      -- p type sub
       if sub == subscriber
         position = i
     if position != nil
