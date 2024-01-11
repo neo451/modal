@@ -5,7 +5,7 @@ utils = {}
 
 tsize = (t) ->
   size = 0
-  for _ in pairs(t) 
+  for _ in pairs(t)
     size = size + 1
   size
 
@@ -39,19 +39,43 @@ utils.filter = (func, table) -> totable filter func, table
 
 utils.map = (func, table) -> totable map func, table
 
-utils.reduce = (func, init, table) -> reduce func, init, table
-
 -- TODO: work on this more
 utils.dump = (o) ->
-    if utils.type(o) == 'table' then
+    if type(o) == 'table' then
         s = '{\n'
         for k, v in pairs o
-            if utils.type(k) ~= 'number' then k = '"' .. k .. '"'
+            if type(k) ~= 'number' then k = '"' .. k .. '"'
             s = s .. '  [' .. k .. '] = ' .. utils.dump(v) .. ',\n'
         return s .. '} '
     else
         return tostring(o)
 
 utils.id = (x) -> x
+
+utils.pipe = (...) ->
+  funcs = { ... }
+  reduce ((f, g) -> (...) -> f(g(...))), id, funcs
+
+-- test
+utils.curry = (func, num_args) ->
+  num_args = num_args or 2
+
+  if num_args <= 1
+    return func
+
+  curry_h = (argtrace, n) ->
+    if 0 == n
+      return func utils.reverse argtrace!
+    else
+      return (onearg) -> curry_h((-> onearg, argtrace!), n - 1)
+  return curry_h(->, num_args)
+
+utils.reverse = (...) ->
+	reverse_h = (acc, v, ...) ->
+		if 0 == select("#", ...) then
+			return v, acc()
+		else
+			return reverse_h (-> v, acc()), ...
+	return reverse_h(->, ...)
 
 return utils

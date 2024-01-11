@@ -1,6 +1,4 @@
-
-
-export class Visitor
+class Visitor
   visit: (node) =>
     type = node[1]
     method = @[type]
@@ -45,6 +43,77 @@ export class Visitor
       { type: "random_sequence", elements: n_seq }
     group
 
+  group:(_, children) =>
+    { elements, other_elements } = children
+    n_elements = { elements }
+    if other_elements != ""
+      for item in *other_elements
+        n_elements[#n_elements + 1] = item
+    { type: "sequence", elements: n_elements }
+
+  other:(_, children) => children or "" -- TODO: better way to do this?
+
+  element:(_, children) =>
+    { value, eculid_modifiers, modifiers, e_weight } = children
+    weight_mods, n_mods = {}, {}
+    for mod in *modifiers
+      if mod.op == "weight"
+        table.insert weight_mods, mod
+      else
+        table.insert n_mods, mod
+    weight_mod = weight_mods[1] or { type = "modifier", op = "weight", value = e_weight }
+    if weight_mod.value ~= 1
+      table.insert n_mods, weight_mod
+    { type: "element", value: value, modifiers: n_mods, euclid_modifiers: eculid_modifiers }
+
+  polyrhythm_subseq:(_, children) =>
+    { type: "polyrhythm", seqs: children[1] }
+
+  polymeter_subseq:(_, children) =>
+    { seqs, steps } = children
+    { type: "polymeter", seqs: seqs, steps: steps or 1 }
+
+  polymeter_steps:(_, children) => children[1]
+
+  polymeter1_subseq:(_, children) =>
+    { type: "polymeter", seqs: children[1], steps: 1 }
+
+  subseq_body:(_, children) =>
+    { seq, other_seqs } = children
+    n_subseqs = { seq }
+    if other_seqs != ""
+      for item in *other_seqs
+        table.insert n_subseqs, item
+    return n_subseqs
+
+  elongate:(node, _) => #node / 2 + 1
+
+  element_value:(_, children) => children[1]
+  
+  term:(_, children) =>
+    if type(children[1]) == "number" then
+      return { type: "number", value: children[1] }
+    children[1]
+
+  rest:(_, _) => { type = "rest" }
+
+  word_with_index:(_, children) =>
+    { word, index } = children
+    { type: "word", value: word, index: index or 0 }
+
+  index:(_, children) => children[1]
+
+  euclid_modifier:(_, children) =>
+    if children == "" then
+      return
+    { k, n, rotation } = children
+    if k ~= nil and n ~= nil
+      return { type: "euclid_modifier", k: k, n: n, rotation: rotation }
+	
+  euclid_rotation_param: (_, children) => children[1]
+
+  -- TODO: modifiers
+
   modifier:(_, children) => children[1]
 
   fast:(_, children) => { type: "modifier", op: "fast", value: children[1] }
@@ -82,3 +151,5 @@ export class Visitor
   pos_integer:(node, _) => tonumber node[2]
 
   pos_real:(node, _) => tonumber node[2]
+
+return { Visitor: Visitor }
