@@ -1,6 +1,10 @@
-require("xi.mini.visitor")
+require "xi.mini.visitor"
+require "xi.mini.interpreter"
+import Span from require "xi.span"
+import pure, silence, fastcat from require "xi.pattern"
 
-same = (name) -> assert.same(visitor_targets[name], Parse_mini(name))
+same = (name) -> assert.same visitor_targets[name], Parse_mini name
+eval = (name) -> assert.same interpreter_targets[name], Mini name
 
 describe "Mini Parser for", ->
   describe "numbers", ->
@@ -74,55 +78,74 @@ describe "Mini Parser for", ->
     it "should pass", ->
       same "bd | sd cp"
 
+describe "Mini Interpreter for", ->
+  describe "numbers", ->
+    it "should pass", ->
+      eval "45"
+      eval "-2."
+      eval "4.64"
+      eval "-3"
 
-eval = (input, query_span, expected_pat) ->
-	pat = Mini input
-	span = query_span or TimeSpan:new 0, 1
-	assert.same(expected_pat, pat.query span)
+  describe "words", ->
+    it "should pass", ->
+      eval "foo"
+      -- same "Bar:2"
+      eval "Bar"
 
-interpreter_targets = {
-	-- { "45", nil, Pure 45 },
-	-- 	{ "-2.", nil, Pure(-2.0) },
-	-- 	{ "4.64", nil, Pure(4.64) },
-	-- 	{ "-3", nil, Pure(-3) },
-	-- 	-- words
-	-- 	{ "foo", nil, Pure("foo") },
-	-- 	{ "Bar", nil, Pure("Bar") },
-	-- 	-- rest
-	-- 	{ "~", nil, Silence() },
-	-- 	-- modifiers
-	-- 	{ "bd*2", nil, Fast(2, "bd") },
-	-- 	{ "bd/3", nil, Slow(3, "bd") },
-	-- 	{ "hh?", nil, Degrade("hh") },
-	-- 	{ "hh??", nil, Degrade(Degrade("hh")) },
-	-- 	{
-	-- 		"hh!!??",
-	-- 		nil,
-	-- 		Degrade({ Degrade(Fastcat({ "hh", "hh", "hh" })) }),
-	-- 	},
-	-- 	-- sequences
-	-- 	{ "bd sd", nil, Fastcat({ "bd", "sd" }) },
-	-- 	{ "bd hh sd", nil, Fastcat({ "bd", "hh", "sd" }) },
-	-- 	{ "hh@2", nil, Pure("hh") },
-	-- 	{ "bd hh@2", nil, Timecat({ { 1, "bd" }, { 2, "hh" } }) },
-	-- 	{ "bd hh@3 sd@2", nil, Timecat({ { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }) },
-	-- 	{ "hh!", nil, Fastcat({ "hh", "hh" }) },
-	-- 	{ "hh!!", nil, Fastcat({ "hh", "hh", "hh" }) },
-	-- 	{ "bd! cp", nil, Fastcat({ "bd", "bd", "cp" }) },
-	-- 	{
-	-- 		"bd! hh? ~ sd/2 cp*3",
-	-- 		nil,
-	-- 		Timecat({
-	-- 			{ 1, "bd" },
-	-- 			{ 1, "bd" },
-	-- 			{ 1, Degrade("hh") },
-	-- 			{ 1, Silence() },
-	-- 			{ 1, Slow(2, "sd") },
-	-- 			{ 1, Fast(3, "cp") },
-	-- 			{ 1, Fast(3, "cp") },
-	-- 			{ 1, Fast(3, "cp") },
-	-- 		}),
-	-- 	},
+  describe "rests", ->
+    it "should pass", ->
+      eval "~"
+
+  describe "sequences", ->
+    it "should pass", ->
+      eval "bd sd"
+      eval "bd hh sd"
+
+export interpreter_targets = {
+  -- numbers
+  "45": pure 45
+  "-2.": pure -2.0
+  "4.64": pure 4.64
+  "-3": pure -3
+  -- word
+  "foo": pure "foo"
+  "Bar": pure "Bar"
+  -- rest
+  "~": silence!
+  -- modifiers
+  --TODO
+  -- "bd*2": fast 2, "bd"
+  -- "bd/3": slow 3, "bd"
+  -- 	{ "hh?", nil, Degrade("hh") },
+  -- 	{ "hh??", nil, Degrade(Degrade("hh")) },
+  -- 	{
+  -- 		"hh!!??",
+  -- 		nil,
+  -- 		Degrade({ Degrade(Fastcat({ "hh", "hh", "hh" })) }),
+  -- 	},
+  -- sequences
+  "bd sd": fastcat "bd", "sd"
+  "bd hh sd": fastcat "bd", "hh", "sd"
+  -- 	{ "hh@2", nil, Pure("hh") },
+  -- 	{ "bd hh@2", nil, Timecat({ { 1, "bd" }, { 2, "hh" } }) },
+  -- 	{ "bd hh@3 sd@2", nil, Timecat({ { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }) },
+  -- "hh!": fastcat("hh", "hh")
+  -- "hh!!": fastcat("hh", "hh", "hh")
+  -- "bd! cp": fastcat("bd", "bd", "cp")
+  -- 	{
+  -- 		"bd! hh? ~ sd/2 cp*3",
+  -- 		nil,
+  -- 		Timecat({
+  -- 			{ 1, "bd" },
+  -- 			{ 1, "bd" },
+  -- 			{ 1, Degrade("hh") },
+  -- 			{ 1, Silence() },
+  -- 			{ 1, Slow(2, "sd") },
+  -- 			{ 1, Fast(3, "cp") },
+  -- 			{ 1, Fast(3, "cp") },
+  -- 			{ 1, Fast(3, "cp") },
+  -- 		}),
+  -- 	},
 }
 
 export visitor_targets = {

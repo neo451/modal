@@ -3,6 +3,9 @@ import Span from require "xi.span"
 import Fraction from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
+
+P = {}
+
 -- TODO: maybe rename m_func
 -- TODO: do patternify the strudel & tidal way
 class Pattern
@@ -106,7 +109,7 @@ class Pattern
   --         return nil
   --       return Event whole_func(event_func.value, event_val.value), s, event_val.value -- TODO: combineContext
   --     func = (event_func) -> map ((event_val) -> apply event_funcs, event_val), event_vals
-  --     -- vals = removenils vals --TODO
+  --     -- vals = removenils vals --TODO:
   --     funcs = map func, event_funcs
   --     return flatten funcs
   --   Pattern query
@@ -126,7 +129,7 @@ class Pattern
       factor = Fraction(factor)
 
     if factor <= Fraction(0)
-      silence!
+      P.silence!
 
     factor = factor\max(1)
 
@@ -154,7 +157,7 @@ class Pattern
     if type(b) != "fraction" and type(e) != "fraction"
       b, e = Fraction(b), Fraction(e)
     if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
-      silence!
+      P.silence!
     @fastgap(Fraction(1) / (e - b))\_late(b)
 
   -- _patternify:(method) =>
@@ -163,9 +166,9 @@ class Pattern
   --     return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
   --   return patterned
 
-export silence = -> Pattern()
+P.silence = -> Pattern!
 
-pure = (value) ->
+P.pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
     m_func = (span) ->
@@ -174,30 +177,34 @@ pure = (value) ->
     map m_func, cycles
   Pattern query
 
-reify = (pat) ->
+P.reify = (pat) ->
   if type(pat) == "pattern"
     return pat
   -- if Type(pat) == "string"
   -- 	parser.mini(pat)
   -- end
-  pure pat
+  P.pure pat
 
-stack = (...) ->
+P.stack = (...) ->
   pats = ...
   if type(pats) == "table"
     pats = ...
   else
     pats = { ... }
-  pats = map reify, pats
+  pats = map P.reify, pats
   query = (state) =>
     events = map ((pat) -> pat\query state), pats
     flatten events
   Pattern query
 
 -- is prime
-slowcat = (...) ->
-  pats = { ... }
-  pats = map reify, pats
+P.slowcat = (...) ->
+  pats = ...
+  if type(pats) == "table"
+    pats = ...
+  else
+    pats = { ... }
+  pats = map P.reify, pats
   query = (state) =>
     len = #pats
     index = state.span._begin\sam!\asFloat! % len + 1
@@ -205,12 +212,18 @@ slowcat = (...) ->
     pat\query state
   Pattern(query)\splitQueries!
 
-fastcat = (...) ->
-  pats = { ... }
-  pats = map reify, pats
-  slowcat(...)\_fast(#pats)
+-- TODO:ABSTRACT tablize
+-- HACK: is passing floats around a good idea?
+P.fastcat = (...) ->
+  pats = ...
+  if type(pats) == "table"
+    pats = ...
+  else
+    pats = { ... }
+  pats = map P.reify, pats
+  P.slowcat(...)\_fast(#pats)
 
-timecat = (time_pat_tuples) ->
+P.timecat = (time_pat_tuples) ->
   tuples, arranged = {}, {}
   accum, total = 0, 0
   for tup in *time_pat_tuples
@@ -220,7 +233,7 @@ timecat = (time_pat_tuples) ->
 
   for tup in *tuples
     { time, pat } = tup
-    table.insert arranged, { accum / total, accum + time / total, reify(pat) }
+    table.insert arranged, { accum / total, (accum + time) / total, P.reify(pat) }
     accum = accum + time
 
   n_pats = {}
@@ -228,7 +241,7 @@ timecat = (time_pat_tuples) ->
     { b, e, pat } = tab
     table.insert n_pats, pat\compress(b, e)
 
-  stack(n_pats)
+  P.statck(n_pats)
 
 -- export seq_count = (x) ->
 --   if type(x) == "table"
@@ -239,25 +252,20 @@ timecat = (time_pat_tuples) ->
 --     else
 --       print "3"
 --       pats = map sequence, x ---???
---       fastcat(pats), #x
+--       P.fastcat(pats), #x
 --   elseif type(x) == "pattern"
 --     print "4"
 --     x, 1
 --   else
 --     print "5"
---     pure(x), 1
+--     M.pure(x), 1
 --
 -- export sequence = (x) ->
 --   seq, _ = seq_count(x)
 --   seq
 
-return {
-  Pattern: Pattern
-  reify: reify
-  silence: silence
-  pure: pure
-  stack: stack
-  slowcat: slowcat
-  fastcat: fastcat
-  timecat: timecat
-}
+P.fast = (arg, pat): P.reify(pat)\_fast(arg) --TODO: use patternified version later
+P.slow = (arg, pat): P.reify(pat)\_slow(arg) --TODO: use patternified version later
+P.Pattern = Pattern
+
+return P
