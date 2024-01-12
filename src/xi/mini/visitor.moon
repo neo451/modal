@@ -1,3 +1,5 @@
+require "xi.mini.grammar"
+
 class Visitor
   visit: (node) =>
     type = node[1]
@@ -7,7 +9,7 @@ class Visitor
       for i = 3, #node
         children[#children + 1] = node[i]
       for i, subnode in pairs(children)
-        children[i] = self:visit(subnode)
+        children[i] = @visit(subnode)
       method(self, node, children)
     else
       method(self, node, "")
@@ -18,7 +20,7 @@ class Visitor
     { group, other_groups, other_seqs } = children
 
     if other_groups != ""
-      elements: {
+      elements = {
         {
           type: "element",
           value: { type: "polyrhythm", seqs: { group } },
@@ -37,10 +39,10 @@ class Visitor
       group = { type: "sequence", elements: elements }
 
     if other_seqs != "" then
-      n_seq: { group }
+      n_seq = { group }
       for item in *other_seqs
         n_seq[#n_seq + 1] = item
-      { type: "random_sequence", elements: n_seq }
+      return { type: "random_sequence", elements: n_seq }
     group
 
   group:(_, children) =>
@@ -54,17 +56,17 @@ class Visitor
   other:(_, children) => children or "" -- TODO: better way to do this?
 
   element:(_, children) =>
-    { value, eculid_modifiers, modifiers, e_weight } = children
+    { value, eculid_modifier, modifiers, elongate } = children
     weight_mods, n_mods = {}, {}
     for mod in *modifiers
       if mod.op == "weight"
         table.insert weight_mods, mod
       else
         table.insert n_mods, mod
-    weight_mod = weight_mods[1] or { type = "modifier", op = "weight", value = e_weight }
+    weight_mod = weight_mods[1] or { type: "modifier", op: "weight", value: elongate }
     if weight_mod.value ~= 1
       table.insert n_mods, weight_mod
-    { type: "element", value: value, modifiers: n_mods, euclid_modifiers: eculid_modifiers }
+    { type: "element", value: value, modifiers: n_mods, euclid_modifier: eculid_modifier }
 
   polyrhythm_subseq:(_, children) =>
     { type: "polyrhythm", seqs: children[1] }
@@ -86,16 +88,16 @@ class Visitor
         table.insert n_subseqs, item
     return n_subseqs
 
-  elongate:(node, _) => #node / 2 + 1
+  elongate:(node, _) => #node[2] / 2 + 1
 
   element_value:(_, children) => children[1]
-  
+
   term:(_, children) =>
     if type(children[1]) == "number" then
       return { type: "number", value: children[1] }
     children[1]
 
-  rest:(_, _) => { type = "rest" }
+  rest:(_, _) => { type: "rest" }
 
   word_with_index:(_, children) =>
     { word, index } = children
@@ -112,7 +114,33 @@ class Visitor
 	
   euclid_rotation_param: (_, children) => children[1]
 
-  -- TODO: modifiers
+  modifiers:(_, children) =>
+    if children == ""
+      return {}
+    mods, degrade_mods, weight_mods = {}, {}, {}
+    count_deg_mods, value_deg_mods = {}, {}
+    for mod in *children
+      if mod.op == "degrade"
+        table.insert degrade_mods, mod
+      elseif mod.op == "weight"
+        table.insert weight_mods, mod
+      else
+        table.insert mods, mod
+    if #degrade_mods > 0
+      for mod in *degrade_mods
+        if mod.value.op == "count"
+          table.insert count_deg_mods, mod
+        else
+          table.insert value_deg_mods, mod
+    if #value_deg_mods > 0
+      table.insert mods, value_deg_mods[#value_deg_mods]
+    elseif #count_deg_mods > 0
+      sum = 0
+      for mod in *count_deg_mods
+        sum = sum + mod.value.value
+      table.insert mods, { type: "modifier", op: "degrade", value: { type: "degrade_arg", op: "count", value: sum } }
+    table.insert mods, weight_mods[#weight_mods]
+    return mods
 
   modifier:(_, children) => children[1]
 
@@ -151,5 +179,9 @@ class Visitor
   pos_integer:(node, _) => tonumber node[2]
 
   pos_real:(node, _) => tonumber node[2]
+
+export Parse_mini = (code) ->
+	raw_ast = Parse code
+	Visitor\visit raw_ast
 
 return { Visitor: Visitor }

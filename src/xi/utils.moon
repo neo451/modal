@@ -71,11 +71,11 @@ utils.curry = (func, num_args) ->
   return curry_h(->, num_args)
 
 utils.reverse = (...) ->
-	reverse_h = (acc, v, ...) ->
-		if 0 == select("#", ...) then
-			return v, acc()
-		else
-			return reverse_h (-> v, acc()), ...
-	return reverse_h(->, ...)
+  reverse_h = (acc, v, ...) ->
+    if 0 == select("#", ...) then
+      return v, acc()
+    else
+      return reverse_h (-> v, acc()), ...
+  return reverse_h(->, ...)
 
 return utils

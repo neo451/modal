@@ -24,6 +24,8 @@ class Pattern
 
   show: => @__tostring!
 
+  __eq: (other) => @show! == other\show!
+
   bindWhole: (choose_whole, func) =>
     print func
     pat_val = @
@@ -94,6 +96,21 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
+  -- appWhole:(whole_func, pat_val) =>
+  --   query = (_, state) ->
+  --     event_funcs = @query(state)
+  --     event_vals = pat_val\query(state)
+  --     apply = (event_func, event_val) ->
+  --       s = event_func.part.sect(event_val.part)
+  --       if s == nil
+  --         return nil
+  --       return Event whole_func(event_func.value, event_val.value), s, event_val.value -- TODO: combineContext
+  --     func = (event_func) -> map ((event_val) -> apply event_funcs, event_val), event_vals
+  --     -- vals = removenils vals --TODO
+  --     funcs = map func, event_funcs
+  --     return flatten funcs
+  --   Pattern query
+
   _fast:(factor) => @withTime ((t) -> t * factor), ((t) -> t / factor)
 
   -- offset might be fraction?
@@ -146,7 +163,7 @@ class Pattern
   --     return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
   --   return patterned
 
-silence = -> Pattern()
+export silence = -> Pattern()
 
 pure = (value) ->
   query = (state) =>
@@ -166,10 +183,14 @@ reify = (pat) ->
   pure pat
 
 stack = (...) ->
-  pats = { ... }
+  pats = ...
+  if type(pats) == "table"
+    pats = ...
+  else
+    pats = { ... }
   pats = map reify, pats
   query = (state) =>
-    events = map (pat) -> pat\query state, pats
+    events = map ((pat) -> pat\query state), pats
     flatten events
   Pattern query
 
@@ -189,8 +210,25 @@ fastcat = (...) ->
   pats = map reify, pats
   slowcat(...)\_fast(#pats)
 
---- tabke a table of key-value pairs
--- export timecat = (table) ->
+timecat = (time_pat_tuples) ->
+  tuples, arranged = {}, {}
+  accum, total = 0, 0
+  for tup in *time_pat_tuples
+    { time, pat } = tup
+    table.insert tuples, { time, pat }
+    total = total + time
+
+  for tup in *tuples
+    { time, pat } = tup
+    table.insert arranged, { accum / total, accum + time / total, reify(pat) }
+    accum = accum + time
+
+  n_pats = {}
+  for tab in *arranged
+    { b, e, pat } = tab
+    table.insert n_pats, pat\compress(b, e)
+
+  stack(n_pats)
 
 -- export seq_count = (x) ->
 --   if type(x) == "table"
@@ -221,7 +259,5 @@ return {
   stack: stack
   slowcat: slowcat
   fastcat: fastcat
-  -- timecat: timecat
-  -- seq_count: seq_count
-  -- sequence: sequence
-  }
+  timecat: timecat
+}

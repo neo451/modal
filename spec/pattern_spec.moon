@@ -2,7 +2,7 @@ import Span from require "xi.span"
 import Fraction from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
-import Pattern, pure, stack, slowcat, fastcat from require "xi.pattern"
+import Pattern, pure, stack, slowcat, fastcat, timecat from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -221,74 +221,26 @@ describe "Pattern", ->
       assert.are.same expectedEvents, actualEvents
 
 
--- 	describe("timecat", ->
--- 		it("should return a pattern based one the time-pat 'tuples' passed in", ->
--- 			 actualEvents = Timecat({ { 3, pure("bd"):fast(4) }, { 1, pure("hh"):fast(8) } }):firstCycle!
--- 			 expectedEvents = List({
--- 				Event(
--- 					Span(Fraction(0), Fraction(3, 16)),
--- 					Span(Fraction(0), Fraction(3, 16)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(3, 16), Fraction(3, 8)),
--- 					Span(Fraction(3, 16), Fraction(3, 8)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(3, 8), Fraction(9, 16)),
--- 					Span(Fraction(3, 8), Fraction(9, 16)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(9, 16), Fraction(3, 4)),
--- 					Span(Fraction(9, 16), Fraction(3, 4)),
--- 					"bd"
--- 				),
--- 				Event(
--- 					Span(Fraction(3, 4), Fraction(25, 32)),
--- 					Span(Fraction(3, 4), Fraction(25, 32)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(25, 32), Fraction(13, 16)),
--- 					Span(Fraction(25, 32), Fraction(13, 16)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(13, 16), Fraction(27, 32)),
--- 					Span(Fraction(13, 16), Fraction(27, 32)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(27, 32), Fraction(7, 8)),
--- 					Span(Fraction(27, 32), Fraction(7, 8)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(7, 8), Fraction(29, 32)),
--- 					Span(Fraction(7, 8), Fraction(29, 32)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(29, 32), Fraction(15, 16)),
--- 					Span(Fraction(29, 32), Fraction(15, 16)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(15, 16), Fraction(31, 32)),
--- 					Span(Fraction(15, 16), Fraction(31, 32)),
--- 					"hh"
--- 				),
--- 				Event(
--- 					Span(Fraction(31, 32), Fraction(1)),
--- 					Span(Fraction(31, 32), Fraction(1)),
--- 					"hh"
--- 				),
--- 			})
--- 			assert.are.same(expectedEvents, actualEvents)
--- 		)
--- 	)
+	describe("timecat", ->
+    it("should return a pattern based one the time-pat 'tuples' passed in", ->
+      actualEvents = timecat({ { 3, pure("bd")\_fast(4) }, { 1, pure("hh")\_fast(8) } })\firstCycle!
+      expectedEvents = {
+        Event(Span(0, (3 / 16)), Span(0, (3 / 16)), "bd"),
+        Event(Span((3 / 16), 3 / 8), Span((3 / 16), 3 / 8), "bd"),
+        Event(Span(3 / 8, (9 / 16)), Span(3 / 8, (9 / 16)), "bd"),
+        Event(Span((9 / 16), 3 / 4), Span((9 / 16), 3 / 4), "bd"),
+        Event(Span(3 / 4, (25 / 32)), Span(3 / 4, (25 / 32)), "hh"),
+        Event(Span((25 / 32), (13 / 16)), Span((25 / 32), (13 / 16)), "hh"),
+        Event(Span((13 / 16), (27 / 32)), Span((13 / 16), (27 / 32)), "hh"),
+        Event(Span((27 / 32), 7 / 8), Span((27 / 32), 7 / 8), "hh"),
+        Event(Span(7 / 8, (29 / 32)), Span(7 / 8, (29 / 32)), "hh"),
+        Event(Span((29 / 32), (15 / 16)), Span((29 / 32), (15 / 16)), "hh"),
+        Event(Span((15 / 16), (31 / 32)), Span((15 / 16), (31 / 32)), "hh"),
+        Event(Span((31 / 32), 1), Span((31 / 32), 1), "hh"),
+       }
+			assert.are.same(expectedEvents, actualEvents)
+		)
+	)
 -- 	-- def test_choose_cycles!:
 -- 	--   assert choose_cycles("bd", "sd", "hh").query(Span(0, 10)) == [
 -- 	--       Event(Span(0, 1), Span(0, 1), "bd"),
