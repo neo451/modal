@@ -241,7 +241,7 @@ P.timecat = (time_pat_tuples) ->
     { b, e, pat } = tab
     table.insert n_pats, pat\compress(b, e)
 
-  P.statck(n_pats)
+  P.stack(n_pats)
 
 -- export seq_count = (x) ->
 --   if type(x) == "table"
@@ -264,8 +264,8 @@ P.timecat = (time_pat_tuples) ->
 --   seq, _ = seq_count(x)
 --   seq
 
-P.fast = (arg, pat): P.reify(pat)\_fast(arg) --TODO: use patternified version later
-P.slow = (arg, pat): P.reify(pat)\_slow(arg) --TODO: use patternified version later
+P.fast = (arg, pat) -> P.reify(pat)\_fast(arg) --TODO: use patternified version later
+P.slow = (arg, pat) -> P.reify(pat)\_slow(arg) --TODO: use patternified version later
 P.Pattern = Pattern
 
 return P

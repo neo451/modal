@@ -1,7 +1,6 @@
 import Pattern, fastcat, timecat, pure, silence from require "xi.pattern"
-import type, dump, map from require "xi.utils"
+import type, dump, map, flatten from require "xi.utils"
 require "xi.mini.visitor"
--- type to tag
 
 class Interpreter
   eval:(node) =>
@@ -23,21 +22,41 @@ class Interpreter
     return timecat tc_args
 
   element:(node) =>
-    modifiers = {}
+    modifiers = [ @eval(mod) for mod in *node.modifiers ]
     pat = @eval(node.value)
     values = { { 1, pat, 0 } }
+
+    for modifier in *modifiers
+      -- values = flatten [ modifier(v) for v in *values ]
+      values = modifier(values[1])
+
     return values
 
-  modifiers:(node) =>
+  modifier:(node) =>
+    -- param = @_sequence_elements({ node.value })
+    switch node.op
+      when "fast"
+        param = node.value.value.value --HACK: tmp fix, no patternify at the moment
+        return (w_p) -> { { w_p[1], w_p[2]\_fast(param), w_p[3] } }
+      when "slow"
+        param = node.value.value.value --HACK: tmp fix, no patternify at the moment
+        return (w_p) -> { { w_p[1], w_p[2]\_slow(param), w_p[3] } }
+      when "repeat"
+        return (w_p) -> [ w_p for i = 1, node.count + 1 ]
+      when "weight"
+        return (w_p) -> { { node.value, w_p[2], w_p[3] }}
+    return id --?
 
-  number:(node) => pure(node.value)
+
+  number:(node) => pure node.value
 
   -- TODO: if index
   word:(node) =>
-    pure(node.value)
+    pure node.value
 
   rest:(node) => silence!
 
 export Mini = (source) ->
-  ast = Parse_mini(source)
-  return Interpreter\eval(ast)
+  ast = Parse_mini source
+  return Interpreter\eval ast
+

@@ -1,5 +1,6 @@
 require "xi.mini.grammar"
 
+-- TODO: type to tag?
 class Visitor
   visit: (node) =>
     type = node[1]
