@@ -1,5 +1,5 @@
 import Pattern, fastcat, timecat, pure, silence from require "xi.pattern"
-import type, dump, map, flatten from require "xi.utils"
+import type, dump, map, flatten, id from require "xi.utils"
 require "xi.mini.visitor"
 
 class Interpreter
@@ -56,7 +56,5 @@ class Interpreter
 
   rest:(node) => silence!
 
-export Mini = (source) ->
-  ast = Parse_mini source
-  return Interpreter\eval ast
 
+return { Interpreter: Interpreter }

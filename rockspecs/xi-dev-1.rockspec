@@ -21,6 +21,7 @@ dependencies = {
 	"ldoc >= 1.0.1-1",
 	"moonscript >= 0.5.0-1",
 	"fun >= 0.1.3-1",
+	"bitop-lua >= 1.0.0", --??? what about 5.3 5.4
 }
 build = {
 	type = "builtin",
@@ -36,10 +37,10 @@ build = {
 		["xi.control"] = "src/xi/control.lua",
 		["xi.clock"] = "src/xi/clock.lua",
 		-- ["xi.pattern_factory"] = "src/xi/pattern_factory.lua",
-		-- ["xi.mini"] = "src/xi/mini/init.lua",
+		["xi.mini"] = "src/xi/mini/init.lua",
 		["xi.mini.grammar"] = "src/xi/mini/grammar.lua",
 		["xi.mini.visitor"] = "src/xi/mini/visitor.lua",
-		-- ["xi.mini.interpreter"] = "src/xi/mini/interpreter.lua",
+		["xi.mini.interpreter"] = "src/xi/mini/interpreter.lua",
 	},
 	-- install = {
 	--    bin = {"bin/xi"}

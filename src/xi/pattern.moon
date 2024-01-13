@@ -3,6 +3,9 @@ import Span from require "xi.span"
 import Fraction from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
+-- import mini from require "xi.mini.interpreter"
+
+bit = require "bitop.funcs"
 
 P = {}
 
@@ -99,22 +102,15 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
-  -- appWhole:(whole_func, pat_val) =>
-  --   query = (_, state) ->
-  --     event_funcs = @query(state)
-  --     event_vals = pat_val\query(state)
-  --     apply = (event_func, event_val) ->
-  --       s = event_func.part.sect(event_val.part)
-  --       if s == nil
-  --         return nil
-  --       return Event whole_func(event_func.value, event_val.value), s, event_val.value -- TODO: combineContext
-  --     func = (event_func) -> map ((event_val) -> apply event_funcs, event_val), event_vals
-  --     -- vals = removenils vals --TODO:
-  --     funcs = map func, event_funcs
-  --     return flatten funcs
-  --   Pattern query
+  _patternify:(method) =>
+    patterned = (patSelf, ...) ->
+      patArg = sequence ...
+      return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
+    return patterned
 
   _fast:(factor) => @withTime ((t) -> t * factor), ((t) -> t / factor)
+
+  -- fast: => Pattern\_patternify((patSelf, val) -> patSelf\_fast(val))
 
   -- offset might be fraction?
   _early:(offset) => @withTime ((t) -> t + offset), ((t) -> t - offset)
@@ -160,11 +156,49 @@ class Pattern
       P.silence!
     @fastgap(Fraction(1) / (e - b))\_late(b)
 
-  -- _patternify:(method) =>
-  --   patterned = (patSelf, ...)
-  --     patArg = sequence ...
-  --     return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
-  --   return patterned
+  degrade_by:(by, prand = nil) =>
+    if by == 0
+      return @
+    if not prand
+      prand = P.rand!
+    return @fmap((val) -> (_) -> val)\appLeft(prand\_filter_values((v) -> v > by))
+
+  -- TODO: tests for this
+  appLeft:(pat_val) =>
+    query = (_, state) ->
+      events = {}
+      event_funcs = @query state
+      for event_func in *event_funcs
+        whole = event_func\wholeOrPart!
+        event_vals = pat_val\querySpan(whole._begin, whole._end)
+        for event_val in *event_vals
+          new_whole = event_func.whole
+          new_part = event_func.part\sect event_val.part
+          if new_part ~= nil
+            new_value = event_func.value event_val.value
+            print new_whole
+            table.insert events, Event new_whole, new_part, new_value
+      return events
+    Pattern query
+
+  appRight:(pat_val) =>
+    query = (_, state) ->
+      events = {}
+      event_vals = pat_val\query state
+      for event_val in *event_vals
+        -- HACK: tmp hack? or is this the better solution?
+        whole = event_val\wholeOrPart!
+        event_funcs = @querySpan(whole._begin, whole._end)
+        event_val\wholeOrPart!
+        for event_func in *event_funcs
+          new_whole = event_val.whole
+          new_part = event_func.part\sect event_val.part
+          if new_part ~= nil
+            new_value = event_func.value event_val.value
+            -- context
+            table.insert events, Event new_whole, new_part, new_value
+        return events
+    Pattern query
 
 P.silence = -> Pattern!
 
@@ -180,9 +214,8 @@ P.pure = (value) ->
 P.reify = (pat) ->
   if type(pat) == "pattern"
     return pat
-  -- if Type(pat) == "string"
-  -- 	parser.mini(pat)
-  -- end
+  -- if type(pat) == "string"
+  -- 	return mini pat
   P.pure pat
 
 P.stack = (...) ->
@@ -243,29 +276,58 @@ P.timecat = (time_pat_tuples) ->
 
   P.stack(n_pats)
 
--- export seq_count = (x) ->
---   if type(x) == "table"
---     print "1"
---     if #x == 1
---       print "2"
---       seq_count x[1]
---     else
---       print "3"
---       pats = map sequence, x ---???
---       P.fastcat(pats), #x
---   elseif type(x) == "pattern"
---     print "4"
---     x, 1
---   else
---     print "5"
---     M.pure(x), 1
---
--- export sequence = (x) ->
---   seq, _ = seq_count(x)
---   seq
+signal = (func) ->
+  query = (state) =>
+    return Event nil, state.span, func(state.span\midpoint!)
+  Pattern query
+
+xorwise = (x) ->
+  a = bit.bxor((bit.lshift(x,13)), x)
+  b = bit.bxor((bit.rshift(a,17)), a)
+  bit.bxor((bit.lshift(b,5)), b)
+
+_frac = (x) -> x - math.floor x
+
+timeToIntSeed = (x) -> 
+  xorwise math.floor (_frac(x\asFloat! / 300) * 536870912)
+
+-- output a bit differnet than strudel??
+intSeedToRand = (x) -> (x % 536870912) / 536870912
+
+timeToRand = (x) -> math.abs intSeedToRand timeToIntSeed x
+
+P.rand = -> signal timeToRand -- HACK: is this right?
+
+seq_count = (x) ->
+  if type(x) == "table"
+    print "1"
+    if #x == 1
+      print "2"
+      seq_count x[1]
+    else
+      print "3"
+      pats = map sequence, x ---???
+      P.fastcat(pats), #x
+  elseif type(x) == "pattern"
+    print "4"
+    x, 1
+  else
+    print "5"
+    M.pure(x), 1
+
+P.sequence = (x) ->
+  seq, _ = seq_count(x)
+  seq
 
 P.fast = (arg, pat) -> P.reify(pat)\_fast(arg) --TODO: use patternified version later
 P.slow = (arg, pat) -> P.reify(pat)\_slow(arg) --TODO: use patternified version later
+
+Pattern.fast = Pattern\_patternify((patSelf, val) -> patSelf\_fast(val))
+
 P.Pattern = Pattern
+
+
+print type P.pure(1)\fast(2)
+
 
 return P

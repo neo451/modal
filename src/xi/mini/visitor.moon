@@ -181,8 +181,4 @@ class Visitor
 
   pos_real:(node, _) => tonumber node[2]
 
-export Parse_mini = (code) ->
-	raw_ast = Parse code
-	Visitor\visit raw_ast
-
 return { Visitor: Visitor }
