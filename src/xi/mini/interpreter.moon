@@ -33,20 +33,18 @@ class Interpreter
     return values
 
   modifier:(node) =>
-    -- param = @_sequence_elements({ node.value })
     switch node.op
       when "fast"
-        param = node.value.value.value --HACK: tmp fix, no patternify at the moment
-        return (w_p) -> { { w_p[1], w_p[2]\_fast(param), w_p[3] } }
+        param = @_sequence_elements({ node.value })
+        return (w_p) -> { { w_p[1], w_p[2]\fast(param), w_p[3] } }
       when "slow"
-        param = node.value.value.value --HACK: tmp fix, no patternify at the moment
-        return (w_p) -> { { w_p[1], w_p[2]\_slow(param), w_p[3] } }
+        param = @_sequence_elements({ node.value })
+        return (w_p) -> { { w_p[1], w_p[2]\slow(param), w_p[3] } }
       when "repeat"
         return (w_p) -> [ w_p for i = 1, node.count + 1 ]
       when "weight"
         return (w_p) -> { { node.value, w_p[2], w_p[3] }}
     return id --?
-
 
   number:(node) => pure node.value
 

@@ -47,7 +47,7 @@ class Pattern
 
   outerBind:(func) => @bindWhole ((a) -> a), func
 
-  innerBind:(func) => @bindWhole((_, b) -> b, func)
+  innerBind:(func) => @bindWhole ((_, b) -> b), func
 
   outerJoin: => @outerBind id
 
@@ -103,14 +103,17 @@ class Pattern
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
   _patternify:(method) =>
-    patterned = (patSelf, ...) ->
-      patArg = sequence ...
-      return patArg\fmap((arg) -> method(patSelf, arg))\outerJoin!
+    patterned = (...) ->
+      -- print "...", ...
+      patArg = P.fastcat ...
+      -- print patArg
+      return patArg\fmap((arg) -> method(arg))\innerJoin!
     return patterned
 
   _fast:(factor) => @withTime ((t) -> t * factor), ((t) -> t / factor)
 
-  -- fast: => Pattern\_patternify((patSelf, val) -> patSelf\_fast(val))
+  fast:(...) => Pattern\_patternify((val) -> @_fast(val))(...)
+  slow:(...) => Pattern\_patternify((val) -> @_slow(val))(...)
 
   -- offset might be fraction?
   _early:(offset) => @withTime ((t) -> t + offset), ((t) -> t - offset)
@@ -306,28 +309,22 @@ seq_count = (x) ->
       seq_count x[1]
     else
       print "3"
-      pats = map sequence, x ---???
+      pats = map P.sequence, x ---???
       P.fastcat(pats), #x
   elseif type(x) == "pattern"
     print "4"
     x, 1
   else
     print "5"
-    M.pure(x), 1
+    P.pure(x), 1
 
 P.sequence = (x) ->
   seq, _ = seq_count(x)
   seq
 
-P.fast = (arg, pat) -> P.reify(pat)\_fast(arg) --TODO: use patternified version later
-P.slow = (arg, pat) -> P.reify(pat)\_slow(arg) --TODO: use patternified version later
-
-Pattern.fast = Pattern\_patternify((patSelf, val) -> patSelf\_fast(val))
+P.fast = (arg, pat) -> P.reify(pat)\fast(arg)
+P.slow = (arg, pat) -> P.reify(pat)\slow(arg)
 
 P.Pattern = Pattern
-
-
-print type P.pure(1)\fast(2)
-
 
 return P
