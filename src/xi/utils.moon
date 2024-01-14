@@ -1,6 +1,6 @@
 require "moon.all"
 (require "fun")!
-bit = require "bitop.funcs"
+bit = require "bitop.funcs" --compatability for 5.3 5.4??
 
 utils = {}
 

@@ -1,14 +1,13 @@
 socket = require "socket"
-abletonlink = require "abletonlink"
+link = require "abletonlink"
 import type from require "xi.utils"
 sleep = (sec) -> socket.sleep sec
 
 class Clock
   new:(bpm = 120, sampleRate = 1/20, beatsPerCycle = 4) =>
     @bpm, @sampleRate, @beatsPerCycle = bpm, sampleRate, beatsPerCycle
-    -- . ?
-    @link = abletonlink.create bpm
-    @sessionState = abletonlink.create_session_state!
+    @link = link.create bpm
+    @sessionState = link.create_session_state!
     @subscribers = {}
     @running = false
     @notifyCoroutine = nil
@@ -29,16 +28,15 @@ class Clock
     table.insert @subscribers, subscriber
 
   unsubscribe:(subscriber) =>
-    position
+    position = nil
     for i, sub in pairs @subscribers
-      -- p type sub
       if sub == subscriber
         position = i
     if position != nil
       table.remove @subscribers, position
 
   createNotifyCoroutine: =>
-    @notifyCoroutine = coroutine.create =>
+    @notifyCoroutine = coroutine.create ->
       print "setup", @running
       @link\enable(true)
       @link\enable_start_stop_sync(true)
@@ -49,18 +47,15 @@ class Clock
       mill = 1000000
       frame = @sampleRate * mill
 
-      print "OK..."
-
       while @running
-        print "tick"
         ticks += 1
+        print "tick", ticks
 
         logicalNow = math.floor start + (ticks * frame)
         logicalNext = math.floor start + ((ticks + 1) * frame)
 
-        wait = (logicalNow - now) / mill
-
         now = @link\clock_micros!
+        wait = (logicalNow - now) / mill
 
         if wait > 0
           sleep wait
@@ -68,11 +63,13 @@ class Clock
         print "running is set to ", @running
 
         if not @running
+          print "break"
           break
-
-        @link\capture_audio_seesionState @sessionState
+        
+        print "here!!"
+        @link\capture_audio_session_state @sessionState
         secondsPerMinute = 60
-        cps = (@seesionState\tempo! / @beatsPerCycle) / secondsPerMinute
+        cps = (@sessionState\tempo! / @beatsPerCycle) / secondsPerMinute
         cycleFrom = @sessionState\beat_at_time(logicalNow, 0) / @beatsPerCycle
         cycleTo = @sessionState\beat_at_time(logicalNext, 0) / @beatsPerCycle
 
@@ -80,6 +77,8 @@ class Clock
           sub\notifyTick cycleFrom, cycleTo, @sessionState, cps, @beatsPerCycle, mill, now
         print("the coroutine is running? ... ", coroutine.running!)
         coroutine.yield!
+
+        print @running
       @linkEnabled = false --?
 
 return { Clock: Clock }

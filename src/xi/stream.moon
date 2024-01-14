@@ -1,5 +1,12 @@
 losc = require "losc"
 plugin = require "losc.plugins.udp-socket"
+abletonlink = require "abletonlink"
+import sound from require "xi.control"
+import Fraction from require "xi.fraction"
+import dump from require "xi.utils"
+
+
+require "moon.all"
 
 export StreamTarget = { name: "SuperDirt", address: "127.0.0.1", port: 57120, latency: 0.2, handshake: true }
 
@@ -35,7 +42,8 @@ class Stream
   notifyTick: (cycleFrom, cycleTo, s, cps, bpc, mill, now) =>
     if not @pattern
       return
-    events = @pattern\onsetsOnly!\querySpan cycleFrom, cycleTo
+
+    events = @pattern\onsetsOnly!\querySpan Fraction(cycleFrom), Fraction(cycleTo)
 
     print "cycle from: ", cycleFrom, " ", "cycle to: ", cycleTo
 

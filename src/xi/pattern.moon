@@ -20,9 +20,9 @@ class Pattern
 
   firstCycle: => @querySpan 0, 1
   -- TODO: can not print signals properly
-  __tostring: => "pattern"
-    -- func = (event) -> event\show!
-    -- dump map func, @firstCycle!
+  __tostring: =>
+    func = (event) -> event\show!
+    dump map func, @firstCycle!
 
   show: => @__tostring!
 

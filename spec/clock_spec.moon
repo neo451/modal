@@ -1,6 +1,8 @@
 import Clock from require "xi.clock"
 import Stream from require "xi.stream"
 import Event from require "xi.event"
+import pure from require "xi.pattern"
+
 
 describe "Clock", ->
   describe "construction", ->
@@ -19,23 +21,23 @@ describe "Clock", ->
       clock = Clock!
       assert.are.equal "clock", clock\type!
   -- TODO: steams equal??
-  -- describe "subscribe/unsubscribe", ->
-  --   it "should add/remove to list of subscribers", ->
-  --     clock = Clock 120
-  --     mySub = Stream!
-  --     mySub.pattern = pure "i am the first"
-  --     clock\subscribe mySub
-  --     assert.are.equal 1, #clock.subscribers
-  --     assert.are.equal mySub, clock.subscribers[1]
-  --     mySub2 = Stream!
-  --     mySub2.pattern = pure "I am the second"
-  --     clock\subscribe mySub2
-  --     assert.are.equal 2, #clock.subscribers
-  --     assert.are.equal mySub, clock.subscribers[1]
-  --     assert.are.equal mySub2, clock.subscribers[2]
-  --     clock\unsubscribe mySub
-  --     assert.are.equal 1, #clock.subscribers
-  --     assert.are.equal mySub2, clock.subscribers[1]
+  describe "subscribe/unsubscribe", ->
+    it "should add/remove to list of subscribers", ->
+      clock = Clock 120
+      mySub = Stream!
+      mySub.pattern = pure "i am the first"
+      clock\subscribe mySub
+      assert.are.equal 1, #clock.subscribers
+      assert.are.equal mySub, clock.subscribers[1]
+      mySub2 = Stream!
+      mySub2.pattern = pure "I am the second"
+      clock\subscribe mySub2
+      assert.are.equal 2, #clock.subscribers
+      assert.are.equal mySub, clock.subscribers[1]
+      assert.are.equal mySub2, clock.subscribers[2]
+      clock\unsubscribe mySub
+      assert.are.equal 1, #clock.subscribers
+      assert.are.equal mySub2, clock.subscribers[1]
   --
   -- describe("notify", ->
   --     it("should call stream's notify method on tick", ->

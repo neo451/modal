@@ -1,3 +1,6 @@
-require "xi.pattern"
+import fastcat from require "xi.pattern"
 
-export sound = (args) -> fastcat(args)\withValue((v) -> { sound: v })
+C = {}
+C.sound = (args) -> fastcat(args)\withValue((v) -> { sound: v })
+
+return C
