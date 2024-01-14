@@ -37,7 +37,7 @@ class Clock
 
   createNotifyCoroutine: =>
     @notifyCoroutine = coroutine.create ->
-      print "setup", @running
+      -- print "setup", @running
       @link\enable(true)
       @link\enable_start_stop_sync(true)
 
@@ -49,7 +49,7 @@ class Clock
 
       while @running
         ticks += 1
-        print "tick", ticks
+        -- print "tick", ticks
 
         logicalNow = math.floor start + (ticks * frame)
         logicalNext = math.floor start + ((ticks + 1) * frame)
@@ -60,13 +60,12 @@ class Clock
         if wait > 0
           sleep wait
 
-        print "running is set to ", @running
+        -- print "running is set to ", @running
 
         if not @running
           print "break"
           break
-        
-        print "here!!"
+
         @link\capture_audio_session_state @sessionState
         secondsPerMinute = 60
         cps = (@sessionState\tempo! / @beatsPerCycle) / secondsPerMinute
@@ -75,10 +74,10 @@ class Clock
 
         for sub in *@subscribers
           sub\notifyTick cycleFrom, cycleTo, @sessionState, cps, @beatsPerCycle, mill, now
-        print("the coroutine is running? ... ", coroutine.running!)
+        -- print("the coroutine is running? ... ", coroutine.running!)
         coroutine.yield!
 
-        print @running
+        -- print @running
       @linkEnabled = false --?
 
 return { Clock: Clock }

@@ -1,15 +1,13 @@
-x = require "xi.init"
+x = require "xi"
 
 print x._VERSION
 
-pat = x.p(1, x.s("gabba"))
--- \fast(x.cat(1, 2, 3, 4))
+x.p 1, x.s("bd sd")\fast(x.cat(1, 2, 3, 4))
+-- x.p 2, x.s"cp!!"
+-- x.p 3, x.s"hh*7"
 
-clock = x.clock
+export clock = x.clock
 clock\start!
 
 while coroutine.resume(clock.notifyCoroutine)
-	--[[ poll for user input]]
-	--
-	print("boop")
-print("all done")
+  a = 1

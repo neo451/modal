@@ -45,7 +45,7 @@ class Stream
 
     events = @pattern\onsetsOnly!\querySpan Fraction(cycleFrom), Fraction(cycleTo)
 
-    print "cycle from: ", cycleFrom, " ", "cycle to: ", cycleTo
+    -- print "cycle from: ", cycleFrom, " ", "cycle to: ", cycleTo
 
     for event in *events
       cycleOn = event.whole._begin
@@ -66,13 +66,13 @@ class Stream
       for key, val in pairs value do
         table.insert msg, key
         table.insert msg, val
-      -- print "send", dump value
+
       msg.types = GenerateTypesString msg
       msg.address = "/dirt/play"
 
       b = @osc.new_message msg
 
-      print dump b
+      -- print dump b
 
       @osc\send b
 

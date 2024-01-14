@@ -4,8 +4,80 @@ import Fraction, tofrac from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
 -- import mini from require "xi.mini.interpreter"
+require "xi.mini.grammar"
+import Visitor from require "xi.mini.visitor"
 
 P = {}
+
+
+
+class Interpreter
+  eval:(node) =>
+    tag = node.type
+    method = @[tag]
+    return method(@, node)
+
+  sequence:(node) =>
+    @_sequence_elements(node.elements)
+
+  _sequence_elements:(elements) =>
+    elements = [@eval(e) for e in *elements]
+    tc_args = {}
+    for es in *elements
+      weight = es[1][1] or 1
+      deg_ratio = es[1][3] or 0 --??
+      pats = [e[2] for e in *es]
+      table.insert tc_args, { #es * weight, P.fastcat(pats)\degrade_by(deg_ratio) }
+    return P.timecat tc_args
+
+  element:(node) =>
+    modifiers = [ @eval(mod) for mod in *node.modifiers ]
+    pat = @eval(node.value)
+    values = { { 1, pat, 0 } }
+
+    for modifier in *modifiers
+      -- values = flatten [ modifier(v) for v in *values ]
+      -- HACK: 
+      values = modifier(values[1])
+
+    return values
+
+  modifier:(node) =>
+    switch node.op
+      when "fast"
+        param = @_sequence_elements({ node.value })
+        return (w_p) -> { { w_p[1], w_p[2]\fast(param), w_p[3] } }
+      when "slow"
+        param = @_sequence_elements({ node.value })
+        return (w_p) -> { { w_p[1], w_p[2]\slow(param), w_p[3] } }
+      when "repeat"
+        return (w_p) -> [ w_p for i = 1, node.count + 1 ]
+      when "weight"
+        return (w_p) -> { { node.value, w_p[2], w_p[3] }}
+      when "degrade"
+        arg = node.value
+        switch arg.op
+          when "count"
+            return (w_p) -> { { w_p[1], w_p[2], Fraction(arg.value, arg.value + 1) } }
+          when "value"
+            return (w_p) -> { { w_p[1], w_p[2], arg.value } }
+    return id
+
+  number:(node) => P.pure node.value
+
+  -- TODO: if index
+  word:(node) =>
+    P.pure node.value
+
+  rest:(node) => silence!
+
+parse = (code) ->
+  raw_ast = Parse code
+  return Visitor\visit raw_ast
+
+P.mini = (source) ->
+  ast = parse source
+  return Interpreter\eval ast
 
 class Pattern
   new:(query = -> {}) =>
@@ -219,8 +291,8 @@ P.pure = (value) ->
 P.reify = (pat) ->
   if type(pat) == "pattern"
     return pat
-  -- if type(pat) == "string"
-  -- 	return mini pat
+  if type(pat) == "string"
+  	return P.mini pat
   P.pure pat
 
 P.stack = (...) ->
@@ -305,5 +377,7 @@ P.slow = (arg, pat) -> P.reify(pat)\slow(arg)
 P.degrade = (arg, pat) -> P.reify(pat)\degrade(arg)
 
 P.Pattern = Pattern
+
+
 
 return P

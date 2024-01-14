@@ -10,4 +10,6 @@ mini = (source) ->
   ast = parse source
   return Interpreter\eval ast
 
+p mini ""
+
 return { parse: parse, mini: mini }
