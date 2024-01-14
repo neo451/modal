@@ -1,5 +1,6 @@
 require "moon.all"
 (require "fun")!
+bit = require "bitop.funcs"
 
 utils = {}
 
@@ -50,6 +51,14 @@ utils.dump = (o) ->
     else
         return tostring(o)
 
+utils.totable = (...) ->
+  pats = ...
+  if type(pats) == "table"
+    pats = ...
+  else
+    pats = { ... }
+  return pats
+
 utils.id = (x) -> x
 
 utils.pipe = (...) ->
@@ -77,5 +86,21 @@ utils.reverse = (...) ->
     else
       return reverse_h (-> v, acc()), ...
   return reverse_h(->, ...)
+
+-- random generator
+xorwise = (x) ->
+  a = bit.bxor(bit.lshift(x,13), x)
+  b = bit.bxor(bit.rshift(a,17), a)
+  bit.bxor(bit.lshift(b,5), b)
+
+_frac = (x) -> (x - x\floor!)\asFloat!
+
+timeToIntSeed = (x) ->
+  xorwise math.floor (_frac(x / 300) * 536870912)
+
+-- output a bit differnet than strudel??
+intSeedToRand = (x) -> (x % 536870912) / 536870912
+
+utils.timeToRand = (x) -> math.abs intSeedToRand timeToIntSeed x
 
 return utils

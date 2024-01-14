@@ -2,7 +2,7 @@ import Span from require "xi.span"
 import Fraction from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
-import Pattern, pure, stack, slowcat, fastcat, timecat from require "xi.pattern"
+import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -51,6 +51,16 @@ describe "Pattern", ->
       assert.are.same expectedEvents, actualEvents
       actualEvents = patternWithOnsetsOnly\querySpan(1/16, 1)
       assert.are.same {}, actualEvents
+
+  describe "filterEvents", ->
+    it "should return new pattern with values removed based on filter func", ->
+      pat = slowcat "bd", "sd", "hh", "mt"
+      newPat = pat\filterEvents (e) -> e.value == "bd" or e.value == "hh"
+      expectedEvents = {
+        Event Span(0, 1), Span(0, 1), "bd" 
+        Event Span(2, 3), Span(2, 3), "hh"
+      }
+      assert.are.same expectedEvents, newPat\querySpan(0, 4)
 
   describe "filterEvents", ->
     it "should return new pattern with events removed based on filter func", ->
@@ -121,7 +131,6 @@ describe "Pattern", ->
       actualEvents = newPat\firstCycle!
       assert.are.same expectedEvents, actualEvents
 
--- TODO: what is a more realistic test case than this?
   describe "outerJoin", ->
     it "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern" , ->
       patOfPats = pure(fastcat(pure("a"), pure("b")))
@@ -132,28 +141,6 @@ describe "Pattern", ->
       actualEvents = patOfPats\outerJoin!\firstCycle!
       assert.are.same expectedEvents, actualEvents
 
--- 	describe("onsetsOnly", ->
--- 		it("should return only events where the start of the whole equals the start of the part", ->
--- 			 whole1 = TimeSpan(Fraction(1, 2), Fraction(2, 1))
--- 			 part1 = TimeSpan(Fraction(1, 2), Fraction(1, 1))
--- 			 event1 = Event(whole1, part1, 1, {}, false)
--- 			 whole2 = TimeSpan(Fraction(2, 3), Fraction(3, 1))
--- 			 part2 = TimeSpan(Fraction(5, 6), Fraction(1, 1))
--- 			 event2 = Event(whole2, part2, 2, {}, false)
--- 			 events = List({ event1, event2 })
--- 			 p = Pattern(function(_)
--- 				return events
--- 			)
---
--- 			 patternWithOnsetsOnly = p:onsetsOnly!
---
--- 			assert.are.same(
--- 				patternWithOnsetsOnly:query(State(TimeSpan(Fraction(0), Fraction(3)))),
--- 				List({ event1 })
--- 			)
--- 		)
---
-
   describe "slowcat", ->
     it "should alternate between the patterns in the list, one pattern per cycle", ->
       cattedPats = slowcat 1, 2, 3
@@ -162,49 +149,34 @@ describe "Pattern", ->
       expectedEventsCycle2 = { Event Span(1, 2), Span(1, 2), 2 }
       assert.are.same expectedEventsCycle2, cattedPats\querySpan(1, 2)
       expectedEventsCycle3 = { Event Span(2, 3), Span(2, 3), 3 }
-      -- assert.are.same expectedEventsCycle3, cattedPats\querySpan(2, 3)
-      -- assert.are.same expectedEventsCycle1, cattedPats\querySpan(3, 4)
 
+  describe "fast", ->
+    it "should return a pattern whose events are closer together in time", ->
+      pat = pure "bd"
+      expectedEvents = {
+        Event(Span(0, 0.5), Span(0, 0.5), "bd")
+        Event(Span(0.5, 1), Span(0.5, 1), "bd")
+      }
+      actualEvents = pat\fast(2)\firstCycle!
+      assert.are.same(expectedEvents, actualEvents)
 
-  -- describe "fast", ->
-  --   it "should return a pattern whose events are closer together in time", ->
-  --     pat = pure "bd"
-  --     expectedEvents = {
-  --       Event(Span(0, 0.5), Span(0, 0.5), "bd")
-  --       Event(Span(0.5, 1), Span(0.5, 1), "bd")
-  --     }
-  --     actualEvents = pat\fast(2)\firstCycle!
-  --     assert.are.same(expectedEvents, actualEvents)
-  --
+  describe "slow", ->
+    it "should return a pattern whose events are closer together in time", ->
+      pat = fastcat "bd", "sd"
+      expectedEvents_0to1 = {
+        Event Span(0, 1), Span(0, 1), "bd"
+      }
+      expectedEvents_1to2 = {
+        Event Span(1, 2), Span(1, 2), "sd"
+      }
+      actualEvents_0to1 = pat\slow(2)\querySpan(0, 1)
+      actualEvents_1to2 = pat\slow(2)\querySpan(1, 2)
+      assert.are.same expectedEvents_0to1, actualEvents_0to1
+      assert.are.same expectedEvents_1to2, actualEvents_1to2
 
---
--- 	describe("slow", ->
--- 		it("should return a pattern whose events are closer together in time", ->
--- 			 pat = Fastcat({ pure("bd"), pure("sd") })
--- 			 expectedEvents_0to1 = List({
--- 				Event(
--- 					Span(Fraction(0), Fraction(1)),
--- 					Span(Fraction(0), Fraction(1)),
--- 					"bd"
--- 				),
--- 			})
--- 			 expectedEvents_1to2 = List({
--- 				Event(
--- 					Span(Fraction(1), Fraction(2)),
--- 					Span(Fraction(1), Fraction(2)),
--- 					"sd"
--- 				),
--- 			})
--- 			 actualEvents_0to1 = pat:slow(2):queryspan(Fraction(0), Fraction(1))
--- 			 actualEvents_1to2 = pat:slow(2):queryspan(Fraction(1), Fraction(2))
--- 			assert.are.same(expectedEvents_0to1, actualEvents_0to1)
--- 			assert.are.same(expectedEvents_1to2, actualEvents_1to2)
--- 		)
--- 	)
---
   describe "fastgap", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat(pure("bd"), pure("sd"))\fastgap(4)\firstCycle!
+      actualEvents = fastcat("bd", "sd")\fastgap(4)\firstCycle!
       expectedEvents = {
          Event Span(0, 1/8), Span(0, 1/8), "bd",
          Event Span(1/8, 1/4), Span(1/8, 1/4), "sd",
@@ -213,34 +185,42 @@ describe "Pattern", ->
 
   describe "compress", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat(pure("bd"), pure("sd"))\compress(1/4, 3/4)\firstCycle!
+      actualEvents = fastcat("bd", "sd")\compress(1/4, 3/4)\firstCycle!
       expectedEvents = {
         Event Span(1/4, 1/2), Span(1/4, 1/2), "bd",
         Event Span(1/2, 3/4), Span(1/2, 3/4), "sd",
       }
       assert.are.same expectedEvents, actualEvents
 
-
-	describe("timecat", ->
-    it("should return a pattern based one the time-pat 'tuples' passed in", ->
-      actualEvents = timecat({ { 3, pure("bd")\_fast(4) }, { 1, pure("hh")\_fast(8) } })\firstCycle!
+  describe "timecat", ->
+    it "should return a pattern based one the time-pat 'tuples' passed in", ->
+      actualEvents = timecat({ { 3, pure("bd")\fast(4) }, { 1, pure("hh")\fast(8) } })\firstCycle!
       expectedEvents = {
-        Event(Span(0, (3 / 16)), Span(0, (3 / 16)), "bd"),
-        Event(Span((3 / 16), 3 / 8), Span((3 / 16), 3 / 8), "bd"),
-        Event(Span(3 / 8, (9 / 16)), Span(3 / 8, (9 / 16)), "bd"),
-        Event(Span((9 / 16), 3 / 4), Span((9 / 16), 3 / 4), "bd"),
-        Event(Span(3 / 4, (25 / 32)), Span(3 / 4, (25 / 32)), "hh"),
-        Event(Span((25 / 32), (13 / 16)), Span((25 / 32), (13 / 16)), "hh"),
-        Event(Span((13 / 16), (27 / 32)), Span((13 / 16), (27 / 32)), "hh"),
-        Event(Span((27 / 32), 7 / 8), Span((27 / 32), 7 / 8), "hh"),
-        Event(Span(7 / 8, (29 / 32)), Span(7 / 8, (29 / 32)), "hh"),
-        Event(Span((29 / 32), (15 / 16)), Span((29 / 32), (15 / 16)), "hh"),
-        Event(Span((15 / 16), (31 / 32)), Span((15 / 16), (31 / 32)), "hh"),
-        Event(Span((31 / 32), 1), Span((31 / 32), 1), "hh"),
-       }
-			assert.are.same(expectedEvents, actualEvents)
-		)
-	)
+        Event Span(0, 3/16), Span(0, 3/16), "bd"
+        Event Span(3/16, 3/8), Span(3/16, 3/8), "bd"
+        Event Span(3/8, 9/16), Span(3/8, 9/16), "bd"
+        Event Span(9/16, 3/4), Span(9/16, 3/4), "bd"
+        Event Span(3/4, 25/32), Span(3/4, 25/32), "hh"
+        Event Span(25/32, 13/16), Span(25/32, 13/16), "hh"
+        Event Span(13/16, 27/32), Span(13/16, 27/32), "hh"
+        Event Span(27/32, 7/8), Span(27/32, 7/8), "hh"
+        Event Span(7/8, 29/32), Span(7/8, 29/32), "hh"
+        Event Span(29/32, 15/16), Span(29/32, 15/16), "hh"
+        Event Span(15/16, 31/32), Span(15/16, 31/32), "hh"
+        Event Span(31/32, 1), Span(31/32, 1), "hh"
+      }
+      assert.are.same expectedEvents, actualEvents
+
+  describe "degrade_by", ->
+    it "should randomly drop events from a pattern", ->
+      actualEvents = fast(8, "sd")\degrade_by(0.75)\firstCycle!
+      expectedEvents = {
+	        Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
+	        Event Span(1/2, 5/8), Span(1/2, 5/8), "sd"
+	        Event Span(3/4, 7/8), Span(3/4, 7/8), "sd"
+      }
+      assert.are.same expectedEvents, actualEvents
+
 -- 	-- def test_choose_cycles!:
 -- 	--   assert choose_cycles("bd", "sd", "hh").query(Span(0, 10)) == [
 -- 	--       Event(Span(0, 1), Span(0, 1), "bd"),
@@ -258,12 +238,3 @@ describe "Pattern", ->
 -- 	--     assert_equal_patterns(
 -- 	--         pure("sd").fast(8).degrade!, pure("sd").fast(8).degrade_by(0.5, rand!)
 -- 	--     )
--- 	--
--- 	--
--- 	-- def test_degrade_by!:
--- 	--     assert pure("sd").fast(8).degrade_by(0.75).first_cycle! == [
--- 	--         Event(Span(1 / 8, 1 / 4), Span(1 / 8, 1 / 4), "sd"),
--- 	--         Event(Span(1 / 2, 5 / 8), Span(1 / 2, 5 / 8), "sd"),
--- 	--         Event(Span(3 / 4, 7 / 8), Span(3 / 4, 7 / 8), "sd"),
--- 	--     ]
--- )

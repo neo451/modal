@@ -1,6 +1,8 @@
 import reduce, type from require 'xi.utils'
 
-decimalToFraction = (x0, err) ->
+F = {}
+
+decimaltofraction = (x0, err) ->
 	err = err or 0.0000000001
 	num, den
 	g = math.abs x0 -- or x0:abs()
@@ -30,7 +32,7 @@ lcm = (a, b) ->
 class Fraction
   new: (n = 0, d = 1, normalize = true) =>
     if n % 1 ~= 0
-      n, d = decimalToFraction n
+      n, d = decimaltofraction n
 
     if d == 0
       error("Fraction: divide by zero")
@@ -46,9 +48,7 @@ class Fraction
   type: => 'fraction'
 
   __add: (f2) =>
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -67,9 +67,7 @@ class Fraction
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
 
   __sub: (f2) =>
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -88,9 +86,7 @@ class Fraction
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
 
   __div: (f2) => 
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -115,9 +111,7 @@ class Fraction
     Fraction(n, d, false)
 
   __mul: (f2) =>
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -136,9 +130,7 @@ class Fraction
     Fraction(na * nb, da * db, false)
 
   __pow: (f2) =>
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     if f2.denominator == 1
       power = f2.numerator
       if power >= 0
@@ -151,9 +143,7 @@ class Fraction
       (@numerator / @denominator) ^ (f2.numerator / f2.denominator)
 
   __mod: (f2) =>
-    if type(f2) == "number"
-      f2 = Fraction(f2)
-
+    f2 = F.tofrac f2
     da = @denominator
     db = f2.denominator
     na = @numerator
@@ -171,31 +161,26 @@ class Fraction
 
   floor: => math.floor @numerator / @denominator
 
-  -- TODO: need tests
   sam: => Fraction @floor!
 
   nextSam: => @sam! + 1
 
   min:(other) =>
-    if type(other) == "number"
-      other = Fraction(other)
-
+    other = F.tofrac other
     if @ < other
       return @
     else
       return other
 
   max:(other) =>
-    if type(other) == "number"
-      other = Fraction(other)
-
+    other = F.tofrac other
     if @ > other
       return @
     else
       return other
 
-  -- TODO: need test
   gcd:(other) =>
+    other = F.tofrac other
     gcd_numerator = gcd @numerator, other.numerator
     lcm_denominator = lcm @denominator, other.denominator
     Fraction gcd_numerator, lcm_denominator
@@ -206,10 +191,15 @@ class Fraction
 
   show: => @__tostring!
 
-gcd_reduce = (table) ->
+F.gcd_reduce = (table) ->
   reduce ((acc, value) -> acc\gcd value), table[1], table
 
-return {
-  Fraction: Fraction
-  gcd: gcd_reduce
-}
+F.tofrac = (x) ->
+  if type(x) == "fraction"
+    return x
+  else
+    return Fraction(x)
+
+F.Fraction = Fraction
+
+return F

@@ -1,6 +1,6 @@
 import parse, mini from require "xi.mini"
 import Span from require "xi.span"
-import pure, silence, fastcat, timecat, fast, slow from require "xi.pattern"
+import pure, silence, fastcat, timecat, fast, slow, degrade from require "xi.pattern"
 
 same = (name) -> assert.same visitor_targets[name], parse name
 eval = (name) -> assert.same interpreter_targets[name], mini name
@@ -101,6 +101,7 @@ describe "Mini Interpreter for", ->
       eval "bd hh sd"
       eval "bd hh@2"
       eval "bd hh@3 sd@2"
+      eval "bd! hh? ~ sd/2 cp*3"
 
   describe "repeat", ->
     it "should pass", ->
@@ -119,6 +120,19 @@ describe "Mini Interpreter for", ->
       eval "bd*2"
       eval "bd/3"
 
+  describe "degrade", ->
+    it "should pass", ->
+      eval "hh?"
+      -- eval "hh???"
+      -- eval "hh?4"
+      -- eval "hh?4??"
+      -- eval "hh??0.87"
+
+  describe "hybrid mod", ->
+    it "should pass", ->
+      eval "hh!!??"
+      -- eval "hh!/2?!"
+
 export interpreter_targets = {
   -- numbers
   "45": pure 45
@@ -133,28 +147,28 @@ export interpreter_targets = {
   -- modifiers
   "bd*2": fast 2, "bd"
   "bd/3": slow 3, "bd"
-  -- "hh?": degrade("hh")
-  -- "hh??": degrade(degrade("hh"))
-  -- "hh!!??": degrade(degrade(fastcat("hh", "hh", "hh")))
+  "hh?": degrade "hh"
+  "hh???": degrade degrade degrade "hh"
+  "hh!!??": degrade degrade fastcat "hh", "hh", "hh"
   -- sequences
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
   "hh@2": pure "hh"
   "bd hh@2": timecat { { 1, "bd" }, { 2, "hh" } }
   "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
-  "hh!": fastcat("hh", "hh")
-  "hh!!!": fastcat("hh", "hh", "hh", "hh")
-  "bd! cp": fastcat("bd", "bd", "cp")
-  -- "bd! hh? ~ sd/2 cp*3": timecat {
-  --   { 1, "bd" },
-  --   { 1, "bd" }, 
-  --   { 1, degrade("hh") },
-  --   { 1, silence! }, 
-  --   { 1, slow(2, "sd") },
-  --   { 1, fast(3, "cp") },
-  --   { 1, fast(3, "cp") },
-  --   { 1, fast(3, "cp") } }
-  --   }
+  "hh!": fastcat "hh", "hh"
+  "hh!!!": fastcat "hh", "hh", "hh", "hh"
+  "bd! cp": fastcat "bd", "bd", "cp"
+  "bd! hh? ~ sd/2 cp*3": timecat {
+    { 1, "bd" }
+    { 1, "bd" }
+    { 1, degrade("hh") }
+    { 1, silence! }
+    { 1, slow(2, "sd") }
+    { 1, fast(3, "cp") }
+    { 1, fast(3, "cp") }
+    { 1, fast(3, "cp") } 
+  }
 }
 
 export visitor_targets = {
