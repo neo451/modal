@@ -1,6 +1,6 @@
 import map, filter, id, flatten, totable, dump, timeToRand, type from require "xi.utils"
 import Span from require "xi.span"
-import Fraction, tofrac from require "xi.fraction"
+import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
 -- import mini from require "xi.mini.interpreter"
@@ -237,7 +237,9 @@ class Pattern
       return @
     if not prand
       prand = P.rand!
-    return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues((v) -> v > by))
+    f = (v) ->
+      v > tofloat(by)
+    return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
   degrade: => @degrade_by(0.5)
 

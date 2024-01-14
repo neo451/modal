@@ -166,8 +166,6 @@ export interpreter_targets = {
     { 1, silence! }
     { 1, slow(2, "sd") }
     { 1, fast(3, "cp") }
-    { 1, fast(3, "cp") }
-    { 1, fast(3, "cp") } 
   }
 }
 

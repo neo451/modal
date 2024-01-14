@@ -200,6 +200,12 @@ F.tofrac = (x) ->
   else
     return Fraction(x)
 
+F.tofloat = (x) ->
+  if type(x) == "fraction"
+    return x\asFloat!
+  else
+    return x
+
 F.Fraction = Fraction
 
 return F
