@@ -19,7 +19,7 @@ import Pattern from require "xi.pattern"
 
 map = (func, items) -> [ func(v, i) for i, v in ipairs items ]
 
-drawLine = (pat, chars) ->
+drawline = (pat, chars) ->
   chars = chars or 60
   cycle = 0
   pos = Fraction(0)
@@ -56,3 +56,4 @@ drawLine = (pat, chars) ->
     cycle = cycle + 1
   return table.concat lines
 
+return { drawline: drawline }

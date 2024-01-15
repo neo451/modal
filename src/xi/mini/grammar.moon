@@ -119,7 +119,6 @@ grammar = Ct C grammar
 --- Parse takes a string of mini code and returns an AST
 -- @tparam string string of mini-notation
 -- @treturn table table of AST nodes
-Parse = (string) -> grammar\match(string)[2]
+parse = (string) -> grammar\match(string)[2]
 
-return { Parse: Parse }
-
+return { parse: parse }

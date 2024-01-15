@@ -1,3 +1,5 @@
+import parse from require "xi.mini.grammar"
+
 class Visitor
   visit: (node) =>
     type = node[1]
@@ -181,4 +183,8 @@ class Visitor
 
   pos_real:(node, _) => tonumber node[2]
 
-return { Visitor: Visitor }
+visit = (code) ->
+  raw_ast = parse code
+  return Visitor\visit raw_ast
+
+return { Visitor: Visitor, visit: visit }

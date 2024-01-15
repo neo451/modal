@@ -1,11 +1,13 @@
-import map, filter, id, flatten, totable, dump, timeToRand, type from require "xi.utils"
+import map, filter, id, flatten, totable, dump, rotate, timeToRand, type from require "xi.utils"
+import bjork from require "xi.euclid"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
-import Parse from require "xi.mini.grammar"
-import Visitor from require "xi.mini.visitor"
+import visit from require "xi.mini.visitor"
 
+-- dump = require "xi.moondump"
+-- pdump = (a) -> print dump a
 P = {}
 
 class Interpreter
@@ -22,22 +24,52 @@ class Interpreter
     tc_args = {}
     for es in *elements
       weight = es[1][1] or 1
-      deg_ratio = es[1][3] or 0 --??
+      deg_ratio = es[1][3] or 0
       pats = [e[2] for e in *es]
       table.insert tc_args, { #es * weight, P.fastcat(pats)\degrade_by(deg_ratio) }
     return P.timecat tc_args
 
+  random_sequence:(node) =>
+    seqs = [@eval(e) for e in *node.elements]
+    return P.randcat seqs
+
+  polyrhythm:(node) =>
+    seqs = [@eval(seq) for seq in *node.seqs]
+    return P.polyrhythm seqs
+
+  polymeter:(node) =>
+    fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
+    return P.stack([@eval(seq)\fast(fp) for _, seq, fp in zip(node.seqs, fast_params)])
+
   element:(node) =>
-    modifiers = [ @eval(mod) for mod in *node.modifiers ]
+    modifiers = [ @eval(mod) for mod in *node.modifiers]
     pat = @eval(node.value)
+
+    if node.euclid_modifier != nil
+      k, n, rotation = @eval node.euclid_modifier
+      -- print k, n, rotation
+      pat = pat\euclid(k, n, rotation)
+
     values = { { 1, pat, 0 } }
-
     for modifier in *modifiers
-      -- values = flatten [ modifier(v) for v in *values ]
-      -- HACK: 
-      values = modifier(values[1])
-
+      n_values = nil
+      for v in *values
+        n_values =  modifier(v)
+      values = n_values
     return values
+
+  euclid_modifier:(node) =>
+    -- k = @eval node.k
+    -- n = @eval node.n
+    k = node.k.elements[1].value.value
+    n = node.n.elements[1].value.value
+    rotation = nil
+    if node.rotation != nil
+      -- rotation = @eval node.rotation
+      rotation = node.rotation.elements[1].value.value
+    else
+      rotation = 0 -- TODO: pure 0
+    return k, n, rotation
 
   modifier:(node) =>
     switch node.op
@@ -50,7 +82,7 @@ class Interpreter
       when "repeat"
         return (w_p) -> [ w_p for i = 1, node.count + 1 ]
       when "weight"
-        return (w_p) -> { { node.value, w_p[2], w_p[3] }}
+        return (w_p) -> { { node.value, w_p[2], w_p[3] } }
       when "degrade"
         arg = node.value
         switch arg.op
@@ -58,7 +90,7 @@ class Interpreter
             return (w_p) -> { { w_p[1], w_p[2], Fraction(arg.value, arg.value + 1) } }
           when "value"
             return (w_p) -> { { w_p[1], w_p[2], arg.value } }
-    return id
+    return (w_p) -> { { w_p[1], w_p[2], w_p[3] } }
 
   number:(node) => P.pure node.value
 
@@ -66,15 +98,12 @@ class Interpreter
   word:(node) =>
     P.pure node.value
 
-  rest:(node) => silence!
-
-parse = (code) ->
-  raw_ast = Parse code
-  return Visitor\visit raw_ast
+  rest:(node) => P.silence!
 
 P.mini = (source) ->
-  ast = parse source
+  ast = visit source
   return Interpreter\eval ast
+
 
 class Pattern
   new:(query = -> {}) =>
@@ -96,6 +125,8 @@ class Pattern
   show: => @__tostring!
 
   __eq: (other) => @show! == other\show! --????
+
+  drawline: (char = 20) => drawline(@, char)
 
   bindWhole: (choose_whole, func) =>
     pat_val = @
@@ -130,6 +161,8 @@ class Pattern
         condf event.value
       filter f, events
     Pattern query
+
+  removeNils: => @filterValues (v) -> v ~= nil
 
   splitQueries: =>
     query = (_, state) ->
@@ -204,6 +237,16 @@ class Pattern
 
   range:(min, max) => @ * (max - min) + min
 
+  struct:(...) =>
+    pats = totable(...) -- TODO: make totable more robust to take strings
+    P.fastcat(pats)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(@)\removeNils!
+
+  -- need patternify
+  euclid:(n, k, offset) =>
+    @struct bjork(n, k, offset)
+
+  -- euclid:(n, k, offset) => Pattern\_patternify((n) -> @_euclid(n))(n, k, offset)
+
   -- need patternify
   fastgap:(factor) =>
     factor = tofrac(factor)
@@ -250,7 +293,6 @@ class Pattern
 
   degrade: => @degrade_by(0.5)
 
-  -- TODO: test
   appLeft:(pat_val) =>
     query = (_, state) ->
       events = {}
@@ -353,10 +395,7 @@ signal = (func) ->
     return { Event nil, state.span, func state.span\midpoint! }
   Pattern query
 
--- TODO: move to utils when finished
-
-
-P.rand = -> signal timeToRand -- HACK: is this right?
+P.rand = -> signal timeToRand
 
 _chooseWith = (pat, ...) ->
   vals = totable(...)

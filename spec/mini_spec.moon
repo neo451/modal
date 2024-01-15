@@ -1,8 +1,8 @@
-import parse, mini from require "xi.mini"
 import Span from require "xi.span"
-import pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack from require "xi.pattern"
+import visit from require "xi.mini.visitor"
+import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack from require "xi.pattern"
 
-same = (name) -> assert.same visitor_targets[name], parse name
+same = (name) -> assert.same visitor_targets[name], visit name
 eval = (name) -> assert.same interpreter_targets[name], mini name
 
 describe "Mini Parser for", ->

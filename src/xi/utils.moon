@@ -61,6 +61,17 @@ utils.totable = (...) ->
     pats = { ... }
   return pats
 
+
+utils.zipWith = (f, xs, ys) -> [ f(x,y) for _, x, y in zip(xs, ys) ]
+
+utils.concat = (a, b) -> totable chain a, b
+
+utils.splitAt = (index, value) -> {[v for v in *value[1,index]], [v for v in *value[index + 1,]]}
+
+utils.rotate = (arr, step) ->
+  { a, b } = utils.splitAt step, arr
+  utils.concat b, a
+
 utils.id = (x) -> x
 
 utils.pipe = (...) ->
