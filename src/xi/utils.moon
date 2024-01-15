@@ -40,6 +40,8 @@ utils.filter = (func, table) -> totable filter func, table
 
 utils.map = (func, table) -> totable map func, table
 
+utils.reduce = (func, init, table) -> reduce func, init, table
+
 -- TODO: work on this more
 utils.dump = (o) ->
     if type(o) == 'table' then

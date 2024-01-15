@@ -17,7 +17,7 @@ import Pattern from require "xi.pattern"
 -- @usage
 -- print drawLine slowcat pure(1)\_fast(4), 2
 
-map = (func, items) -> [ func(v, i) for i, v in pairs items ]
+map = (func, items) -> [ func(v, i) for i, v in ipairs items ]
 
 drawLine = (pat, chars) ->
   chars = chars or 60

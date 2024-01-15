@@ -134,8 +134,6 @@ describe "Event", ->
       event5 = Event Span(3/4, 1), Span(1/2, 1), 5, {}, false
       assert.is_false(event1 == event5)
 
-
-
   describe "combineContext", ->
     it "should return new event with merged context tables", ->
         event1 = Event Span(1/2, 1), Span(1/2, 1), 5, { thing1: "something", thing2: 5, locations: { 1, 2, 3 } }, false
@@ -144,11 +142,11 @@ describe "Event", ->
 
         assert.are.same expectedContext, event1\combineContext(event2)
 
-        -- event1 = Event Span(1/2, 1), Span(1/2, 1), 5, { thing1: "something", thing2: 5, locations: { 1, 2, 3 } }, false
-        -- event2 = Event Span(1/2, 1), Span(1/2, 1), 6, { thing1: "something else", thing3: "more cowbell" }, false
-        -- expectedContext = { thing1: "something else", thing2: 5, thing3: "more cowbell", locations: { 1, 2, 3 } }
-        --
-        -- assert.are.same expectedContext, event1\combineContext(event2)
+        event1 = Event Span(1/2, 1), Span(1/2, 1), 5, { thing1: "something", thing2: 5, locations: { 1, 2, 3 } }, false
+        event2 = Event Span(1/2, 1), Span(1/2, 1), 6, { thing1: "something else", thing3: "more cowbell" }, false
+        expectedContext = { thing1: "something else", thing2: 5, thing3: "more cowbell", locations: { 1, 2, 3 } }
+
+        assert.are.same expectedContext, event1\combineContext(event2)
 
   describe "setContext", ->
     it "should return new event with specified context", ->

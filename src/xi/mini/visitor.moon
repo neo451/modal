@@ -1,6 +1,3 @@
-require "xi.mini.grammar"
-
--- TODO: type to tag?
 class Visitor
   visit: (node) =>
     type = node[1]
@@ -9,7 +6,7 @@ class Visitor
       children = {}
       for i = 3, #node
         children[#children + 1] = node[i]
-      for i, subnode in pairs(children)
+      for i, subnode in ipairs(children)
         children[i] = @visit(subnode)
       method(self, node, children)
     else
@@ -68,6 +65,10 @@ class Visitor
     if weight_mod.value ~= 1
       table.insert n_mods, weight_mod
     { type: "element", value: value, modifiers: n_mods, euclid_modifier: eculid_modifier }
+
+  m_element:(_, children) =>
+    { value, eculid_modifier } = children
+    { type: "element", value: value, modifiers: {}, euclid_modifier: eculid_modifier }
 
   polyrhythm_subseq:(_, children) =>
     { type: "polyrhythm", seqs: children[1] }
@@ -151,8 +152,7 @@ class Visitor
 
   _repeat:(_, children) =>
     sum = 0
-    for _, v in pairs(children) do
-      sum = sum + v
+    sum = reduce ((sum, v) -> sum + v), 0, children
     { type: "modifier", op: "repeat", count: sum }
 
   repeatn:(_, children) => children[1]

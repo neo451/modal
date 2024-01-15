@@ -3,13 +3,10 @@ import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
--- import mini from require "xi.mini.interpreter"
-require "xi.mini.grammar"
+import Parse from require "xi.mini.grammar"
 import Visitor from require "xi.mini.visitor"
 
 P = {}
-
-
 
 class Interpreter
   eval:(node) =>
@@ -98,7 +95,7 @@ class Pattern
 
   show: => @__tostring!
 
-  __eq: (other) => @show! == other\show!
+  __eq: (other) => @show! == other\show! --????
 
   bindWhole: (choose_whole, func) =>
     pat_val = @
@@ -177,6 +174,11 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
+  -- metamethods
+  __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(P.reify(other))
+
+  __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft(P.reify(other))
+
   _patternify:(method) =>
     patterned = (...) ->
       -- print "...", ...
@@ -196,6 +198,11 @@ class Pattern
   _slow:(value) => @_fast 1 / value
 
   _late:(offset) => @_early -offset
+  
+  -- TODO: test
+  segment:(n) => P.pure(id)\fast(n)\appLeft(@)
+
+  range:(min, max) => @ * (max - min) + min
 
   -- need patternify
   fastgap:(factor) =>
@@ -351,35 +358,71 @@ signal = (func) ->
 
 P.rand = -> signal timeToRand -- HACK: is this right?
 
--- p P.rand!\firstCycle!
+_chooseWith = (pat, ...) ->
+  vals = totable(...)
+  vals = map P.reify, vals
+  if #vals == 0
+    return P.silence!
+  
+  return pat\range(1, #vals + 1)\fmap((i) ->
+    key = math.min(math.max(math.floor(i), 0), #vals) -- ????
+    return vals[key]
+  )
+
+chooseWith = (pat, ...) ->
+  _chooseWith(pat, ...)\outerJoin!
+
+choose = (...) -> chooseWith P.rand!, ...
+
+P.chooseCycles = (...) -> return choose(...)\segment(1)
+
+P.randcat = (...) -> P.chooseCycles(...)
 
 -- seq_count = (x) ->
 --   if type(x) == "table"
---     print "1"
---     if #x == 1
---       print "2"
---       seq_count x[1]
+--     if #x == 0
+--       return { P.silence!, 0 }
+--     elseif #x == 1
+--       return seq_count x[1]
 --     else
---       print "3"
---       pats = map P.sequence, x ---???
---       P.fastcat(pats), #x
+--       pats = map ((a) -> _seq_count(a)[1]), x ---???
+--       return { P.fastcat(pats), #x }
 --   elseif type(x) == "pattern"
---     print "4"
---     x, 1
+--     return { x, 1 }
 --   else
---     print "5"
---     P.pure(x), 1
+--     return { P.reify(x), 1 }
 --
--- P.sequence = (x) ->
---   seq, _ = seq_count(x)
---   seq
+-- P.polymeter = (steps, ...) ->
+--   args = totable(...)
+--   seqs = map seq_count, args
+--   p seqs
+--   if #seqs == 0
+--     return P.silence!
+--
+--   if steps == 0
+--     steps = seqs[1][2]
+--
+--   pats = {}
+--
+--   for seq in *seqs
+--     print Fraction(steps, seq[2])
+--     if seq[2] == 0
+--       continue
+--     if seq[2] == steps
+--       table.insert pats, seq[1]
+--     else
+--       print seq[1]\_fast(4)
+--       table.insert pats, seq[1]\_fast(Fraction(steps, seq[2]))
+--
+--   return P.stack(pats)
+--
+-- print P.polymeter(4, "bd", "sd", "hh", "cp", "hh")
 
+P.polyrhythm = (...) -> P.stack(...)
 P.fast = (arg, pat) -> P.reify(pat)\fast(arg)
 P.slow = (arg, pat) -> P.reify(pat)\slow(arg)
 P.degrade = (arg, pat) -> P.reify(pat)\degrade(arg)
 
 P.Pattern = Pattern
-
-
 
 return P

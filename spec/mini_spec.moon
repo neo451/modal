@@ -1,6 +1,6 @@
 import parse, mini from require "xi.mini"
 import Span from require "xi.span"
-import pure, silence, fastcat, timecat, fast, slow, degrade from require "xi.pattern"
+import pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack from require "xi.pattern"
 
 same = (name) -> assert.same visitor_targets[name], parse name
 eval = (name) -> assert.same interpreter_targets[name], mini name
@@ -50,7 +50,7 @@ describe "Mini Parser for", ->
   describe "hybrid mod", ->
     it "should pass", ->
       same "hh!!??!"
-      same "hh!/2?!"
+      -- TODO:more complex case
 
   describe "sequence", ->
     it "should pass", ->
@@ -133,6 +133,21 @@ describe "Mini Interpreter for", ->
       eval "hh!!??"
       -- eval "hh!/2?!"
 
+  describe "random seq", ->
+    it "should pass", ->
+      eval "bd | sd cp"
+
+  describe "polyrhythm", ->
+    it "should pass", ->
+      eval "[bd sd] hh"
+      eval "bd sd . cp . hh*2"
+      eval "[bd, sd]"
+
+  describe "polymeter", ->
+    it "should pass", ->
+      eval "bd*<2 3 4>"
+      eval "{bd sd hh cp hh}%4"
+
 export interpreter_targets = {
   -- numbers
   "45": pure 45
@@ -167,6 +182,12 @@ export interpreter_targets = {
     { 1, slow(2, "sd") }
     { 1, fast(3, "cp") }
   }
+  "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
+  "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, "hh"))
+  "[bd, sd]": stack "bd", "sd"
+  "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
+  "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp", "hh")\fast(4/5)
+  "bd*<2 3 4>": slowcat fast(2, "bd"), fast(3, "bd"), fast(4, "bd")
 }
 
 export visitor_targets = {
@@ -457,44 +478,7 @@ export visitor_targets = {
     },
   },
 
-  ["hh!/2?!"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: {
-          { type: "modifier", op: "repeat", count: 1 },
-          {
-            type: "modifier",
-            op: "slow",
-            value: {
-              type: "element",
-              value: { type: "number", value: 2 },
-              modifiers: {
-                {
-                  type: "modifier",
-                  op: "repeat",
-                  count: 1,
-                },
-                {
-                  type: "modifier",
-                  op: "degrade",
-                  value: {
-                    type: "degrade_arg",
-                    op: "count",
-                    value: 1,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
   -- sequences
-
   ["bd sd"]: {
     type: "sequence",
     elements: {

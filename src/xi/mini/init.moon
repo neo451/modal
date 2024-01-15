@@ -1,4 +1,4 @@
-require "xi.mini.grammar"
+import Parse from require "xi.mini.grammar"
 import Interpreter from require "xi.mini.interpreter"
 import Visitor from require "xi.mini.visitor"
 
@@ -9,7 +9,5 @@ parse = (code) ->
 mini = (source) ->
   ast = parse source
   return Interpreter\eval ast
-
-p mini ""
 
 return { parse: parse, mini: mini }

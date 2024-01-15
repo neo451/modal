@@ -71,9 +71,9 @@ class Event
     loc1 = @context.locations or {}
     loc2 = other.context.locations or {}
     newloc = {}
-    for _, value in pairs loc1
+    for _, value in ipairs loc1
       table.insert newloc, value
-    for _, value in pairs loc2
+    for _, value in ipairs loc2
       table.insert newloc, value
     newContext.locations = newloc
     newContext

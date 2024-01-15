@@ -8,6 +8,7 @@ token_var = (id, patt) -> Ct Cc(id) * C(patt)
 sequence = token "sequence"
 group = token "group"
 element = token "element"
+m_element = token "m_element"
 element_value = token "element_value"
 polyrhythm_subseq = token "polyrhythm_subseq"
 polymeter_subseq = token "polymeter_subseq"
@@ -63,6 +64,8 @@ grammar = {
 
   -- element
   element: element_value * euclid_modifier * modifiers * elongate,
+  -- tmp fix?
+  m_element: element_value * euclid_modifier, --???euclidian neccssary?
   element_value: term + polyrhythm_subseq + polymeter_subseq + polymeter1_subseq,
   elongate: (ws ^ -1 * P("_")) ^ 0,
 
@@ -86,8 +89,8 @@ grammar = {
   -- term modifiers
   modifiers: modifier ^ 0,
   modifier: fast + slow + _repeat + degrade + weight,
-  fast: P("*") * element,
-  slow: P("/") * element,
+  fast: P("*") * m_element,
+  slow: P("/") * m_element,
   _repeat: (repeat1 + repeatn) ^ 1,
   repeatn: P("!") * -P("!") * pos_integer,
   repeat1: P("!") * -pos_integer,
@@ -116,5 +119,7 @@ grammar = Ct C grammar
 --- Parse takes a string of mini code and returns an AST
 -- @tparam string string of mini-notation
 -- @treturn table table of AST nodes
-export Parse = (string) -> grammar\match(string)[2]
+Parse = (string) -> grammar\match(string)[2]
+
+return { Parse: Parse }
 

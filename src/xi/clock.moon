@@ -29,7 +29,7 @@ class Clock
 
   unsubscribe:(subscriber) =>
     position = nil
-    for i, sub in pairs @subscribers
+    for i, sub in ipairs @subscribers
       if sub == subscriber
         position = i
     if position != nil
@@ -63,7 +63,6 @@ class Clock
         -- print "running is set to ", @running
 
         if not @running
-          print "break"
           break
 
         @link\capture_audio_session_state @sessionState
