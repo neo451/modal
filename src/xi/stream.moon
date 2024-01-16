@@ -76,4 +76,4 @@ class Stream
 
       @osc\send b
 
-return { Stream: Stream }
+return { :Stream }

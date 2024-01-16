@@ -1,6 +1,5 @@
 import reduce, type from require 'xi.utils'
-
-F = {}
+local *
 
 decimaltofraction = (x0, err) ->
 	err = err or 0.0000000001
@@ -48,7 +47,7 @@ class Fraction
   type: => 'fraction'
 
   __add: (f2) =>
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -67,7 +66,7 @@ class Fraction
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
 
   __sub: (f2) =>
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -86,7 +85,7 @@ class Fraction
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
 
   __div: (f2) => 
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -111,7 +110,7 @@ class Fraction
     Fraction(n, d, false)
 
   __mul: (f2) =>
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     na = @numerator
     nb = f2.numerator
     da = @denominator
@@ -130,7 +129,7 @@ class Fraction
     Fraction(na * nb, da * db, false)
 
   __pow: (f2) =>
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     if f2.denominator == 1
       power = f2.numerator
       if power >= 0
@@ -143,7 +142,7 @@ class Fraction
       (@numerator / @denominator) ^ (f2.numerator / f2.denominator)
 
   __mod: (f2) =>
-    f2 = F.tofrac f2
+    f2 = tofrac f2
     da = @denominator
     db = f2.denominator
     na = @numerator
@@ -166,21 +165,21 @@ class Fraction
   nextSam: => @sam! + 1
 
   min:(other) =>
-    other = F.tofrac other
+    other = tofrac other
     if @ < other
       return @
     else
       return other
 
   max:(other) =>
-    other = F.tofrac other
+    other = tofrac other
     if @ > other
       return @
     else
       return other
 
   gcd:(other) =>
-    other = F.tofrac other
+    other = tofrac other
     gcd_numerator = gcd @numerator, other.numerator
     lcm_denominator = lcm @denominator, other.denominator
     Fraction gcd_numerator, lcm_denominator
@@ -191,21 +190,19 @@ class Fraction
 
   show: => @__tostring!
 
-F.gcd_reduce = (table) ->
+gcd_reduce = (table) ->
   reduce ((acc, value) -> acc\gcd value), table[1], table
 
-F.tofrac = (x) ->
+tofrac = (x) ->
   if type(x) == "fraction"
     return x
   else
     return Fraction(x)
 
-F.tofloat = (x) ->
+tofloat = (x) ->
   if type(x) == "fraction"
     return x\asFloat!
   else
     return x
 
-F.Fraction = Fraction
-
-return F
+return { :Fraction, :tofrac, :tofloat, :gcd_reduce }

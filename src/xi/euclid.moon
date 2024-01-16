@@ -1,5 +1,4 @@
 import flatten, zipWith, concat, splitAt, rotate from require "xi.utils"
-dump = require "xi.moondump"
 
 left = (n, m) ->
   { ons, offs } = n
@@ -33,4 +32,4 @@ bjork = (ons, steps, offset = 0) ->
   result = concat flatten(result[2][1]), flatten(result[2][2])
   rotate result, offset
 
-return { bjork: bjork }
+return { :bjork }

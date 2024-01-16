@@ -79,4 +79,4 @@ class Clock
         -- print @running
       @linkEnabled = false --?
 
-return { Clock: Clock }
+return { :Clock }

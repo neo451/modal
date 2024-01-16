@@ -121,4 +121,4 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
-return { parse: parse }
+return { :parse }

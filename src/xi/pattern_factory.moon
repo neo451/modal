@@ -18,4 +18,4 @@ hush = ->
     DefaultClock\unsubscribe stream
   Streams = {}
 
-return { p: p, hush: hush, DefaultClock: DefaultClock }
+return { :p, :hush, :DefaultClock }

@@ -41,7 +41,6 @@ build = {
 		["xi.pattern_factory"] = "src/xi/pattern_factory.lua",
 		["xi.mini.grammar"] = "src/xi/mini/grammar.lua",
 		["xi.mini.visitor"] = "src/xi/mini/visitor.lua",
-		["xi.moondump"] = "src/xi/moondump.lua",
 	},
 	-- install = {
 	--    bin = {"bin/xi"}

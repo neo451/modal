@@ -56,4 +56,4 @@ drawline = (pat, chars) ->
     cycle = cycle + 1
   return table.concat lines
 
-return { drawline: drawline }
+return { :drawline }

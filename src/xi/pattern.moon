@@ -5,7 +5,7 @@ import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
 import visit from require "xi.mini.visitor"
-
+local *
 -- dump = require "xi.moondump"
 -- pdump = (a) -> print dump a
 P = {}
@@ -26,20 +26,20 @@ class Interpreter
       weight = es[1][1] or 1
       deg_ratio = es[1][3] or 0
       pats = [e[2] for e in *es]
-      table.insert tc_args, { #es * weight, P.fastcat(pats)\degrade_by(deg_ratio) }
-    return P.timecat tc_args
+      table.insert tc_args, { #es * weight, fastcat(pats)\degrade_by(deg_ratio) }
+    return timecat tc_args
 
   random_sequence:(node) =>
     seqs = [@eval(e) for e in *node.elements]
-    return P.randcat seqs
+    return randcat seqs
 
   polyrhythm:(node) =>
     seqs = [@eval(seq) for seq in *node.seqs]
-    return P.polyrhythm seqs
+    return polyrhythm seqs
 
   polymeter:(node) =>
     fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
-    return P.stack([@eval(seq)\fast(fp) for _, seq, fp in zip(node.seqs, fast_params)])
+    return stack([@eval(seq)\fast(fp) for _, seq, fp in zip(node.seqs, fast_params)])
 
   element:(node) =>
     modifiers = [ @eval(mod) for mod in *node.modifiers]
@@ -92,15 +92,15 @@ class Interpreter
             return (w_p) -> { { w_p[1], w_p[2], arg.value } }
     return (w_p) -> { { w_p[1], w_p[2], w_p[3] } }
 
-  number:(node) => P.pure node.value
+  number:(node) => pure node.value
 
   -- TODO: if index
   word:(node) =>
-    P.pure node.value
+    pure node.value
 
-  rest:(node) => P.silence!
+  rest:(node) => silence!
 
-P.mini = (source) ->
+mini = (source) ->
   ast = visit source
   return Interpreter\eval ast
 
@@ -117,6 +117,7 @@ class Pattern
     @query state
 
   firstCycle: => @querySpan 0, 1
+
   -- TODO: can not print signals properly
   __tostring: =>
     func = (event) -> event\show!
@@ -125,8 +126,6 @@ class Pattern
   show: => @__tostring!
 
   __eq: (other) => @show! == other\show! --????
-
-  drawline: (char = 20) => drawline(@, char)
 
   bindWhole: (choose_whole, func) =>
     pat_val = @
@@ -208,14 +207,14 @@ class Pattern
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
   -- metamethods
-  __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(P.reify(other))
+  __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(reify(other))
 
-  __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft(P.reify(other))
+  __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft(reify(other))
 
   _patternify:(method) =>
     patterned = (...) ->
       -- print "...", ...
-      patArg = P.fastcat ...
+      patArg = fastcat ...
       -- print patArg
       return patArg\fmap((arg) -> method(arg))\innerJoin!
     return patterned
@@ -233,13 +232,13 @@ class Pattern
   _late:(offset) => @_early -offset
   
   -- TODO: test
-  segment:(n) => P.pure(id)\fast(n)\appLeft(@)
+  segment:(n) => pure(id)\fast(n)\appLeft(@)
 
   range:(min, max) => @ * (max - min) + min
 
   struct:(...) =>
     pats = totable(...) -- TODO: make totable more robust to take strings
-    P.fastcat(pats)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(@)\removeNils!
+    fastcat(pats)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(@)\removeNils!
 
   -- need patternify
   euclid:(n, k, offset) =>
@@ -252,7 +251,7 @@ class Pattern
     factor = tofrac(factor)
 
     if factor <= Fraction(0)
-      P.silence!
+      silence!
 
     factor = factor\max(1)
 
@@ -279,14 +278,14 @@ class Pattern
   compress:(b, e) =>
     b, e = tofrac(b), tofrac(e)
     if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
-      return P.silence!
+      return silence!
     @fastgap(Fraction(1) / (e - b))\_late(b)
 
   degrade_by:(by, prand = nil) =>
     if by == 0
       return @
     if not prand
-      prand = P.rand!
+      prand = rand!
     f = (v) ->
       v > tofloat(by)
     return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
@@ -328,9 +327,9 @@ class Pattern
         return events
     Pattern query
 
-P.silence = -> Pattern!
+silence = -> Pattern!
 
-P.pure = (value) ->
+pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
     f = (span) ->
@@ -339,25 +338,25 @@ P.pure = (value) ->
     map f, cycles
   Pattern query
 
-P.reify = (pat) ->
+reify = (pat) ->
   if type(pat) == "pattern"
     return pat
   if type(pat) == "string"
-  	return P.mini pat
-  P.pure pat
+  	return mini pat
+  pure pat
 
-P.stack = (...) ->
+stack = (...) ->
   pats = totable(...)
-  pats = map P.reify, pats
+  pats = map reify, pats
   query = (state) =>
     events = map ((pat) -> pat\query state), pats
     flatten events
   Pattern query
 
 -- is prime
-P.slowcat = (...) ->
+slowcat = (...) ->
   pats = totable(...)
-  pats = map P.reify, pats
+  pats = map reify, pats
   query = (state) =>
     len = #pats
     index = state.span._begin\sam!\asFloat! % len + 1
@@ -365,12 +364,12 @@ P.slowcat = (...) ->
     pat\query state
   Pattern(query)\splitQueries!
 
-P.fastcat = (...) ->
+fastcat = (...) ->
   pats = totable(...)
-  pats = map P.reify, pats
-  P.slowcat(...)\_fast(#pats)
+  pats = map reify, pats
+  slowcat(...)\_fast(#pats)
 
-P.timecat = (time_pat_tuples) ->
+timecat = (time_pat_tuples) ->
   tuples, arranged = {}, {}
   accum, total = 0, 0
   for tup in *time_pat_tuples
@@ -380,7 +379,7 @@ P.timecat = (time_pat_tuples) ->
 
   for tup in *tuples
     { time, pat } = tup
-    table.insert arranged, { accum / total, (accum + time) / total, P.reify(pat) }
+    table.insert arranged, { accum / total, (accum + time) / total, reify(pat) }
     accum = accum + time
 
   n_pats = {}
@@ -388,20 +387,20 @@ P.timecat = (time_pat_tuples) ->
     { b, e, pat } = tab
     table.insert n_pats, pat\compress(b, e)
 
-  P.stack(n_pats)
+  stack(n_pats)
 
 signal = (func) ->
   query = (state) =>
     return { Event nil, state.span, func state.span\midpoint! }
   Pattern query
 
-P.rand = -> signal timeToRand
+rand = -> signal timeToRand
 
 _chooseWith = (pat, ...) ->
   vals = totable(...)
-  vals = map P.reify, vals
+  vals = map reify, vals
   if #vals == 0
-    return P.silence!
+    return silence!
   
   return pat\range(1, #vals + 1)\fmap((i) ->
     key = math.min(math.max(math.floor(i), 0), #vals) -- ????
@@ -411,57 +410,31 @@ _chooseWith = (pat, ...) ->
 chooseWith = (pat, ...) ->
   _chooseWith(pat, ...)\outerJoin!
 
-choose = (...) -> chooseWith P.rand!, ...
+choose = (...) -> chooseWith rand!, ...
 
-P.chooseCycles = (...) -> return choose(...)\segment(1)
+chooseCycles = (...) -> return choose(...)\segment(1)
 
-P.randcat = (...) -> P.chooseCycles(...)
+randcat = (...) -> chooseCycles(...)
 
--- seq_count = (x) ->
---   if type(x) == "table"
---     if #x == 0
---       return { P.silence!, 0 }
---     elseif #x == 1
---       return seq_count x[1]
---     else
---       pats = map ((a) -> _seq_count(a)[1]), x ---???
---       return { P.fastcat(pats), #x }
---   elseif type(x) == "pattern"
---     return { x, 1 }
---   else
---     return { P.reify(x), 1 }
---
--- P.polymeter = (steps, ...) ->
---   args = totable(...)
---   seqs = map seq_count, args
---   p seqs
---   if #seqs == 0
---     return P.silence!
---
---   if steps == 0
---     steps = seqs[1][2]
---
---   pats = {}
---
---   for seq in *seqs
---     print Fraction(steps, seq[2])
---     if seq[2] == 0
---       continue
---     if seq[2] == steps
---       table.insert pats, seq[1]
---     else
---       print seq[1]\_fast(4)
---       table.insert pats, seq[1]\_fast(Fraction(steps, seq[2]))
---
---   return P.stack(pats)
---
--- print P.polymeter(4, "bd", "sd", "hh", "cp", "hh")
+polyrhythm = (...) -> stack(...)
 
-P.polyrhythm = (...) -> P.stack(...)
-P.fast = (arg, pat) -> P.reify(pat)\fast(arg)
-P.slow = (arg, pat) -> P.reify(pat)\slow(arg)
-P.degrade = (arg, pat) -> P.reify(pat)\degrade(arg)
+fast = (arg, pat) -> reify(pat)\fast(arg)
 
-P.Pattern = Pattern
+slow = (arg, pat) -> reify(pat)\slow(arg)
 
-return P
+degrade = (arg, pat) -> reify(pat)\degrade(arg)
+
+return {
+  :Pattern
+  :pure
+  :silence
+  :mini
+  :fastcat
+  :slowcat
+  :timecat
+  :randcat
+  :stack
+  :fast
+  :slow
+  :degrade
+}

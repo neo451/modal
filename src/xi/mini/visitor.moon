@@ -187,4 +187,4 @@ visit = (code) ->
   raw_ast = parse code
   return Visitor\visit raw_ast
 
-return { Visitor: Visitor, visit: visit }
+return { :Visitor, :visit }

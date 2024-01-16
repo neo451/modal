@@ -65,4 +65,4 @@ class Span
       error("Span: Arcs do not intersect")
     result
 
-return { Span: Span }
+return { :Span }

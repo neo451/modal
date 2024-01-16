@@ -78,4 +78,4 @@ class Event
     newContext.locations = newloc
     newContext
 
-return { Event: Event }
+return { :Event }

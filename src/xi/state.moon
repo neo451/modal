@@ -16,4 +16,4 @@ class State
 
   __eq:(other) => @span == other.span and compare @controls, other.controls
 
-return { State: State }
+return { :State }
