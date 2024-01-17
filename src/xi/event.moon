@@ -32,12 +32,6 @@ class Event
   show: => @__tostring!
 
   __tostring: =>
-    -- -- HACK: tmp fix??
-    -- print type @value
-    -- if type(@value) != "string"
-    --   value = type @value
-    -- else
-    --   value = @value
     partStartsWithWhole = @hasWhole! and @whole._begin == @part._begin
     partEndsWithWhole = @hasWhole! and @whole._end == @part._end
     partFormat = "(%s)"

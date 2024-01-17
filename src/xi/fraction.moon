@@ -2,31 +2,31 @@ import reduce, type from require 'xi.utils'
 local *
 
 decimaltofraction = (x0, err) ->
-	err = err or 0.0000000001
-	num, den
-	g = math.abs x0 -- or x0:abs()
-	sign = x0 / g
-	a, b, c, d = 0, 1, 1, 0
-	s
-	iter = 0
-	while iter < 1000000
-		s = math.floor g
-		num = a + s * c
-		den = b + s * d
-		a, b, c, d = c, d, num, den
-		g = 1.0 / (g - s)
-		iter = iter + 1
-		if err > math.abs sign * num / den - x0
-			return sign * num, den
+  err = err or 0.0000000001
+  num, den
+  g = math.abs x0 -- or x0:abs()
+  sign = x0 / g
+  a, b, c, d = 0, 1, 1, 0
+  s
+  iter = 0
+  while iter < 1000000
+    s = math.floor g
+    num = a + s * c
+    den = b + s * d
+    a, b, c, d = c, d, num, den
+    g = 1.0 / (g - s)
+    iter = iter + 1
+    if err > math.abs sign * num / den - x0
+      return sign * num, den
 
-	error "Fraction: failed to find a fraction for " .. x0
-	0, 1
+  error "Fraction: failed to find a fraction for " .. x0
+  0, 1
 
 gcd = (a, b) ->
-	(b == 0) and a or gcd(b, a % b)
+  (b == 0) and a or gcd(b, a % b)
 
 lcm = (a, b) ->
-	(a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
+  (a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
 
 class Fraction
   new: (n = 0, d = 1, normalize = true) =>
@@ -84,7 +84,7 @@ class Fraction
 
     Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
 
-  __div: (f2) => 
+  __div: (f2) =>
     f2 = tofrac f2
     na = @numerator
     nb = f2.numerator

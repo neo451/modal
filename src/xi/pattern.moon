@@ -1,3 +1,6 @@
+--- Core pattern representation for strudel
+-- @module xi.pattern
+
 import map, filter, id, flatten, totable, dump, rotate, timeToRand, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import Span from require "xi.span"
@@ -8,7 +11,6 @@ import visit from require "xi.mini.visitor"
 local *
 -- dump = require "xi.moondump"
 -- pdump = (a) -> print dump a
-P = {}
 
 class Interpreter
   eval:(node) =>
@@ -99,11 +101,6 @@ class Interpreter
     pure node.value
 
   rest:(node) => silence!
-
-mini = (source) ->
-  ast = visit source
-  return Interpreter\eval ast
-
 
 class Pattern
   new:(query = -> {}) =>
@@ -230,8 +227,7 @@ class Pattern
   _slow:(value) => @_fast 1 / value
 
   _late:(offset) => @_early -offset
-  
-  -- TODO: test
+
   segment:(n) => pure(id)\fast(n)\appLeft(@)
 
   range:(min, max) => @ * (max - min) + min
@@ -247,7 +243,7 @@ class Pattern
   -- euclid:(n, k, offset) => Pattern\_patternify((n) -> @_euclid(n))(n, k, offset)
 
   -- need patternify
-  fastgap:(factor) =>
+  _fastgap:(factor) =>
     factor = tofrac(factor)
 
     if factor <= Fraction(0)
@@ -275,11 +271,11 @@ class Pattern
       map f, events
     Pattern(query)\splitQueries!
 
-  compress:(b, e) =>
+  _compress:(b, e) =>
     b, e = tofrac(b), tofrac(e)
     if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
       return silence!
-    @fastgap(Fraction(1) / (e - b))\_late(b)
+    @_fastgap(Fraction(1) / (e - b))\_late(b)
 
   degrade_by:(by, prand = nil) =>
     if by == 0
@@ -327,8 +323,16 @@ class Pattern
         return events
     Pattern query
 
+--- Does absolutely nothing..
+-- @return Pattern
+-- @usage
+-- silence!
 silence = -> Pattern!
 
+--- A discrete value that repeats once per cycle.
+-- @return Pattern
+-- @usage
+-- pure('e4')
 pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
@@ -338,25 +342,39 @@ pure = (value) ->
     map f, cycles
   Pattern query
 
-reify = (pat) ->
-  if type(pat) == "pattern"
-    return pat
-  if type(pat) == "string"
-  	return mini pat
-  pure pat
+--- Turns mini-notation(string) into a pattern
+-- @param string
+-- @return Pattern
+mini = (string) ->
+  ast = visit string
+  Interpreter\eval ast
 
+--- Turns something into a pattern, unless it's already a pattern
+-- @local
+-- @return pattern
+reify = (thing) ->
+  switch type thing
+    when "pattern" then thing
+    when "table" then fastcat thing
+    when "string" then mini thing
+    else pure thing
+
+--- The given items are played at the same time at the same length.
+-- @return Pattern
+-- @usage
+-- stack("g3", "b3", {"e4", "d4"})
 stack = (...) ->
-  pats = totable(...)
-  pats = map reify, pats
+  pats = map reify, totable(...)
   query = (state) =>
     events = map ((pat) -> pat\query state), pats
     flatten events
   Pattern query
 
--- is prime
-slowcat = (...) ->
-  pats = totable(...)
-  pats = map reify, pats
+--- Concatenation: combines a list of patterns, switching between them successively, one per cycle. Unlike slowcat, this version will skip cycles.
+-- @param items to concatenate
+-- @return Pattern
+slowcatPrime = (...) ->
+  pats = map reify, totable(...)
   query = (state) =>
     len = #pats
     index = state.span._begin\sam!\asFloat! % len + 1
@@ -364,47 +382,64 @@ slowcat = (...) ->
     pat\query state
   Pattern(query)\splitQueries!
 
+--- Concatenation: combines a list of patterns, switching between them successively, one per cycle:
+-- @param items to concatenate
+-- @return Pattern
+-- @usage
+-- slowcat("e5", "b4", {"d5", "c5"})
+slowcat = (...) ->
+  pats = map reify, totable(...)
+  query = (state) =>
+    span = state.span
+    len = #pats
+    index = state.span._begin\sam!\asFloat! % len + 1
+    pat = pats[index]
+    if not pat then return {}
+    offset = span._begin\floor! - (span._begin / len)\floor!
+    pat\withEventTime((t) -> t + offset)\query(state\setSpan(span\withTime((t) -> t - offset)))
+  Pattern(query)\splitQueries!
+
+--- Like slowcat, but the items are crammed into one cycle.
+-- @param items to concatenate
+-- @return Pattern
+-- @usage
+-- fastcat("e5", "b4", ["d5", "c5"])
 fastcat = (...) ->
-  pats = totable(...)
-  pats = map reify, pats
+  pats = map reify, totable(...)
   slowcat(...)\_fast(#pats)
 
-timecat = (time_pat_tuples) ->
-  tuples, arranged = {}, {}
-  accum, total = 0, 0
-  for tup in *time_pat_tuples
-    { time, pat } = tup
-    table.insert tuples, { time, pat }
-    total = total + time
-
+-- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
+-- @param table of time-pat tables
+-- @return Pattern
+-- @usage
+-- timecat({{3,"e3"},{1, "g3"}}).note() // "e3@3 g3".note()
+timecat = (tuples) ->
+  pats = {}
+  times = map ((x) -> x[1]), tuples
+  total = reduce op.add, Fraction(0), times
+  accum = Fraction(0)
   for tup in *tuples
     { time, pat } = tup
-    table.insert arranged, { accum / total, (accum + time) / total, reify(pat) }
+    b = accum / total
+    e = (accum + time) / total
+    table.insert pats, reify(pat)\_compress(b, e)
     accum = accum + time
+  stack(pats)
 
-  n_pats = {}
-  for tab in *arranged
-    { b, e, pat } = tab
-    table.insert n_pats, pat\compress(b, e)
-
-  stack(n_pats)
-
-signal = (func) ->
+waveform = (func) ->
   query = (state) =>
     return { Event nil, state.span, func state.span\midpoint! }
   Pattern query
 
-rand = -> signal timeToRand
+rand = -> waveform timeToRand
 
 _chooseWith = (pat, ...) ->
-  vals = totable(...)
-  vals = map reify, vals
-  if #vals == 0
-    return silence!
-  
-  return pat\range(1, #vals + 1)\fmap((i) ->
-    key = math.min(math.max(math.floor(i), 0), #vals) -- ????
-    return vals[key]
+  vals = map reify, totable(...)
+  if #vals == 0 then return silence!
+  return pat\range(1, #vals + 1)\fmap(
+    (i) ->
+      key = math.min(math.max(math.floor(i), 0), #vals)
+      return vals[key]
   )
 
 chooseWith = (pat, ...) ->
@@ -412,7 +447,7 @@ chooseWith = (pat, ...) ->
 
 choose = (...) -> chooseWith rand!, ...
 
-chooseCycles = (...) -> return choose(...)\segment(1)
+chooseCycles = (...) -> choose(...)\segment(1)
 
 randcat = (...) -> chooseCycles(...)
 

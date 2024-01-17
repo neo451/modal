@@ -176,7 +176,7 @@ describe "Pattern", ->
 
   describe "fastgap", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat("bd", "sd")\fastgap(4)\firstCycle!
+      actualEvents = fastcat("bd", "sd")\_fastgap(4)\firstCycle!
       expectedEvents = {
          Event Span(0, 1/8), Span(0, 1/8), "bd",
          Event Span(1/8, 1/4), Span(1/8, 1/4), "sd",
@@ -185,7 +185,7 @@ describe "Pattern", ->
 
   describe "compress", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat("bd", "sd")\compress(1/4, 3/4)\firstCycle!
+      actualEvents = fastcat("bd", "sd")\_compress(1/4, 3/4)\firstCycle!
       expectedEvents = {
         Event Span(1/4, 1/2), Span(1/4, 1/2), "bd",
         Event Span(1/2, 3/4), Span(1/2, 3/4), "sd",
