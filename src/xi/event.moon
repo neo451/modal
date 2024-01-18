@@ -1,4 +1,4 @@
-import compare from require "xi.utils"
+import compare, dumpval from require "xi.utils"
 import Span from require "xi.span"
 
 class Event
@@ -45,7 +45,7 @@ class Event
 
     partString = string.format partFormat, @part\show!
 
-    string.format "[%s | %s]", partString, @value
+    string.format "[%s | %s]", partString, dumpval @value
 
   spanEquals: (other) =>
     ((other.whole == nil) and (@whole == nil)) or (other.whole == @whole)

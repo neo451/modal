@@ -464,6 +464,7 @@ return {
   :pure
   :silence
   :mini
+  :reify
   :fastcat
   :slowcat
   :timecat

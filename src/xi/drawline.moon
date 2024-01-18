@@ -1,10 +1,10 @@
 --- drawline.moon
 -- @module drawline
 
-import filter, reduce, flatten, dump, type from require "xi.utils"
-import Fraction from require "xi.fraction"
-import Pattern from require "xi.pattern"
-
+import filter, reduce, flatten, dump, dumpval, type from require "xi.utils"
+import Fraction, gcd_reduce from require "xi.fraction"
+import Pattern, reify from require "xi.pattern"
+import sound from require "xi.control"
 --- intended for debugging, drawline renders the pattern as a string, where each character represents the same time span.
 -- should only be used with single characters as values, otherwise the character slots will be messed up.
 -- character legend:
@@ -20,6 +20,7 @@ import Pattern from require "xi.pattern"
 map = (func, items) -> [ func(v, i) for i, v in ipairs items ]
 
 drawline = (pat, chars) ->
+  pat = reify pat
   chars = chars or 60
   cycle = 0
   pos = Fraction(0)
@@ -47,7 +48,12 @@ drawline = (pat, chars) ->
         event = matches[index]
         if event ~= nil
           isOnset = event.whole._begin == _begin
-          char = isOnset and "" .. event.value or "-"
+          char = nil
+          if isOnset
+            char = dumpval event.value
+          else
+            char = "-"
+          -- char = isOnset and dumpval event.value or "-"
           return line .. char
         return line .. "."
       lines = map mapfunc, lines

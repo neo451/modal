@@ -116,4 +116,12 @@ intSeedToRand = (x) -> (x % 536870912) / 536870912
 
 utils.timeToRand = (x) -> math.abs intSeedToRand timeToIntSeed x
 
+utils.dumpval = (thing) ->
+  switch type(thing)
+    when "table"
+      tab = [v for k, v in pairs thing]
+      return tab[1]
+    when "string"
+      return thing
+
 return utils

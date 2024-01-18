@@ -22,7 +22,7 @@ class Clock
   stop: =>
     @running = false
     print "clock stopped"
-    coroutine.close @notifyCoroutine
+    -- coroutine.close @notifyCoroutine
 
   subscribe:(subscriber) =>
     table.insert @subscribers, subscriber
