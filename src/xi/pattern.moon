@@ -1,6 +1,5 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-
 import map, filter, id, flatten, totable, dump, rotate, timeToRand, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import Span from require "xi.span"
@@ -322,6 +321,11 @@ class Pattern
             table.insert events, Event new_whole, new_part, new_value
         return events
     Pattern query
+
+  combineRight:(others) =>
+    f = (a, b) ->
+      a\fmap((x) -> (y) -> {x, y})\appLeft(b)
+    return reduce f, @, others
 
 --- Does absolutely nothing..
 -- @return Pattern

@@ -42,16 +42,17 @@ utils.map = (func, table) -> totable map func, table
 
 utils.reduce = (func, init, table) -> reduce func, init, table
 
--- TODO: work on this more
+-- TODO: line breaks
 utils.dump = (o) ->
-    if type(o) == 'table' then
-        s = '{\n'
-        for k, v in pairs o
-            if type(k) ~= 'number' then k = '"' .. k .. '"'
-            s = s .. '  [' .. k .. '] = ' .. utils.dump(v) .. ',\n'
-        return s .. '} '
-    else
-        return tostring(o)
+  if type(o) == 'table'
+    -- if tsize(o) then return "{}"
+    s = '{'
+    for k, v in pairs o
+      -- if type(k) ~= 'number' then k = '"' .. k .. '"'
+      s = s .. ' ' .. k .. ': ' .. utils.dump(v)
+    return s .. ' } '
+  else
+    return tostring(o)
 
 utils.totable = (...) ->
   pats = ...

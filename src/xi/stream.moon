@@ -1,6 +1,5 @@
 losc = require "losc"
 plugin = require "losc.plugins.udp-socket"
-abletonlink = require "abletonlink"
 import sound from require "xi.control"
 import Fraction from require "xi.fraction"
 import dump from require "xi.utils"

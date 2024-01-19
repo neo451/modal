@@ -1,4 +1,4 @@
-import compare from require "xi.utils"
+import compare, dump from require "xi.utils"
 import Span from require "xi.span"
 
 class State
@@ -13,6 +13,8 @@ class State
   withSpan:(func) => @setSpan(func @span)
 
   setControls:(controls) => State @span, controls
+
+  __tostring: => "span: ".. @span\show! .. "  controls: " .. dump @controls
 
   __eq:(other) => @span == other.span and compare @controls, other.controls
 
