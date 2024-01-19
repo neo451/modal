@@ -1,6 +1,6 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-import map, filter, id, flatten, totable, dump, rotate, timeToRand, type from require "xi.utils"
+import map, filter, id, flatten, totable, dump, rotate, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
@@ -202,10 +202,58 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
+  appLeft:(pat_val) =>
+    query = (_, state) ->
+      events = {}
+      event_funcs = @query state
+      for event_func in *event_funcs
+        whole = event_func\wholeOrPart!
+        event_vals = pat_val\querySpan(whole._begin, whole._end)
+        for event_val in *event_vals
+          new_whole = event_func.whole
+          new_part = event_func.part\sect event_val.part
+          new_context = event_val\combineContext event_func
+          if new_part ~= nil
+            new_value = event_func.value event_val.value
+            table.insert events, Event new_whole, new_part, new_value
+      return events
+    Pattern query
+
+  appRight:(pat_val) =>
+    query = (_, state) ->
+      events = {}
+      event_vals = pat_val\query state
+      for event_val in *event_vals
+        whole = event_val\wholeOrPart!
+        event_funcs = @querySpan(whole._begin, whole._end)
+        event_val\wholeOrPart!
+        for event_func in *event_funcs
+          new_whole = event_val.whole
+          new_part = event_func.part\sect event_val.part
+          new_context = event_val\combineContext event_func
+          if new_part ~= nil
+            new_value = event_func.value event_val.value
+            table.insert events, Event new_whole, new_part, new_value
+        return events
+    Pattern query
+
+  combineRight:(others) =>
+    f = (a, b) ->
+      a\fmap((x) -> (y) -> {x, y})\appLeft(b)
+    return reduce f, @, others
+
   -- metamethods
   __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(reify(other))
 
+  __div:(other) => @fmap((x) -> (y) -> y / x)\appLeft(reify(other))
+
   __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft(reify(other))
+
+  __sub:(other) => @fmap((x) -> (y) -> y - x)\appLeft(reify(other))
+
+  __mod:(other) => @fmap((x) -> (y) -> y % x)\appLeft(reify(other))
+
+  __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft(reify(other))
 
   _patternify:(method) =>
     patterned = (...) ->
@@ -219,8 +267,9 @@ class Pattern
 
   fast:(...) => Pattern\_patternify((val) -> @_fast(val))(...)
   slow:(...) => Pattern\_patternify((val) -> @_slow(val))(...)
+  early:(...) => Pattern\_patternify((val) -> @_early(val))(...)
+  late:(...) => Pattern\_patternify((val) -> @_late(val))(...)
 
-  -- offset might be fraction?
   _early:(offset) => @withTime ((t) -> t + offset), ((t) -> t - offset)
 
   _slow:(value) => @_fast 1 / value
@@ -230,6 +279,21 @@ class Pattern
   segment:(n) => pure(id)\fast(n)\appLeft(@)
 
   range:(min, max) => @ * (max - min) + min
+
+  rev: =>
+    query = (_, state) ->
+      span = state.span
+      cycle = span._begin\sam!
+      nextCycle = span._begin\nextSam!
+      reflect = (to_reflect) ->
+        reflected = to_reflect\withTime((time) -> cycle + ( nextCycle - time))
+        tmp = reflected._begin
+        reflected._begin = reflected._end
+        reflected._end = tmp
+        return reflected
+      events = @query state\setSpan reflect(span)
+      map ((event) -> event\withSpan reflect), events
+    Pattern query
 
   struct:(...) =>
     pats = totable(...) -- TODO: make totable more robust to take strings
@@ -277,55 +341,22 @@ class Pattern
     @_fastgap(Fraction(1) / (e - b))\_late(b)
 
   degrade_by:(by, prand = nil) =>
-    if by == 0
-      return @
-    if not prand
-      prand = rand!
-    f = (v) ->
-      v > tofloat(by)
+    if by == 0 then return @
+    if not prand then prand = rand!
+    f = (v) -> v > tofloat(by)
     return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
   degrade: => @degrade_by(0.5)
 
-  appLeft:(pat_val) =>
-    query = (_, state) ->
-      events = {}
-      event_funcs = @query state
-      for event_func in *event_funcs
-        whole = event_func\wholeOrPart!
-        event_vals = pat_val\querySpan(whole._begin, whole._end)
-        for event_val in *event_vals
-          new_whole = event_func.whole
-          new_part = event_func.part\sect event_val.part
-          new_context = event_val\combineContext event_func
-          if new_part ~= nil
-            new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value
-      return events
-    Pattern query
+  superimpose:(func) => stack(@, func(@))
 
-  appRight:(pat_val) =>
-    query = (_, state) ->
-      events = {}
-      event_vals = pat_val\query state
-      for event_val in *event_vals
-        whole = event_val\wholeOrPart!
-        event_funcs = @querySpan(whole._begin, whole._end)
-        event_val\wholeOrPart!
-        for event_func in *event_funcs
-          new_whole = event_val.whole
-          new_part = event_func.part\sect event_val.part
-          new_context = event_val\combineContext event_func
-          if new_part ~= nil
-            new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value
-        return events
-    Pattern query
+  layer:(...) =>
+    pats = totable(...)
+    stack [func(@) for func in *pats]
 
-  combineRight:(others) =>
-    f = (a, b) ->
-      a\fmap((x) -> (y) -> {x, y})\appLeft(b)
-    return reduce f, @, others
+  iter:(n) => slowcat [@early Fraction(i - 1, n) for i in range(n)]
+
+  reviter:(n) => slowcat [@late Fraction(i - 1, n) for i in range(n)]
 
 --- Does absolutely nothing..
 -- @return Pattern
@@ -358,10 +389,14 @@ mini = (string) ->
 -- @return pattern
 reify = (thing) ->
   switch type thing
-    when "pattern" then thing
-    when "table" then fastcat thing
     when "string" then mini thing
+    when "table" then fastcat thing
+    when "pattern" then thing
     else pure thing
+
+run = (n) -> fastcat [i for i in range(0, n - 1)]
+scan = (n) -> slowcat [run(i) for i in range(n)]
+
 
 --- The given items are played at the same time at the same length.
 -- @return Pattern
@@ -370,7 +405,11 @@ reify = (thing) ->
 stack = (...) ->
   pats = map reify, totable(...)
   query = (state) =>
-    events = map ((pat) -> pat\query state), pats
+    span = state.span
+    f = (pat) ->
+      -- tmp fix? same issue with appLeft why is state mutated? --weird
+      pat\querySpan(span._begin, span._end)
+    events = map f, pats
     flatten events
   Pattern query
 
@@ -457,24 +496,75 @@ randcat = (...) -> chooseCycles(...)
 
 polyrhythm = (...) -> stack(...)
 
-fast = (arg, pat) -> reify(pat)\fast(arg)
+fast = (arg, pat) -> 
+  if pat != nil then return reify(pat)\fast(arg)
+  else return curry(fast, 2)(arg)
 
-slow = (arg, pat) -> reify(pat)\slow(arg)
+slow = (arg, pat) ->
+  if pat != nil then return reify(pat)\slow(arg)
+  else return curry(slow, 2)(arg)
 
-degrade = (arg, pat) -> reify(pat)\degrade(arg)
+early = (arg, pat) ->
+  if pat != nil then return reify(pat)\early(arg)
+  else return curry(early, 2)(arg)
+
+late = (arg, pat) ->
+  if pat != nil then return reify(pat)\late(arg)
+  else return curry(late, 2)(arg)
+
+iter = (arg, pat) ->
+  if pat != nil then return reify(pat)\iter(arg)
+  else return curry(iter, 2)(arg)
+
+reviter = (arg, pat) ->
+  if pat != nil then return reify(pat)\reviter(arg)
+  else return curry(reviter, 2)(arg)
+
+degradeBy = (arg, pat) ->
+  if pat != nil then return reify(pat)\degrade_by(arg)
+  else return curry(degrade, 2)(arg)
+
+degrade = (pat) ->
+  if pat != nil then return reify(pat)\degrade!
+  else return curry(degrade, 1)
+
+rev = (pat) ->
+  if pat != nil then return reify(pat)\rev!
+  else return curry(rev, 1)
+
+superimpose = (func, pat) ->
+  if pat != nil then return reify(pat)\superimpose(func)
+  else return curry(superimpose, 2)(func)
+
+layer = (...) ->
+  pats = totable(...)
+  reify(pats[#pats])\layer([pat for pat in *pats[1, #pats - 1]])
+
+-- TODO: wchoose, waveforms, tests for the new methods, patternify for euclid
 
 return {
   :Pattern
+  :id
   :pure
   :silence
   :mini
   :reify
+  :run
+  :scan
   :fastcat
   :slowcat
   :timecat
   :randcat
   :stack
+  :layer
+  :superimpose
+  :rev
   :fast
   :slow
+  :early
+  :late
   :degrade
+  :degradeBy
+  :iter
+  :reviter
 }

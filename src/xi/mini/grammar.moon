@@ -1,7 +1,7 @@
 --- defines the PEG grammar for parsing mini-notation
 -- @module mini.grammar
 import P, S, V, R, C, Ct, Cc from require("lpeg")
-
+-- TODO: support musical notation like e3, cmaj3
 token = (id) -> Ct Cc(id) * C(V(id))
 token_var = (id, patt) -> Ct Cc(id) * C(patt)
 

@@ -10,8 +10,8 @@ controls = { "sound", "note" }
 create = (name) ->
   withVal = (v) -> { [name]: v }
   func = (args) -> fastcat(args)\fmap(withVal)
-  pfunc = (args) => @withValue(withVal)
-  Pattern.__base[name] = pfunc
+  -- pfunc = (args) => @withValue(withVal)
+  -- Pattern.__base[name] = pfunc
   C[name] = func
 
 for name in *controls
@@ -19,7 +19,7 @@ for name in *controls
 
 -- print C.sound("sd")
 
-pure("sd").sound()
+-- pure("sd").sound()
 
 -- p C.sound("a")\combineRight({C.sound("b"), C.sound("c")})
 return C

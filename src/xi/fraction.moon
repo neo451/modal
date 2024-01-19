@@ -1,9 +1,6 @@
 import reduce, type from require 'xi.utils'
 local *
 
-numerators = { "⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹" }
-denominators = { "₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉" }
-
 decimaltofraction = (x0, err) ->
   err = err or 0.0000000001
   num, den
@@ -190,9 +187,7 @@ class Fraction
   asFloat: => @numerator / @denominator
 
   __tostring: =>
-    num = numerators[@numerator + 1]
-    deno = denominators[@denominator + 1]
-    string.format "%s/%s", num, deno
+    string.format "%d/%d", @numerator, @denominator
 
   show: => @__tostring!
 
