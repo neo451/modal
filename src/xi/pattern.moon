@@ -72,10 +72,10 @@ class Interpreter
     switch node.op
       when "fast"
         param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], (fast param, w_p[2]), w_p[3] } }
+        return (w_p) -> { { w_p[1], fast(param, w_p[2]), w_p[3] } }
       when "slow"
         param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], (slow param, w_p[2]), w_p[3] } }
+        return (w_p) -> { { w_p[1], slow(param, w_p[2]), w_p[3] } }
       when "repeat"
         return (w_p) -> [ w_p for i = 1, node.count + 1 ]
       when "weight"
@@ -202,8 +202,7 @@ class Pattern
       events = {}
       event_funcs = @query state
       for event_func in *event_funcs
-        whole = event_func\wholeOrPart!
-        event_vals = pat_val\querySpan(whole._begin, whole._end)
+        event_vals = pat_val\query state\setSpan event_func\wholeOrPart!
         for event_val in *event_vals
           new_whole = event_func.whole
           new_part = event_func.part\sect event_val.part
@@ -219,8 +218,7 @@ class Pattern
       events = {}
       event_vals = pat_val\query state
       for event_val in *event_vals
-        whole = event_val\wholeOrPart!
-        event_funcs = @querySpan(whole._begin, whole._end)
+        event_funcs = pat_val\query state\setSpan event_val\wholeOrPart!
         event_val\wholeOrPart!
         for event_func in *event_funcs
           new_whole = event_val.whole
@@ -382,6 +380,7 @@ slowcat = (...) ->
 fastcat = (...) ->
   pats = map reify, totable(...)
   _fast #pats, slowcat(...)
+
 -- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
 -- @param table of time-pat tables
 -- @return Pattern
@@ -410,7 +409,7 @@ rand = -> waveform timeToRand
 _chooseWith = (pat, ...) ->
   vals = map reify, totable(...)
   if #vals == 0 then return silence!
-  return pat\range(1, #vals + 1)\fmap(
+  return range(1, #vals + 1, pat)\fmap(
     (i) ->
       key = math.min(math.max(math.floor(i), 0), #vals)
       return vals[key]
@@ -430,7 +429,6 @@ polyrhythm = (...) -> stack(...)
 patternify = (func, arity) ->
   patterned = (...) ->
     args = map reify, totable(...)
-    -- print dump args
     -- for partial application
     if #args == arity - 1
       if arity == 1
@@ -447,14 +445,13 @@ patternify = (func, arity) ->
     return (reduce f, init, right)\innerJoin!
   return patterned
 
-_patternify = (func) ->
-  patterned = (...) ->
-    patArg = fastcat(...)
-    return patArg\fmap((arg) -> func(arg))\innerJoin!
-  return patterned
+-- _patternify = (func) ->
+--   patterned = (...) ->
+--     patArg = fastcat(...)
+--     return patArg\fmap((arg) -> func(arg))\innerJoin!
+--   return patterned
 
-_fast = (factor, pat) ->
-  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
+_fast = (factor, pat) -> (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 
 _slow = (factor, pat) -> _fast (1 / factor), pat
 
@@ -466,19 +463,6 @@ struct = (table, pat) -> fastcat(table)\fmap((b) -> (val) -> if b == 1 return va
 
 _euclid = (n, k, offset, pat) ->
   struct bjork(n, k, offset), reify pat
-
-euclid = patternify _euclid, 4
-
-fast = _patternify _fast
-
-slow = _patternify _slow
---
--- fast = (...) -> _patternify((val) -> _fast(val, pat))(...)
--- slow = (...) -> _patternify((val) -> _slow(val, pat))(...)
-
-early = patternify _early, 2
-
-late = patternify _late, 2
 
 superimpose = (func, pat) -> stack(pat, func(pat))
 
@@ -500,21 +484,17 @@ _rev = (pat) ->
     map ((event) -> event\withSpan reflect), events
   Pattern query
 
-rev = patternify _rev, 1
 
 _iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in range(n)]
 
-iter = patternify _iter, 2
 
 _reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in range(n)]
 
-reviter = patternify _reviter, 2
 
 segment = (n, pat) -> fast(n, pure(id))\appLeft pat
 
 _range = (min, max, pat) -> (reify pat) * (max - min) + min
 
-range = patternify _range, 3
 
 _fastgap = (factor, pat) ->
   pat = reify pat
@@ -553,11 +533,6 @@ _compress = (b, e, pat) ->
   fasted = _fastgap (Fraction(1) / (e - b)), pat
   _late b, fasted
 
-fastgap = patternify _fastgap, 2
-
--- TODO: compress to 0.5-0.75 is not right? maybe because fraction.moon
-compress = patternify _compress, 3
-
 _degradeBy = (by, pat) ->
   pat = reify pat
   if by == 0 then return pat
@@ -565,27 +540,46 @@ _degradeBy = (by, pat) ->
   f = (v) -> v > by
   return pat\fmap((val) -> (_) -> val)\appLeft(rand!\filterValues(f))
 
-degradeBy = patternify _degradeBy, 2
-
 _degrade = (pat) -> _degradeBy(0.5, pat)
 
+rev = patternify _rev, 1
+range = patternify _range, 3
+fastgap = patternify _fastgap, 2
+compress = patternify _compress, 3
+degradeBy = patternify _degradeBy, 2
 degrade = patternify _degrade, 1
+euclid = patternify _euclid, 4
+fast = patternify _fast, 2
+slow = patternify _slow, 2
+iter = patternify _iter, 2
+reviter = patternify _reviter, 2
+early = patternify _early, 2
+late = patternify _late, 2
 
 -- TODO: wchoose, waveforms, tests for the new methods, patternify for euclid
 -- TODO: mini for degrade broke!!
 -- print mini "hh!!??"
 -- print degrade fastcat "hh", "hh", "hh"
 
--- print layer { rev!, fast(2) } , "bd sd"
-print slow(2, "bd sd") == _slow(2, "bd sd")
-print fast(2, "bd sd") == _fast(2, "bd sd")
--- print iter(3, "bd sd") == _iter(3, "bd sd")
--- print iter(3, "bd sd")
+-- print slow(2, slowcat("bd","sd")) == _slow(2, slowcat("bd","sd"))
+-- print fast(2,'bd')
+-- print compress(0.5, 0.75, 'bd sd') == _compress(0.5, 0.75, 'bd sd')
+-- print _fast(2, 'bd sd')
+-- print fast(2, "bd sd") == _fast(2, "bd sd")
+-- print _fast(2, "bd sd")
+-- print fast(2, "bd sd")
+-- -- print iter(3, "bd sd") == _iter(3, "bd sd")
+-- -- print iter(3, "bd sd")
+--
+-- print range(20,200,"0.5") == _range(20, 200, "0.5")
+-- print rev("bd sd") == _rev("bd sd")
+--
+-- print _euclid(3, 5, 0, "bd sd") == euclid(3, 5, 0, "bd sd")
 
-print range(20,200,"0.5") == _range(20, 200, "0.5")
-print rev("bd sd") == _rev("bd sd")
+-- print mini "bd sd"
 
-print _euclid(3, 5, 0, "bd") == euclid(3, 5, 0, "bd")
+-- print _fast 2, (_fastgap 2, "bd")
+
 
 return {
   :Pattern
