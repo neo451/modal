@@ -2,7 +2,6 @@ import id, slowcat, fastcat, pure, stack, timecat, randcat, fast, slow, degrade,
 import drawline from require "xi.drawline"
 import hush, p, DefaultClock, d1, d2, d3, d4, d5, d6, d7, d8 from require "xi.pattern_factory"
 import sound from require "xi.control"
-import Clock from require "xi.clock"
 
 xi = {
   _VERSION: "xi dev-1"

@@ -1,13 +1,13 @@
-import reduce, type from require 'xi.utils'
+import reduce from require 'xi.utils'
 local *
 
 decimaltofraction = (x0, err) ->
   err = err or 0.0000000001
-  num, den
+  local num, den
   g = math.abs x0 -- or x0:abs()
   sign = x0 / g
   a, b, c, d = 0, 1, 1, 0
-  s
+  local s
   iter = 0
   while iter < 1000000
     s = math.floor g
@@ -16,17 +16,16 @@ decimaltofraction = (x0, err) ->
     a, b, c, d = c, d, num, den
     g = 1.0 / (g - s)
     iter = iter + 1
+
     if err > math.abs sign * num / den - x0
       return sign * num, den
 
   error "Fraction: failed to find a fraction for " .. x0
   0, 1
 
-gcd = (a, b) ->
-  (b == 0) and a or gcd(b, a % b)
+gcd = (a, b) -> (b == 0) and a or gcd(b, a % b)
 
-lcm = (a, b) ->
-  (a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
+lcm = (a, b) -> (a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
 
 class Fraction
   new: (n = 0, d = 1, normalize = true) =>
@@ -195,15 +194,9 @@ gcd_reduce = (table) ->
   reduce ((acc, value) -> acc\gcd value), table[1], table
 
 tofrac = (x) ->
-  if type(x) == "fraction"
-    return x
-  else
+  if type(x) == "number"
     return Fraction(x)
-
-tofloat = (x) ->
-  if type(x) == "fraction"
-    return x\asFloat!
   else
     return x
 
-return { :Fraction, :tofrac, :tofloat, :gcd_reduce }
+return { :Fraction, :gcd_reduce, :tofrac }

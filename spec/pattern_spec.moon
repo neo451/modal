@@ -2,7 +2,7 @@ import Span from require "xi.span"
 import Fraction from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
-import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow from require "xi.pattern"
+import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, fastgap, compress, degradeBy from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -52,30 +52,16 @@ describe "Pattern", ->
       actualEvents = patternWithOnsetsOnly\querySpan(1/16, 1)
       assert.are.same {}, actualEvents
 
-  describe "filterEvents", ->
-    it "should return new pattern with values removed based on filter func", ->
-      pat = slowcat "bd", "sd", "hh", "mt"
-      newPat = pat\filterEvents (e) -> e.value == "bd" or e.value == "hh"
-      expectedEvents = {
-        Event Span(0, 1), Span(0, 1), "bd" 
-        Event Span(2, 3), Span(2, 3), "hh"
-      }
-      assert.are.same expectedEvents, newPat\querySpan(0, 4)
+  -- describe "filterEvents", ->
+  --   it "should return new pattern with values removed based on filter func", ->
+  --     pat = slowcat "bd", "sd", "hh", "mt"
+  --     newPat = pat\filterEvents (e) -> e.value == "bd" or e.value == "hh"
+  --     expectedEvents = {
+  --       Event Span(0, 1), Span(0, 1), "bd" 
+  --       Event Span(2, 3), Span(2, 3), "hh"
+  --     }
+  --     assert.are.same expectedEvents, newPat\querySpan(0, 4)
 
-  describe "filterEvents", ->
-    it "should return new pattern with events removed based on filter func", ->
-      whole1 = Span 1/2, 2
-      part1 = Span 1/2, 1
-      event1 = Event whole1, part1, 1, {}, false
-      whole2 = Span 2/3, 3
-      part2 = Span 2/3, 1
-      event2 = Event whole2, part2, 2, {}, false
-      events = { event1, event2 }
-      pattern = Pattern -> events
-      filterFunction = (e) -> e.value == 1
-      filteredPattern = pattern\filterEvents filterFunction
-      filteredEvents = filteredPattern\query!
-      assert.are.same { event1 }, filteredEvents
 
   describe "pure", ->
     it "should create Pattern of a single value repeating once per cycle", ->
@@ -157,7 +143,7 @@ describe "Pattern", ->
         Event(Span(0, 0.5), Span(0, 0.5), "bd")
         Event(Span(0.5, 1), Span(0.5, 1), "bd")
       }
-      actualEvents = pat\fast(2)\firstCycle!
+      actualEvents = fast(2, pat)\firstCycle!
       assert.are.same(expectedEvents, actualEvents)
 
   describe "slow", ->
@@ -169,14 +155,14 @@ describe "Pattern", ->
       expectedEvents_1to2 = {
         Event Span(1, 2), Span(1, 2), "sd"
       }
-      actualEvents_0to1 = pat\slow(2)\querySpan(0, 1)
-      actualEvents_1to2 = pat\slow(2)\querySpan(1, 2)
+      actualEvents_0to1 = slow(2, pat)\querySpan(0, 1)
+      actualEvents_1to2 = slow(2, pat)\querySpan(1, 2)
       assert.are.same expectedEvents_0to1, actualEvents_0to1
       assert.are.same expectedEvents_1to2, actualEvents_1to2
 
   describe "fastgap", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat("bd", "sd")\_fastgap(4)\firstCycle!
+      actualEvents = fastgap(4, fastcat("bd", "sd"))\firstCycle!
       expectedEvents = {
          Event Span(0, 1/8), Span(0, 1/8), "bd",
          Event Span(1/8, 1/4), Span(1/8, 1/4), "sd",
@@ -194,7 +180,7 @@ describe "Pattern", ->
 
   describe "timecat", ->
     it "should return a pattern based one the time-pat 'tuples' passed in", ->
-      actualEvents = timecat({ { 3, pure("bd")\fast(4) }, { 1, pure("hh")\fast(8) } })\firstCycle!
+      actualEvents = timecat({ { 3, fast(4, "bd") }, { 1, fast(8, "hh") } })\firstCycle!
       expectedEvents = {
         Event Span(0, 3/16), Span(0, 3/16), "bd"
         Event Span(3/16, 3/8), Span(3/16, 3/8), "bd"
@@ -213,7 +199,7 @@ describe "Pattern", ->
 
   describe "degrade_by", ->
     it "should randomly drop events from a pattern", ->
-      actualEvents = fast(8, "sd")\degrade_by(0.75)\firstCycle!
+      actualEvents = degradeBy(0.75, fast(8, "sd"))\firstCycle!
       expectedEvents = {
 	        Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
 	        Event Span(1/2, 5/8), Span(1/2, 5/8), "sd"

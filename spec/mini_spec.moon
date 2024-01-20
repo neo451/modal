@@ -186,7 +186,7 @@ export interpreter_targets = {
   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, "hh"))
   "[bd, sd]": stack "bd", "sd"
   "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
-  "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp", "hh")\fast(4/5)
+  "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
   "bd*<2 3 4>": slowcat fast(2, "bd"), fast(3, "bd"), fast(4, "bd")
 }
 

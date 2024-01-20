@@ -40,7 +40,7 @@ class Interpreter
 
   polymeter:(node) =>
     fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
-    return stack([@eval(seq)\fast(fp) for _, seq, fp in zip(node.seqs, fast_params)])
+    return stack([_fast fp, @eval(seq) for _, seq, fp in zip(node.seqs, fast_params)])
 
   element:(node) =>
     modifiers = [ @eval(mod) for mod in *node.modifiers]
@@ -48,8 +48,7 @@ class Interpreter
 
     if node.euclid_modifier != nil
       k, n, rotation = @eval node.euclid_modifier
-      -- print k, n, rotation
-      pat = pat\euclid(k, n, rotation)
+      pat = euclid k, n, rotation, pat
 
     values = { { 1, pat, 0 } }
     for modifier in *modifiers
@@ -60,26 +59,23 @@ class Interpreter
     return values
 
   euclid_modifier:(node) =>
-    -- k = @eval node.k
-    -- n = @eval node.n
-    k = node.k.elements[1].value.value
-    n = node.n.elements[1].value.value
+    k = @eval node.k
+    n = @eval node.n
     rotation = nil
     if node.rotation != nil
-      -- rotation = @eval node.rotation
-      rotation = node.rotation.elements[1].value.value
+      rotation = @eval node.rotation
     else
-      rotation = 0 -- TODO: pure 0
+      rotation = pure(0)
     return k, n, rotation
 
   modifier:(node) =>
     switch node.op
       when "fast"
         param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], w_p[2]\fast(param), w_p[3] } }
+        return (w_p) -> { { w_p[1], (fast param, w_p[2]), w_p[3] } }
       when "slow"
         param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], w_p[2]\slow(param), w_p[3] } }
+        return (w_p) -> { { w_p[1], (slow param, w_p[2]), w_p[3] } }
       when "repeat"
         return (w_p) -> [ w_p for i = 1, node.count + 1 ]
       when "weight"
@@ -102,8 +98,7 @@ class Interpreter
   rest:(node) => silence!
 
 class Pattern
-  new:(query = -> {}) =>
-    @query = query
+  new:(query = -> {}) => @query = query
 
   type: -> "pattern"
 
@@ -255,57 +250,6 @@ class Pattern
 
   __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft(reify(other))
 
-  _patternify:(method) =>
-    patterned = (...) ->
-      -- print "...", ...
-      patArg = fastcat ...
-      -- print patArg
-      return patArg\fmap((arg) -> method(arg))\innerJoin!
-    return patterned
-
-  _fast:(factor) => @withTime ((t) -> t * factor), ((t) -> t / factor)
-
-  fast:(...) => Pattern\_patternify((val) -> @_fast(val))(...)
-  slow:(...) => Pattern\_patternify((val) -> @_slow(val))(...)
-  early:(...) => Pattern\_patternify((val) -> @_early(val))(...)
-  late:(...) => Pattern\_patternify((val) -> @_late(val))(...)
-
-  _early:(offset) => @withTime ((t) -> t + offset), ((t) -> t - offset)
-
-  _slow:(value) => @_fast 1 / value
-
-  _late:(offset) => @_early -offset
-
-  segment:(n) => pure(id)\fast(n)\appLeft(@)
-
-  range:(min, max) => @ * (max - min) + min
-
-  rev: =>
-    query = (_, state) ->
-      span = state.span
-      cycle = span._begin\sam!
-      nextCycle = span._begin\nextSam!
-      reflect = (to_reflect) ->
-        reflected = to_reflect\withTime((time) -> cycle + ( nextCycle - time))
-        tmp = reflected._begin
-        reflected._begin = reflected._end
-        reflected._end = tmp
-        return reflected
-      events = @query state\setSpan reflect(span)
-      map ((event) -> event\withSpan reflect), events
-    Pattern query
-
-  struct:(...) =>
-    pats = totable(...) -- TODO: make totable more robust to take strings
-    fastcat(pats)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(@)\removeNils!
-
-  -- need patternify
-  euclid:(n, k, offset) =>
-    @struct bjork(n, k, offset)
-
-  -- euclid:(n, k, offset) => Pattern\_patternify((n) -> @_euclid(n))(n, k, offset)
-
-  -- need patternify
   _fastgap:(factor) =>
     factor = tofrac(factor)
 
@@ -338,25 +282,14 @@ class Pattern
     b, e = tofrac(b), tofrac(e)
     if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
       return silence!
-    @_fastgap(Fraction(1) / (e - b))\_late(b)
+    _late b, @_fastgap(Fraction(1) / (e - b))
 
   degrade_by:(by, prand = nil) =>
     if by == 0 then return @
+    if type(by) == "fraction" then by = by\asFloat!
     if not prand then prand = rand!
-    f = (v) -> v > tofloat(by)
+    f = (v) -> v >= by
     return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
-
-  degrade: => @degrade_by(0.5)
-
-  superimpose:(func) => stack(@, func(@))
-
-  layer:(...) =>
-    pats = totable(...)
-    stack [func(@) for func in *pats]
-
-  iter:(n) => slowcat [@early Fraction(i - 1, n) for i in range(n)]
-
-  reviter:(n) => slowcat [@late Fraction(i - 1, n) for i in range(n)]
 
 --- Does absolutely nothing..
 -- @return Pattern
@@ -396,7 +329,6 @@ reify = (thing) ->
 
 run = (n) -> fastcat [i for i in range(0, n - 1)]
 scan = (n) -> slowcat [run(i) for i in range(n)]
-
 
 --- The given items are played at the same time at the same length.
 -- @return Pattern
@@ -449,8 +381,7 @@ slowcat = (...) ->
 -- fastcat("e5", "b4", ["d5", "c5"])
 fastcat = (...) ->
   pats = map reify, totable(...)
-  slowcat(...)\_fast(#pats)
-
+  _fast #pats, slowcat(...)
 -- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
 -- @param table of time-pat tables
 -- @return Pattern
@@ -490,57 +421,171 @@ chooseWith = (pat, ...) ->
 
 choose = (...) -> chooseWith rand!, ...
 
-chooseCycles = (...) -> choose(...)\segment(1)
+chooseCycles = (...) -> segment 1, choose(...)
 
 randcat = (...) -> chooseCycles(...)
 
 polyrhythm = (...) -> stack(...)
 
-fast = (arg, pat) -> 
-  if pat != nil then return reify(pat)\fast(arg)
-  else return curry(fast, 2)(arg)
+patternify = (func, arity) ->
+  patterned = (...) ->
+    args = map reify, totable(...)
+    -- print dump args
+    -- for partial application
+    if #args == arity - 1
+      if arity == 1
+        return func
+      else
+        return curry(func, arity)(...)
+    pat = args[#args]
+    if arity == 1 then return func pat
+    left = args[1]
+    right = [arg for arg in *args[2, #args]]
+    mapFn = curry func, arity
+    f = (acc, p) -> acc\appLeft p
+    init = left\fmap mapFn
+    return (reduce f, init, right)\innerJoin!
+  return patterned
 
-slow = (arg, pat) ->
-  if pat != nil then return reify(pat)\slow(arg)
-  else return curry(slow, 2)(arg)
+_patternify = (func) ->
+  patterned = (...) ->
+    patArg = fastcat(...)
+    return patArg\fmap((arg) -> func(arg))\innerJoin!
+  return patterned
 
-early = (arg, pat) ->
-  if pat != nil then return reify(pat)\early(arg)
-  else return curry(early, 2)(arg)
+_fast = (factor, pat) ->
+  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 
-late = (arg, pat) ->
-  if pat != nil then return reify(pat)\late(arg)
-  else return curry(late, 2)(arg)
+_slow = (factor, pat) -> _fast (1 / factor), pat
 
-iter = (arg, pat) ->
-  if pat != nil then return reify(pat)\iter(arg)
-  else return curry(iter, 2)(arg)
+_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
 
-reviter = (arg, pat) ->
-  if pat != nil then return reify(pat)\reviter(arg)
-  else return curry(reviter, 2)(arg)
+_late = (offset, pat) -> _early -offset, pat
 
-degradeBy = (arg, pat) ->
-  if pat != nil then return reify(pat)\degrade_by(arg)
-  else return curry(degrade, 2)(arg)
+struct = (table, pat) -> fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
 
-degrade = (pat) ->
-  if pat != nil then return reify(pat)\degrade!
-  else return curry(degrade, 1)
+_euclid = (n, k, offset, pat) ->
+  struct bjork(n, k, offset), reify pat
 
-rev = (pat) ->
-  if pat != nil then return reify(pat)\rev!
-  else return curry(rev, 1)
+euclid = patternify _euclid, 4
 
-superimpose = (func, pat) ->
-  if pat != nil then return reify(pat)\superimpose(func)
-  else return curry(superimpose, 2)(func)
+fast = _patternify _fast
 
-layer = (...) ->
-  pats = totable(...)
-  reify(pats[#pats])\layer([pat for pat in *pats[1, #pats - 1]])
+slow = _patternify _slow
+--
+-- fast = (...) -> _patternify((val) -> _fast(val, pat))(...)
+-- slow = (...) -> _patternify((val) -> _slow(val, pat))(...)
+
+early = patternify _early, 2
+
+late = patternify _late, 2
+
+superimpose = (func, pat) -> stack(pat, func(pat))
+
+layer = (table, pat) -> stack [func reify pat for func in *table]
+
+_rev = (pat) ->
+  pat = reify pat
+  query = (_, state) ->
+    span = state.span
+    cycle = span._begin\sam!
+    nextCycle = span._begin\nextSam!
+    reflect = (to_reflect) ->
+      reflected = to_reflect\withTime((time) -> cycle + ( nextCycle - time))
+      tmp = reflected._begin
+      reflected._begin = reflected._end
+      reflected._end = tmp
+      return reflected
+    events = pat\query state\setSpan reflect(span)
+    map ((event) -> event\withSpan reflect), events
+  Pattern query
+
+rev = patternify _rev, 1
+
+_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in range(n)]
+
+iter = patternify _iter, 2
+
+_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in range(n)]
+
+reviter = patternify _reviter, 2
+
+segment = (n, pat) -> fast(n, pure(id))\appLeft pat
+
+_range = (min, max, pat) -> (reify pat) * (max - min) + min
+
+range = patternify _range, 3
+
+_fastgap = (factor, pat) ->
+  pat = reify pat
+  factor = tofrac(factor)
+
+  if factor <= Fraction(0) then return silence!
+
+  factor = factor\max(1)
+
+  mungeQuery = (t) ->
+    t\sam! + ((t - t\sam!) * factor)\min(1)
+
+  eventSpanFunc = (span) ->
+    b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
+    e = span._begin\sam! + (span._end - span._begin\sam!) / factor
+    Span b, e
+
+  query = (_, state) ->
+    span = state.span
+    new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
+    if new_span._begin == new_span._begin\nextSam!
+      return {}
+    new_state = State new_span
+    events = pat\query new_state
+    f = (event) ->
+      event\withSpan eventSpanFunc
+    map f, events
+  Pattern(query)\splitQueries!
+
+_compress = (b, e, pat) ->
+  print b,e,pat
+  pat = reify pat
+  b, e = tofrac(b), tofrac(e)
+  if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
+    return silence!
+  fasted = _fastgap (Fraction(1) / (e - b)), pat
+  _late b, fasted
+
+fastgap = patternify _fastgap, 2
+
+-- TODO: compress to 0.5-0.75 is not right? maybe because fraction.moon
+compress = patternify _compress, 3
+
+_degradeBy = (by, pat) ->
+  pat = reify pat
+  if by == 0 then return pat
+  if type(by) == "fraction" then by = by\asFloat!
+  f = (v) -> v > by
+  return pat\fmap((val) -> (_) -> val)\appLeft(rand!\filterValues(f))
+
+degradeBy = patternify _degradeBy, 2
+
+_degrade = (pat) -> _degradeBy(0.5, pat)
+
+degrade = patternify _degrade, 1
 
 -- TODO: wchoose, waveforms, tests for the new methods, patternify for euclid
+-- TODO: mini for degrade broke!!
+-- print mini "hh!!??"
+-- print degrade fastcat "hh", "hh", "hh"
+
+-- print layer { rev!, fast(2) } , "bd sd"
+print slow(2, "bd sd") == _slow(2, "bd sd")
+print fast(2, "bd sd") == _fast(2, "bd sd")
+-- print iter(3, "bd sd") == _iter(3, "bd sd")
+-- print iter(3, "bd sd")
+
+print range(20,200,"0.5") == _range(20, 200, "0.5")
+print rev("bd sd") == _rev("bd sd")
+
+print _euclid(3, 5, 0, "bd") == euclid(3, 5, 0, "bd")
 
 return {
   :Pattern
@@ -563,6 +608,8 @@ return {
   :slow
   :early
   :late
+  :fastgap
+  :compress
   :degrade
   :degradeBy
   :iter

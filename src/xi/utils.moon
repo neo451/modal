@@ -62,7 +62,6 @@ utils.totable = (...) ->
     pats = { ... }
   return pats
 
-
 utils.zipWith = (f, xs, ys) -> [ f(x,y) for _, x, y in zip(xs, ys) ]
 
 utils.concat = (a, b) -> totable chain a, b
