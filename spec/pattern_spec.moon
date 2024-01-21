@@ -171,7 +171,7 @@ describe "Pattern", ->
 
   describe "compress", ->
     it "should bring pattern closer together", ->
-      actualEvents = fastcat("bd", "sd")\_compress(1/4, 3/4)\firstCycle!
+      actualEvents = compress(1/4, 3/4, fastcat("bd", "sd"))\firstCycle!
       expectedEvents = {
         Event Span(1/4, 1/2), Span(1/4, 1/2), "bd",
         Event Span(1/2, 3/4), Span(1/2, 3/4), "sd",

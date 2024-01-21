@@ -197,12 +197,14 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
+  -- TODO: test!!
   appLeft:(pat_val) =>
     query = (_, state) ->
       events = {}
       event_funcs = @query state
       for event_func in *event_funcs
-        event_vals = pat_val\query state\setSpan event_func\wholeOrPart!
+        whole = event_func\wholeOrPart!
+        event_vals = pat_val\querySpan(whole._begin, whole._end)
         for event_val in *event_vals
           new_whole = event_func.whole
           new_part = event_func.part\sect event_val.part
@@ -212,13 +214,14 @@ class Pattern
             table.insert events, Event new_whole, new_part, new_value
       return events
     Pattern query
-
+  -- TODO: test!!
   appRight:(pat_val) =>
     query = (_, state) ->
       events = {}
       event_vals = pat_val\query state
       for event_val in *event_vals
-        event_funcs = pat_val\query state\setSpan event_val\wholeOrPart!
+        whole = event_val\wholeOrPart!
+        event_funcs = @querySpan(whole._begin, whole._end)
         event_val\wholeOrPart!
         for event_func in *event_funcs
           new_whole = event_val.whole
@@ -248,40 +251,10 @@ class Pattern
 
   __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft(reify(other))
 
-  _fastgap:(factor) =>
-    factor = tofrac(factor)
+  -- TODO: Make this like # in tidal, |>, look at yuescript for more hacks???
+  __concat:(other) => @fmap((x) -> (y) -> y .. x)\appLeft(reify(other))
 
-    if factor <= Fraction(0)
-      silence!
-
-    factor = factor\max(1)
-
-    mungeQuery = (t) ->
-      t\sam! + ((t - t\sam!) * factor)\min(1)
-
-    eventSpanFunc = (span) ->
-      b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
-      e = span._begin\sam! + (span._end - span._begin\sam!) / factor
-      Span b, e
-
-    query = (_, state) ->
-      span = state.span
-      new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
-      if new_span._begin == new_span._begin\nextSam!
-        return {}
-      new_state = State new_span
-      events = @query new_state
-      f = (event) ->
-        event\withSpan eventSpanFunc
-      map f, events
-    Pattern(query)\splitQueries!
-
-  _compress:(b, e) =>
-    b, e = tofrac(b), tofrac(e)
-    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
-      return silence!
-    _late b, @_fastgap(Fraction(1) / (e - b))
-
+  -- HACK: why stack overflow???????????
   degrade_by:(by, prand = nil) =>
     if by == 0 then return @
     if type(by) == "fraction" then by = by\asFloat!
@@ -395,7 +368,8 @@ timecat = (tuples) ->
     { time, pat } = tup
     b = accum / total
     e = (accum + time) / total
-    table.insert pats, reify(pat)\_compress(b, e)
+    new_pat = _compress(b, e, pat)
+    table.insert(pats, new_pat)
     accum = accum + time
   stack(pats)
 
@@ -426,49 +400,33 @@ randcat = (...) -> chooseCycles(...)
 
 polyrhythm = (...) -> stack(...)
 
-patternify = (func, arity) ->
-  patterned = (...) ->
-    args = map reify, totable(...)
-    -- for partial application
-    if #args == arity - 1
-      if arity == 1
-        return func
-      else
-        return curry(func, arity)(...)
-    pat = args[#args]
-    if arity == 1 then return func pat
-    left = args[1]
-    right = [arg for arg in *args[2, #args]]
-    mapFn = curry func, arity
-    f = (acc, p) -> acc\appLeft p
-    init = left\fmap mapFn
-    return (reduce f, init, right)\innerJoin!
-  return patterned
-
--- tParam :: (arg -> pat -> Pattern a) -> Pattern arg -> pat -> Pattern a
--- tParam f arg pat = innerJoin $ (`f` pat) <$> arg
-
--- patternify the first two parameters
--- _patternify_p_p :: (Pattern p) => (a -> b -> c -> p d) -> (p a -> p b -> c -> p d)
--- _patternify_p_p f apat bpat pat        = innerJoin $ (\a b -> f a b pat) <$> apat <* bpat
-
 _patternify = (func) ->
-  patterned = (arg, pat) ->
-    -- tmp hack for partial application, but args are not patternified
-    if pat == nil then return curry(func, 2)(arg)
-    arg = reify arg
-    -- return arg\fmap((arg) -> func(arg, pat))\innerJoin!
-    return arg\fmap((arg) -> func(arg, pat))\innerJoin!
+  patterned = (apat, pat) ->
+    -- tmp hack for partial application, but apats are not patternified
+    if pat == nil then return curry(func, 2)(apat)
+    apat = reify apat
+    mapFn = (a) -> func(a, pat)
+    return apat\fmap(mapFn)\innerJoin!
   return patterned
 
 _patternify_p_p = (func) ->
   patterned = (apat, bpat, pat) ->
-    apat = reify apat
-    bpat = reify bpat
-    pat = reify pat
+    if pat == nil then return curry(func, 3)(apat)(bpat)
+    apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
     mapFn = (a, b) -> func a, b, pat
     mapFn = curry mapFn, 2
-    return (apat\fmap(mapFn)\appLeft(bpat))\innerJoin!
+    patOfPats = apat\fmap(mapFn)\appLeft(bpat)
+    return patOfPats\innerJoin!
+  return patterned
+
+_patternify_p_p_p = (func) ->
+  patterned = (apat, bpat, cpat, pat) ->
+    if pat == nil then return curry(func, 4)(apat)(bpat)(cpat)
+    apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
+    mapFn = (a, b, c) -> func a, b, c, pat
+    mapFn = curry mapFn, 3
+    patOfPats = apat\fmap(mapFn)\appLeft(bpat)\appLeft(cpat)
+    return patOfPats\innerJoin!
   return patterned
 
 _fast = (rate, pat) -> return (reify pat)\withTime ((t) -> t * rate), ((t) -> t / rate)
@@ -479,10 +437,10 @@ _early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - 
 
 _late = (offset, pat) -> _early -offset, pat
 
-struct = (table, pat) -> fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
+struct = (table, pat) ->
+  fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
 
-_euclid = (n, k, offset, pat) ->
-  struct bjork(n, k, offset), reify pat
+_euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 
 superimpose = (func, pat) -> stack(pat, func(pat))
 
@@ -504,34 +462,25 @@ rev = (pat) ->
     map ((event) -> event\withSpan reflect), events
   Pattern query
 
-
 _iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in range(n)]
-
 
 _reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in range(n)]
 
-
-segment = (n, pat) -> fast(n, pure(id))\appLeft pat
+_segment = (n, pat) -> fast(n, pure(id))\appLeft pat
 
 _range = (min, max, pat) -> pat\fmap((x) -> x * (max - min) + min)
-
 
 _fastgap = (factor, pat) ->
   pat = reify pat
   factor = tofrac(factor)
-
   if factor <= Fraction(0) then return silence!
-
   factor = factor\max(1)
-
   mungeQuery = (t) ->
     t\sam! + ((t - t\sam!) * factor)\min(1)
-
   eventSpanFunc = (span) ->
     b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
     e = span._begin\sam! + (span._end - span._begin\sam!) / factor
     Span b, e
-
   query = (_, state) ->
     span = state.span
     new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
@@ -545,7 +494,6 @@ _fastgap = (factor, pat) ->
   Pattern(query)\splitQueries!
 
 _compress = (b, e, pat) ->
-  print b,e,pat
   pat = reify pat
   b, e = tofrac(b), tofrac(e)
   if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
@@ -561,9 +509,9 @@ _degradeBy = (by, pat) ->
   return pat\fmap((val) -> (_) -> val)\appLeft(rand!\filterValues(f))
 
 degrade = (pat) -> _degradeBy(0.5, pat)
-
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
+segment = _patternify _segment
 fast = _patternify _fast
 slow = _patternify _slow
 iter = _patternify _iter
@@ -572,10 +520,9 @@ early = _patternify _early
 late = _patternify _late
 range = _patternify_p_p _range
 compress = _patternify_p_p _compress
+euclid = _patternify_p_p_p _euclid
 
--- euclid = patternify _euclid, 4
-
--- TODO: wchoose, waveforms, tests for the new methods, patternify for euclid
+-- TODO: wchoose, waveforms, tests for the new methods
 -- TODO: mini for degrade broke!!
 -- print mini "hh!!??"
 -- print degrade fastcat "hh", "hh", "hh"
@@ -593,6 +540,7 @@ return {
   :slowcat
   :timecat
   :randcat
+  :euclid
   :stack
   :layer
   :superimpose
