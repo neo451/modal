@@ -445,13 +445,33 @@ patternify = (func, arity) ->
     return (reduce f, init, right)\innerJoin!
   return patterned
 
--- _patternify = (func) ->
---   patterned = (...) ->
---     patArg = fastcat(...)
---     return patArg\fmap((arg) -> func(arg))\innerJoin!
---   return patterned
+-- tParam :: (arg -> pat -> Pattern a) -> Pattern arg -> pat -> Pattern a
+-- tParam f arg pat = innerJoin $ (`f` pat) <$> arg
 
-_fast = (factor, pat) -> (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
+-- patternify the first two parameters
+-- _patternify_p_p :: (Pattern p) => (a -> b -> c -> p d) -> (p a -> p b -> c -> p d)
+-- _patternify_p_p f apat bpat pat        = innerJoin $ (\a b -> f a b pat) <$> apat <* bpat
+
+_patternify = (func) ->
+  patterned = (arg, pat) ->
+    -- tmp hack for partial application, but args are not patternified
+    if pat == nil then return curry(func, 2)(arg)
+    arg = reify arg
+    -- return arg\fmap((arg) -> func(arg, pat))\innerJoin!
+    return arg\fmap((arg) -> func(arg, pat))\innerJoin!
+  return patterned
+
+_patternify_p_p = (func) ->
+  patterned = (apat, bpat, pat) ->
+    apat = reify apat
+    bpat = reify bpat
+    pat = reify pat
+    mapFn = (a, b) -> func a, b, pat
+    mapFn = curry mapFn, 2
+    return (apat\fmap(mapFn)\appLeft(bpat))\innerJoin!
+  return patterned
+
+_fast = (rate, pat) -> return (reify pat)\withTime ((t) -> t * rate), ((t) -> t / rate)
 
 _slow = (factor, pat) -> _fast (1 / factor), pat
 
@@ -468,7 +488,7 @@ superimpose = (func, pat) -> stack(pat, func(pat))
 
 layer = (table, pat) -> stack [func reify pat for func in *table]
 
-_rev = (pat) ->
+rev = (pat) ->
   pat = reify pat
   query = (_, state) ->
     span = state.span
@@ -493,7 +513,7 @@ _reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in ran
 
 segment = (n, pat) -> fast(n, pure(id))\appLeft pat
 
-_range = (min, max, pat) -> (reify pat) * (max - min) + min
+_range = (min, max, pat) -> pat\fmap((x) -> x * (max - min) + min)
 
 
 _fastgap = (factor, pat) ->
@@ -540,46 +560,25 @@ _degradeBy = (by, pat) ->
   f = (v) -> v > by
   return pat\fmap((val) -> (_) -> val)\appLeft(rand!\filterValues(f))
 
-_degrade = (pat) -> _degradeBy(0.5, pat)
+degrade = (pat) -> _degradeBy(0.5, pat)
 
-rev = patternify _rev, 1
-range = patternify _range, 3
-fastgap = patternify _fastgap, 2
-compress = patternify _compress, 3
-degradeBy = patternify _degradeBy, 2
-degrade = patternify _degrade, 1
-euclid = patternify _euclid, 4
-fast = patternify _fast, 2
-slow = patternify _slow, 2
-iter = patternify _iter, 2
-reviter = patternify _reviter, 2
-early = patternify _early, 2
-late = patternify _late, 2
+fastgap = _patternify _fastgap
+degradeBy = _patternify _degradeBy
+fast = _patternify _fast
+slow = _patternify _slow
+iter = _patternify _iter
+reviter = _patternify _reviter
+early = _patternify _early
+late = _patternify _late
+range = _patternify_p_p _range
+compress = _patternify_p_p _compress
+
+-- euclid = patternify _euclid, 4
 
 -- TODO: wchoose, waveforms, tests for the new methods, patternify for euclid
 -- TODO: mini for degrade broke!!
 -- print mini "hh!!??"
 -- print degrade fastcat "hh", "hh", "hh"
-
--- print slow(2, slowcat("bd","sd")) == _slow(2, slowcat("bd","sd"))
--- print fast(2,'bd')
--- print compress(0.5, 0.75, 'bd sd') == _compress(0.5, 0.75, 'bd sd')
--- print _fast(2, 'bd sd')
--- print fast(2, "bd sd") == _fast(2, "bd sd")
--- print _fast(2, "bd sd")
--- print fast(2, "bd sd")
--- -- print iter(3, "bd sd") == _iter(3, "bd sd")
--- -- print iter(3, "bd sd")
---
--- print range(20,200,"0.5") == _range(20, 200, "0.5")
--- print rev("bd sd") == _rev("bd sd")
---
--- print _euclid(3, 5, 0, "bd sd") == euclid(3, 5, 0, "bd sd")
-
--- print mini "bd sd"
-
--- print _fast 2, (_fastgap 2, "bd")
-
 
 return {
   :Pattern

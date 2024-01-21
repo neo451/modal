@@ -20,7 +20,7 @@ describe "Clock", ->
     it "should have a function declaring its type", ->
       clock = Clock!
       assert.are.equal "clock", clock\type!
-  -- TODO: steams equal??
+
   describe "subscribe/unsubscribe", ->
     it "should add/remove to list of subscribers", ->
       clock = Clock 120
@@ -38,16 +38,3 @@ describe "Clock", ->
       clock\unsubscribe mySub
       assert.are.equal 1, #clock.subscribers
       assert.are.equal mySub2, clock.subscribers[1]
-  --
-  -- describe("notify", ->
-  --     it("should call stream's notify method on tick", ->
-  --         local clock = LinkClock:new()
-  --         clock._link = mock(clock._link, true)
-  --         clock._linkSessionState = mock(clock._linkSessionState)
-  --         local stream = mock(Stream:new(), true)
-  --         clock:subscribe(stream)
-  --         clock:start()
-  --     )
-  -- )
-
-

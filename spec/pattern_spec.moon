@@ -206,21 +206,3 @@ describe "Pattern", ->
 	        Event Span(3/4, 7/8), Span(3/4, 7/8), "sd"
       }
       assert.are.same expectedEvents, actualEvents
-
--- 	-- def test_choose_cycles!:
--- 	--   assert choose_cycles("bd", "sd", "hh").query(Span(0, 10)) == [
--- 	--       Event(Span(0, 1), Span(0, 1), "bd"),
--- 	--       Event(Span(1, 2), Span(1, 2), "sd"),
--- 	--       Event(Span(2, 3), Span(2, 3), "sd"),
--- 	--       Event(Span(3, 4), Span(3, 4), "sd"),
--- 	--       Event(Span(4, 5), Span(4, 5), "hh"),
--- 	--       Event(Span(5, 6), Span(5, 6), "bd"),
--- 	--       Event(Span(6, 7), Span(6, 7), "bd"),
--- 	--       Event(Span(7, 8), Span(7, 8), "sd"),
--- 	--       Event(Span(8, 9), Span(8, 9), "sd"),
--- 	--       Event(Span(9, 10), Span(9, 10), "bd"),
--- 	--   ]
--- 	-- def test_degrade!:
--- 	--     assert_equal_patterns(
--- 	--         pure("sd").fast(8).degrade!, pure("sd").fast(8).degrade_by(0.5, rand!)
--- 	--     )
