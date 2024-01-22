@@ -1,4 +1,5 @@
 import parse from require "xi.mini.grammar"
+import reduce, op from require "fun"
 
 class Visitor
   visit: (node) =>
@@ -153,9 +154,8 @@ class Visitor
   slow:(_, children) => { type: "modifier", op: "slow", value: children[1] }
 
   _repeat:(_, children) =>
-    sum = 0
-    sum = reduce ((sum, v) -> sum + v), 0, children
-    { type: "modifier", op: "repeat", count: sum }
+    count = reduce op.add, 0, children
+    { type: "modifier", op: "repeat", count: count }
 
   repeatn:(_, children) => children[1]
 
@@ -171,7 +171,11 @@ class Visitor
 
   weight:(_, children) => { type: "modifier", op: "weight", value: children[1] }
 
-  word:(node, _) => node[2]
+  word:(node, _) => 
+    switch node[2]
+      when "t" then true
+      when "f" then false
+      else node[2]
 
   number:(_, children) => children[1]
 

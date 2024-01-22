@@ -1,5 +1,5 @@
 require "moon.all"
-(require "fun")!
+fun = require "fun"
 bit = require "bitop.funcs" --compatability for 5.3 5.4??
 
 utils = {}
@@ -36,11 +36,11 @@ utils.flatten = (t) ->
         table.insert flat, value
   flat
 
-utils.filter = (func, table) -> totable filter func, table
+utils.filter = (func, table) -> fun.totable fun.filter func, table
 
-utils.map = (func, table) -> totable map func, table
+utils.map = (func, table) -> fun.totable fun.map func, table
 
-utils.reduce = (func, init, table) -> reduce func, init, table
+utils.reduce = (func, init, table) -> fun.reduce func, init, table
 
 -- TODO: line breaks
 utils.dump = (o) ->
@@ -62,9 +62,9 @@ utils.totable = (...) ->
     pats = { ... }
   return pats
 
-utils.zipWith = (f, xs, ys) -> [ f(x,y) for _, x, y in zip(xs, ys) ]
+utils.zipWith = (f, xs, ys) -> [ f(x,y) for _, x, y in fun.zip(xs, ys) ]
 
-utils.concat = (a, b) -> totable chain a, b
+utils.concat = (a, b) -> fun.totable fun.chain a, b
 
 utils.splitAt = (index, value) -> {[v for v in *value[1,index]], [v for v in *value[index + 1,]]}
 
@@ -78,7 +78,6 @@ utils.pipe = (...) ->
   funcs = { ... }
   reduce ((f, g) -> (...) -> f(g(...))), id, funcs
 
--- test
 utils.curry = (func, num_args) ->
   num_args = num_args or 2
 

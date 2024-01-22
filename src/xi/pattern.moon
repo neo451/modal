@@ -1,24 +1,31 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-import map, filter, id, flatten, totable, dump, rotate, union, timeToRand, curry, type from require "xi.utils"
+import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
 import State from require "xi.state"
 import visit from require "xi.mini.visitor"
+import genericParams, aliasParams from require "xi.control"
+import op from require "fun"
 local *
 
+fun = require "fun"
+
 C = {}
-controls = { "sound", "note", "n", "pan", "room", "delay", "squiz" }
 
 create = (name) ->
   withVal = (v) -> { [name]: v }
   func = (args) -> reify(args)\fmap(withVal)
   C[name] = func
 
-for name in *controls
-  create name
+for name in *genericParams
+  param = name[2]
+  create param
+  if aliasParams[param] != nil
+    alias = aliasParams[param]
+    C[alias] = C[param]
 
 class Interpreter
   eval:(node) =>
@@ -49,7 +56,7 @@ class Interpreter
 
   polymeter:(node) =>
     fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
-    return stack([_fast fp, @eval(seq) for _, seq, fp in zip(node.seqs, fast_params)])
+    return stack([_fast fp, @eval(seq) for _, seq, fp in fun.zip(node.seqs, fast_params)])
 
   element:(node) =>
     modifiers = [ @eval(mod) for mod in *node.modifiers]
@@ -203,7 +210,6 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
-  -- TODO: test!!
   appLeft:(pat_val) =>
     query = (_, state) ->
       events = {}
@@ -220,7 +226,7 @@ class Pattern
             table.insert events, Event new_whole, new_part, new_value
       return events
     Pattern query
-  -- TODO: test!!
+
   appRight:(pat_val) =>
     query = (_, state) ->
       events = {}
@@ -295,9 +301,6 @@ reify = (thing) ->
     when "table" then fastcat thing
     when "pattern" then thing
     else pure thing
-
-run = (n) -> fastcat [i for i in range(0, n - 1)]
-scan = (n) -> slowcat [run(i) for i in range(n)]
 
 --- The given items are played at the same time at the same length.
 -- @return Pattern
@@ -435,14 +438,36 @@ _early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - 
 
 _late = (offset, pat) -> _early -offset, pat
 
+_inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
+
+_outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
+
+_off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
+
 struct = (table, pat) ->
   fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 
-superimpose = (func, pat) -> stack(pat, func(pat))
+_juxBy = (by, f, pat) ->
+  by = by / 2
+  elem_or = (dict, key, default) ->
+    if dict[key] != nil then return dict[key]
+    return default
+  left = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) - by }, valmap)
+  right = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) + by }, valmap)
+  return stack left, f right
 
-layer = (table, pat) -> stack [func reify pat for func in *table]
+
+_jux = (f, pat) -> _juxBy(0.5, f, pat)
+
+run = (n) -> fastcat [i for i in range(0, n - 1)]
+
+scan = (n) -> slowcat [run(i) for i in range(n)]
+
+superimpose = (f, pat) -> stack(pat, f(pat))
+
+layer = (table, pat) -> stack [f reify pat for f in *table]
 
 rev = (pat) ->
   pat = reify pat
@@ -460,9 +485,9 @@ rev = (pat) ->
     map ((event) -> event\withSpan reflect), events
   Pattern query
 
-_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in range(n)]
+_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in fun.range(n)]
 
-_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in range(n)]
+_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in fun.range(n)]
 
 _segment = (n, pat) -> fast(n, pure(id))\appLeft pat
 
@@ -509,6 +534,18 @@ _degradeBy = (by, pat) ->
 
 degrade = (pat) -> _degradeBy(0.5, pat)
 
+_when = (bool, f, pat) -> bool and f(pat) or pat
+
+_firstOf = (n, f, pat) ->
+  boolpat = fastcat concat { true }, [false for i = 1, n - 1]
+  when_ boolpat, f, pat
+
+_lastOf = (n, f, pat) ->
+  boolpat = fastcat concat [false for i = 1, n - 1], {true}
+  when_ boolpat, f, pat
+
+palindrome = (pat) -> slowcat pat, rev pat
+
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
 segment = _patternify _segment
@@ -518,13 +555,24 @@ iter = _patternify _iter
 reviter = _patternify _reviter
 early = _patternify _early
 late = _patternify _late
+inside = _patternify_p_p _inside
+outside = _patternify_p_p _outside
+-- when is a reserved keyword ...
+when_ = _patternify_p_p _when
+firstOf = _patternify_p_p _firstOf
+lastOf = _patternify_p_p _lastOf
+every = firstOf
+off = _patternify_p_p _off
 range = _patternify_p_p _range
 compress = _patternify_p_p _compress
 euclid = _patternify_p_p_p _euclid
+jux = _patternify _jux
+juxBy = _patternify_p_p _juxBy
 
 -- TODO: wchoose, waveforms, tests for the new functions
 
 return {
+  when:when_
   :C
   :Pattern
   :id
@@ -542,6 +590,14 @@ return {
   :stack
   :layer
   :superimpose
+  :struct
+  :jux
+  :juxBy
+  :inside
+  :outside
+  :firstOf
+  :lastOf
+  :every
   :rev
   :fast
   :slow
