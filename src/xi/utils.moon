@@ -124,4 +124,12 @@ utils.dumpval = (thing) ->
     when "string"
       return thing
 
+utils.union = (a, b) ->
+  new_map = {}
+  for i, v in pairs(b)
+    new_map[i] = v
+  for i, v in pairs(a)
+    new_map[i] = v
+  return new_map
+
 return utils

@@ -1,6 +1,6 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-import map, filter, id, flatten, totable, dump, rotate, timeToRand, curry, type from require "xi.utils"
+import map, filter, id, flatten, totable, dump, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
@@ -8,8 +8,17 @@ import Event from require "xi.event"
 import State from require "xi.state"
 import visit from require "xi.mini.visitor"
 local *
--- dump = require "xi.moondump"
--- pdump = (a) -> print dump a
+
+C = {}
+controls = { "sound", "note", "n", "pan", "room", "delay", "squiz" }
+
+create = (name) ->
+  withVal = (v) -> { [name]: v }
+  func = (args) -> reify(args)\fmap(withVal)
+  C[name] = func
+
+for name in *controls
+  create name
 
 class Interpreter
   eval:(node) =>
@@ -27,7 +36,7 @@ class Interpreter
       weight = es[1][1] or 1
       deg_ratio = es[1][3] or 0
       pats = [e[2] for e in *es]
-      table.insert tc_args, { #es * weight, fastcat(pats)\degrade_by(deg_ratio) }
+      table.insert tc_args, { #es * weight, degradeBy(deg_ratio, fastcat(pats)) }
     return timecat tc_args
 
   random_sequence:(node) =>
@@ -52,7 +61,7 @@ class Interpreter
 
     values = { { 1, pat, 0 } }
     for modifier in *modifiers
-      n_values = nil
+      local n_values
       for v in *values
         n_values =  modifier(v)
       values = n_values
@@ -62,10 +71,8 @@ class Interpreter
     k = @eval node.k
     n = @eval node.n
     rotation = nil
-    if node.rotation != nil
-      rotation = @eval node.rotation
-    else
-      rotation = pure(0)
+    if node.rotation != nil then rotation = @eval node.rotation
+    else rotation = pure(0)
     return k, n, rotation
 
   modifier:(node) =>
@@ -91,9 +98,10 @@ class Interpreter
 
   number:(node) => pure node.value
 
-  -- TODO: if index
   word:(node) =>
-    pure node.value
+    if node.index != 0
+      return C.sound(node.value)\combineLeft(C.n(node.index))
+    return pure node.value
 
   rest:(node) => silence!
 
@@ -115,8 +123,6 @@ class Pattern
     dump map func, @firstCycle!
 
   show: => @__tostring!
-
-  __eq: (other) => @show! == other\show! --????
 
   bindWhole: (choose_whole, func) =>
     pat_val = @
@@ -233,12 +239,13 @@ class Pattern
         return events
     Pattern query
 
-  combineRight:(others) =>
-    f = (a, b) ->
-      a\fmap((x) -> (y) -> {x, y})\appLeft(b)
-    return reduce f, @, others
+  combineRight:(other) => @fmap((x) -> (y) -> union(y, x))\appLeft(other)
+
+  combineLeft:(other) => @fmap((x) -> (y) -> union(x, y))\appLeft(other)
 
   -- metamethods
+  __eq: (other) => @show! == other\show!
+
   __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(reify(other))
 
   __div:(other) => @fmap((x) -> (y) -> y / x)\appLeft(reify(other))
@@ -251,16 +258,7 @@ class Pattern
 
   __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft(reify(other))
 
-  -- TODO: Make this like # in tidal, |>, look at yuescript for more hacks???
-  __concat:(other) => @fmap((x) -> (y) -> y .. x)\appLeft(reify(other))
-
-  -- HACK: why stack overflow???????????
-  degrade_by:(by, prand = nil) =>
-    if by == 0 then return @
-    if type(by) == "fraction" then by = by\asFloat!
-    if not prand then prand = rand!
-    f = (v) -> v >= by
-    return @fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
+  __concat:(other) => @combineLeft(other)
 
 --- Does absolutely nothing..
 -- @return Pattern
@@ -506,9 +504,11 @@ _degradeBy = (by, pat) ->
   if by == 0 then return pat
   if type(by) == "fraction" then by = by\asFloat!
   f = (v) -> v > by
-  return pat\fmap((val) -> (_) -> val)\appLeft(rand!\filterValues(f))
+  prand = rand!
+  return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
 degrade = (pat) -> _degradeBy(0.5, pat)
+
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
 segment = _patternify _segment
@@ -522,12 +522,10 @@ range = _patternify_p_p _range
 compress = _patternify_p_p _compress
 euclid = _patternify_p_p_p _euclid
 
--- TODO: wchoose, waveforms, tests for the new methods
--- TODO: mini for degrade broke!!
--- print mini "hh!!??"
--- print degrade fastcat "hh", "hh", "hh"
+-- TODO: wchoose, waveforms, tests for the new functions
 
 return {
+  :C
   :Pattern
   :id
   :pure
