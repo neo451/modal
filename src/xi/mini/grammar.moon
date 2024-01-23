@@ -1,6 +1,7 @@
 --- defines the PEG grammar for parsing mini-notation
 -- @module mini.grammar
 import P, S, V, R, C, Ct, Cc from require("lpeg")
+require "moon.all"
 -- TODO: support musical notation like e3, cmaj3
 token = (id) -> Ct Cc(id) * C(V(id))
 token_var = (id, patt) -> Ct Cc(id) * C(patt)
@@ -44,6 +45,7 @@ other_groups = token_var "other", V("other_groups")
 other_seqs = token_var "other", V("other_seqs")
 other_subseqs = token_var "other", V("other_subseqs")
 other_elements = token_var "other", V("other_elements")
+chordmod = V "chordmod"
 minus = V "minus"
 ws = V "ws"
 
@@ -55,7 +57,7 @@ grammar = {
   -- root
   root: token_var "root", ws ^ -1 * sequence * ws ^ -1,
 
-    -- sequence
+  -- sequence
   sequence: group * other_groups * other_seqs,
   other_groups: (ws * -P("|") * P(".") * ws * group) ^ 0,
   other_seqs: (ws ^ -1 * P("|") * ws ^ -1 * sequence) ^ 0,
@@ -78,40 +80,41 @@ grammar = {
   other_subseqs: (ws ^ -1 * P(",") * ws ^ -1 * sequence) ^ 0,
 
   -- terms
-  term: number + word_with_index + rest,
-  word_with_index: word * index ^ -1,
-  index: P(":") * number,
+  term: word_with_index + rest + number
+  word_with_index: word * index ^ -1
+  index: P(":") * number
 
   -- eculid modifier
-  euclid_modifier: ( P("(") * ws ^ -1 * sequence * ws ^ -1 * P(",") * ws ^ -1 * sequence * euclid_rotation_param ^ -1 * ws ^ -1 * P(")")) ^ 0,
-  euclid_rotation_param: ws ^ -1 * P(",") * ws ^ -1 * sequence,
+  euclid_modifier: ( P("(") * ws ^ -1 * sequence * ws ^ -1 * P(",") * ws ^ -1 * sequence * euclid_rotation_param ^ -1 * ws ^ -1 * P(")")) ^ 0
+  euclid_rotation_param: ws ^ -1 * P(",") * ws ^ -1 * sequence
 
   -- term modifiers
-  modifiers: modifier ^ 0,
-  modifier: fast + slow + _repeat + degrade + weight,
-  fast: P("*") * m_element,
-  slow: P("/") * m_element,
-  _repeat: (repeat1 + repeatn) ^ 1,
-  repeatn: P("!") * -P("!") * pos_integer,
-  repeat1: P("!") * -pos_integer,
-  degrade: degrade1 + degraden + degrader,
-  degrader: P("?") * -P("?") * pos_real,
-  degraden: P("?") * -pos_real * -P("?") * pos_integer,
-  degrade1: P("?") * -pos_integer * -pos_real,
-  weight: P("@") * number,
+  modifiers: modifier ^ 0
+  modifier: fast + slow + _repeat + degrade + weight
+  fast: P("*") * m_element
+  slow: P("/") * m_element
+  _repeat: (repeat1 + repeatn) ^ 1
+  repeatn: P("!") * -P("!") * pos_integer
+  repeat1: P("!") * -pos_integer
+  degrade: degrade1 + degraden + degrader
+  degrader: P("?") * -P("?") * pos_real
+  degraden: P("?") * -pos_real * -P("?") * pos_integer
+  degrade1: P("?") * -pos_integer * -pos_real
+  weight: P("@") * number
 
   -- primitives
-  word: R("az", "AZ") ^ 1,
-  number: real + integer,
-  real: integer * P(".") * pos_integer ^ -1,
-  pos_real: pos_integer * P(".") * pos_integer ^ -1,
-  integer: minus ^ -1 * pos_integer,
-  pos_integer: -minus * R("09") ^ 1,
-  rest: P("~"),
+  word: (R("az", "AZ") + P("'")) ^ 1 * R("09") ^ -1 * chordmod ^ 0
+  chordmod: P("'") * ((S"id" + R"09") + P"o" + R"09")
+  number: real + integer
+  real: integer * P(".") * pos_integer ^ -1
+  pos_real: pos_integer * P(".") * pos_integer ^ -1
+  integer: minus ^ -1 * pos_integer
+  pos_integer: -minus * R("09") ^ 1
+  rest: P("~")
 
   -- Misc
-  minus: P("-"),
-  ws: S(" \t") ^ -1,
+  minus: P("-")
+  ws: S(" \t") ^ -1
 }
 
 grammar = Ct C grammar

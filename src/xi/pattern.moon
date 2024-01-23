@@ -1,7 +1,8 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
 import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
-import bjork from require "xi.euclid"
+import bjork from require "xi.theory.euclid"
+import parseChord from require "xi.theory.chords"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
@@ -26,6 +27,12 @@ for name in *genericParams
   if aliasParams[param] != nil
     alias = aliasParams[param]
     C[alias] = C[param]
+
+C.note = (args) ->
+  args = reify(args)
+  chordToStack = (thing) -> stack(parseChord thing)
+  withVal = (v) -> { note: v }
+  return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
 
 class Interpreter
   eval:(node) =>
@@ -571,8 +578,9 @@ juxBy = _patternify_p_p _juxBy
 
 -- TODO: wchoose, waveforms, tests for the new functions
 
+
 return {
-  when:when_
+  when: when_
   :C
   :Pattern
   :id
