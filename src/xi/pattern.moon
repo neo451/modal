@@ -132,7 +132,6 @@ class Pattern
 
   firstCycle: => @querySpan 0, 1
 
-  -- TODO: can not print signals properly
   __tostring: =>
     func = (event) -> event\show!
     dump map func, @firstCycle!
@@ -310,6 +309,7 @@ reify = (thing) ->
     when "pattern" then thing
     else pure thing
 
+-- ** Combining patterns
 --- The given items are played at the same time at the same length.
 -- @return Pattern
 -- @usage
@@ -358,7 +358,7 @@ slowcat = (...) ->
 -- @param items to concatenate
 -- @return Pattern
 -- @usage
--- fastcat("e5", "b4", ["d5", "c5"])
+-- fastcat("e5", "b4", {"d5", "c5"})
 fastcat = (...) ->
   pats = map reify, totable(...)
   _fast #pats, slowcat(...)
@@ -367,7 +367,7 @@ fastcat = (...) ->
 -- @param table of time-pat tables
 -- @return Pattern
 -- @usage
--- timecat({{3,"e3"},{1, "g3"}}).note() // "e3@3 g3".note()
+-- timecat({{3,"e3"},{1, "g3"}}) // "e3@3 g3"
 timecat = (tuples) ->
   pats = {}
   times = map ((x) -> x[1]), tuples
@@ -377,17 +377,68 @@ timecat = (tuples) ->
     { time, pat } = tup
     b = accum / total
     e = (accum + time) / total
-    new_pat = _compress(b, e, pat)
-    table.insert(pats, new_pat)
+    new_pat = _compress b, e, pat
+    table.insert pats, new_pat
     accum = accum + time
   stack(pats)
 
+_fast = (rate, pat) -> return (reify pat)\withTime ((t) -> t * rate), ((t) -> t / rate)
+
+_slow = (factor, pat) -> _fast (1 / factor), pat
+
+_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
+
+_late = (offset, pat) -> _early -offset, pat
+
+_inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
+
+_outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
+
+-- ** waveforms
 waveform = (func) ->
   query = (state) =>
     return { Event nil, state.span, func state.span\midpoint! }
   Pattern query
 
-rand = -> waveform timeToRand
+steady = (value) -> return new Pattern((state) -> { Event nil, state.span, value })
+
+toBipolar = (pat) -> pat\fmap (x) -> x * 2 - 1
+
+fromBipolar = (pat) -> pat\fmap((x) -> (x + 1) / 2)
+
+sine2 = waveform (t) -> math.sin(t\asFloat! * math.pi * 2)
+
+sine = fromBipolar sine2
+
+cosine2 = _late 1/4, sine2
+
+cosine = fromBipolar cosine2
+
+square = waveform (t) -> math.floor ( t * 2 ) % 2
+
+square2 = toBipolar square
+
+isaw = waveform (t) -> -(t % 1) + 1
+isaw2 = toBipolar isaw
+
+saw = waveform (t) -> t % 1
+saw2 = toBipolar saw
+
+tri = fastcat isaw, saw
+tri2 = fastcat isaw2, saw2
+
+time = waveform id
+
+-- ** randoms
+rand = waveform timeToRand
+
+_irand = (i) -> rand\fmap (x) -> math.floor x * i
+
+irand = (ipat) -> reify(ipat)\fmap(_irand)\innerJoin!
+
+run = (n) -> fastcat [i for i in range(0, n - 1)]
+
+scan = (n) -> slowcat [run(i) for i in range(n)]
 
 _chooseWith = (pat, ...) ->
   vals = map reify, totable(...)
@@ -401,7 +452,7 @@ _chooseWith = (pat, ...) ->
 chooseWith = (pat, ...) ->
   _chooseWith(pat, ...)\outerJoin!
 
-choose = (...) -> chooseWith rand!, ...
+choose = (...) -> chooseWith rand, ...
 
 chooseCycles = (...) -> segment 1, choose(...)
 
@@ -438,23 +489,11 @@ _patternify_p_p_p = (func) ->
     return patOfPats\innerJoin!
   return patterned
 
-_fast = (rate, pat) -> return (reify pat)\withTime ((t) -> t * rate), ((t) -> t / rate)
-
-_slow = (factor, pat) -> _fast (1 / factor), pat
-
-_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
-
-_late = (offset, pat) -> _early -offset, pat
-
-_inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
-
-_outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
-
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 
--- TODO: take bool? "t f f"?
-struct = (table, pat) ->
-  fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
+struct = (boolpat, pat) ->
+  pat, boolpat = reify(pat), reify(boolpat)
+  boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 
@@ -467,12 +506,7 @@ _juxBy = (by, f, pat) ->
   right = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) + by }, valmap)
   return stack left, f right
 
-
 _jux = (f, pat) -> _juxBy(0.5, f, pat)
-
-run = (n) -> fastcat [i for i in range(0, n - 1)]
-
-scan = (n) -> slowcat [run(i) for i in range(n)]
 
 superimpose = (f, pat) -> stack(pat, f(pat))
 
@@ -493,6 +527,8 @@ rev = (pat) ->
     events = pat\query state\setSpan reflect(span)
     map ((event) -> event\withSpan reflect), events
   Pattern query
+
+palindrome = (pat) -> slowcat pat, rev pat
 
 _iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in fun.range(n)]
 
@@ -533,15 +569,25 @@ _compress = (b, e, pat) ->
   fasted = _fastgap (Fraction(1) / (e - b)), pat
   _late b, fasted
 
-_degradeBy = (by, pat) ->
+_degradeByWith = (prand, by, pat) ->
   pat = reify pat
-  if by == 0 then return pat
   if type(by) == "fraction" then by = by\asFloat!
   f = (v) -> v > by
-  prand = rand!
   return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
+_degradeBy = (by, pat) -> _degradeByWith(rand, by, pat)
+
+_undegradeBy = (by, pat) -> _degradeByWith(rand\fmap((r) -> 1 - r), by, pat)
+
 degrade = (pat) -> _degradeBy(0.5, pat)
+
+undegrade = (pat) -> _undegradeBy(0.5, pat)
+
+-- ** higher order functions
+sometimesBy = (by, func, pat) ->
+  (reify(by)\fmap (by) ->  stack _degradeBy(by, pat), func _undegradeBy(1 - by, pat))\innerJoin!
+
+sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
 
 _when = (bool, f, pat) -> bool and f(pat) or pat
 
@@ -553,8 +599,7 @@ _lastOf = (n, f, pat) ->
   boolpat = fastcat concat [false for i = 1, n - 1], {true}
   when_ boolpat, f, pat
 
-palindrome = (pat) -> slowcat pat, rev pat
-
+-- ** music theory
 _scale = (name, pat) ->
   pat = reify pat
   toScale = (v) -> getScale(name, v)
@@ -583,7 +628,7 @@ euclid = _patternify_p_p_p _euclid
 jux = _patternify _jux
 juxBy = _patternify_p_p _juxBy
 
--- TODO: wchoose, waveforms, tests for the new functions
+-- TODO: wchoose, tests for the new functions
 
 return {
   when: when_

@@ -199,4 +199,10 @@ tofrac = (x) ->
   else
     return x
 
-return { :Fraction, :gcd_reduce, :tofrac }
+tofloat = (x) ->
+  if type(x) == "fraction"
+    return x\asFloat!
+  else
+    return x
+
+return { :Fraction, :gcd_reduce, :tofrac, :tofloat }
