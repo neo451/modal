@@ -3,6 +3,7 @@
 import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.theory.euclid"
 import parseChord from require "xi.theory.chords"
+import getScale from require "xi.theory.scales"
 import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event from require "xi.event"
@@ -451,6 +452,7 @@ _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 
+-- TODO: take bool? "t f f"?
 struct = (table, pat) ->
   fastcat(table)\fmap((b) -> (val) -> if b == 1 return val else nil)\appLeft(pat)\removeNils!
 
@@ -553,6 +555,12 @@ _lastOf = (n, f, pat) ->
 
 palindrome = (pat) -> slowcat pat, rev pat
 
+_scale = (name, pat) ->
+  pat = reify pat
+  toScale = (v) -> getScale(name, v)
+  pat\fmap(toScale)
+
+scale = _patternify _scale
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
 segment = _patternify _segment
@@ -564,8 +572,7 @@ early = _patternify _early
 late = _patternify _late
 inside = _patternify_p_p _inside
 outside = _patternify_p_p _outside
--- when is a reserved keyword ...
-when_ = _patternify_p_p _when
+when_ = _patternify_p_p _when -- when is a reserved keyword ...
 firstOf = _patternify_p_p _firstOf
 lastOf = _patternify_p_p _lastOf
 every = firstOf
@@ -577,7 +584,6 @@ jux = _patternify _jux
 juxBy = _patternify_p_p _juxBy
 
 -- TODO: wchoose, waveforms, tests for the new functions
-
 
 return {
   when: when_

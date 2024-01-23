@@ -292,6 +292,7 @@ range = (n, chord) ->
     return concat chord, new_tones
 
 parseChord = (chord) ->
+  if type(chord) == "number" then return chord
   ast = grammar\match chord
   notename = notes[ast[2][3][2]]
   offset = 0

@@ -46,6 +46,7 @@ other_seqs = token_var "other", V("other_seqs")
 other_subseqs = token_var "other", V("other_subseqs")
 other_elements = token_var "other", V("other_elements")
 chordmod = V "chordmod"
+chordname = V "chordname"
 minus = V "minus"
 ws = V "ws"
 
@@ -103,7 +104,8 @@ grammar = {
   weight: P("@") * number
 
   -- primitives
-  word: (R("az", "AZ") + P("'")) ^ 1 * R("09") ^ -1 * chordmod ^ 0
+  word: R("az", "AZ") ^ 1 * R("09") ^ -1 * P("'") ^ -1 * chordname ^ -1 * chordmod ^ 0
+  chordname: R("az","09") ^ 1
   chordmod: P("'") * ((S"id" + R"09") + P"o" + R"09")
   number: real + integer
   real: integer * P(".") * pos_integer ^ -1

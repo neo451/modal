@@ -1,4 +1,3 @@
-require "moon.all"
 -- five notes scales
 minPent = { 0,3,5,7,10 }
 majPent = { 0,2,4,7,9 }
@@ -182,4 +181,13 @@ scaleTable =
   "saba": saba
   "iraq": iraq
 
-p scaleTable["yu"]
+getScale = (name, num) ->
+  num = tonumber(num)
+  scale = scaleTable[name]
+  index = (num + 1) % #scale
+  octave = math.floor (num) / (#scale)
+  if index == 0 then index = #scale
+  note = scale[index] + octave * 12
+  return note
+
+return { :scaleTable, :getScale }
