@@ -605,6 +605,12 @@ _scale = (name, pat) ->
   toScale = (v) -> getScale(name, v)
   pat\fmap(toScale)
 
+
+-- ** composing
+-- TODO: squeezeJoin!
+-- _inhabit = (tablepat, index) ->
+--   return fastcat tablepat[index]
+
 scale = _patternify _scale
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
