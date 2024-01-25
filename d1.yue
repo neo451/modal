@@ -1,0 +1,5 @@
+s'bd cp sd ht coins hh . hh coins sd' 
+  |> slow 2, _
+  |> degrade
+  |> rev
+  |> off 0.25, fast(2), _

@@ -112,7 +112,7 @@ class Interpreter
     return (w_p) -> { { w_p[1], w_p[2], w_p[3] } }
 
   number:(node) => pure node.value
-
+  -- TODO: not right
   word:(node) =>
     if node.index != 0
       return C.sound(node.value)\combineLeft(C.n(node.index))
@@ -637,7 +637,7 @@ juxBy = _patternify_p_p _juxBy
 -- TODO: wchoose, tests for the new functions
 
 return {
-  when: when_
+  :when_
   :C
   :Pattern
   :id
@@ -664,6 +664,8 @@ return {
   :lastOf
   :every
   :rev
+  :off
+  :every
   :fast
   :slow
   :early
@@ -672,6 +674,11 @@ return {
   :compress
   :degrade
   :degradeBy
+  :undegradeBy
+  :undegrade
+  :sometimes
   :iter
   :reviter
+  :scale
+  :sine, :sine2, :square, :square2, :saw, :saw2, :isaw, :isaw2, :tri, :tri2, :rand, :irand
 }
