@@ -1,32 +1,30 @@
 socket = require "socket"
 moonscript = require "moonscript.base"
-import dump from "xi.utils"
+-- import dump from "xi.moondump"
+-- require "moon.all"
 for k, v in pairs(require "xi")
   _G[k] = v
 
+clock = DefaultClock
 clock\start!
-host = host or "*"
-port = port or 8080
-s = assert(socket.bind(host, port))
+host = "*"
+port = 8080
+s = socket.bind(host, port)
 i, p = s\getsockname!
-assert(i, p)
-print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
-c = assert(s\accept!)
-c\settimeout(0.001)
-print("Connected")
+-- assert(i, p)
+c = s\accept!
+c\settimeout(0.00000000000001)
+print("Connected to Xi")
 
 getstring = (a) ->
-  -- TODO: switch statement to handle different types of messages
   if a
     func, err = moonscript.loadstring(a)
     if func
-      ok, f = pcall(func)
+      ok, res = pcall(func)
       if ok
-        -- print type f
-        -- print f.querySpan(0,2)
-        f
+        print res
       else
-        print("Execution error:", f)
+        print("Execution error:", ok)
     else
       print("Compilation error:", err)
 

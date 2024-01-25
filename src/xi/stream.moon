@@ -1,10 +1,9 @@
 losc = require "losc"
 plugin = require "losc.plugins.udp-socket"
+bundle = require "losc.bundle"
 import sound from require "xi.control"
 import Fraction from require "xi.fraction"
 import dump from require "xi.utils"
-
-
 require "moon.all"
 
 export StreamTarget = { name: "SuperDirt", address: "127.0.0.1", port: 57120, latency: 0.2, handshake: true }
@@ -33,7 +32,7 @@ class Stream
         sendAddr: target.address 
       })})
     @isPlaying = false
-    @latency = 0.2
+    @latency = 0.3
     @pattern = nil
 
   type: -> "stream"
@@ -57,7 +56,7 @@ class Stream
       ts = libloDiff + @latency + (linkOn / mill)
 
       value = event.value
-      value.cps = cps
+      value.cps = event.value.cps or cps --???
       value.cycle = cycleOn\asFloat!
       value.delta = deltaSeconds
 
@@ -71,8 +70,8 @@ class Stream
 
       b = @osc.new_message msg
 
-      -- print dump b
+      bundle = bundle.new(ts, b)
 
-      @osc\send b
+      @osc\send bundle
 
 return { :Stream }

@@ -1,4 +1,4 @@
-import Pattern from require "xi.pattern"
+import C from require "xi.pattern"
 import Stream from require "xi.stream"
 import Clock from require "xi.clock"
 moon = require "moon"
@@ -18,16 +18,19 @@ hush = ->
     DefaultClock\unsubscribe stream
   Streams = {}
 
-d1 = (a) -> p 1, a
-d2 = (a) -> p 2, a
-d3 = (a) -> p 3, a
-d4 = (a) -> p 4, a
-d5 = (a) -> p 5, a
-d6 = (a) -> p 6, a
-d7 = (a) -> p 7, a
-d8 = (a) -> p 8, a
+d1 = (a) -> p 1, a .. C.orbit"1"
+d2 = (a) -> p 2, a .. C.orbit"2"
+d3 = (a) -> p 3, a .. C.orbit"3"
+d4 = (a) -> p 4, a .. C.orbit"4"
+d5 = (a) -> p 5, a .. C.orbit"5"
+d6 = (a) -> p 6, a .. C.orbit"6"
+d7 = (a) -> p 7, a .. C.orbit"7"
+d8 = (a) -> p 8, a .. C.orbit"8"
 
-setcps = (cps) -> DefaultClock.bpm = cps * DefaultClock.beatsPerCycle * 60
+-- TODO: not working, need to go deeper
+-- setcps = (cps) ->
+--   DefaultClock.bpm = cps * DefaultClock.beatsPerCycle * 60
+--   return DefaultClock
 
 return {
   :p,

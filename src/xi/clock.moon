@@ -1,5 +1,6 @@
 socket = require "socket"
 link = require "abletonlink"
+Timetag = require "losc.timetag"
 import type from require "xi.utils"
 sleep = (sec) -> socket.sleep sec
 
@@ -11,6 +12,7 @@ class Clock
     @subscribers = {}
     @running = false
     @notifyCoroutine = nil
+    @latency = 0.2
 
   type: -> "clock"
 
@@ -37,7 +39,6 @@ class Clock
 
   createNotifyCoroutine: =>
     @notifyCoroutine = coroutine.create ->
-      -- print "setup", @running
       @link\enable(true)
       @link\enable_start_stop_sync(true)
 
@@ -49,34 +50,32 @@ class Clock
 
       while @running
         ticks += 1
-        -- print "tick", ticks
 
         logicalNow = math.floor start + (ticks * frame)
+
         logicalNext = math.floor start + ((ticks + 1) * frame)
 
         now = @link\clock_micros!
+
         wait = (logicalNow - now) / mill
 
-        if wait > 0
-          sleep wait
+        if wait > 0 then sleep wait
 
-        -- print "running is set to ", @running
-
-        if not @running
-          break
+        if not @running then break
 
         @link\capture_audio_session_state @sessionState
-        secondsPerMinute = 60
-        cps = (@sessionState\tempo! / @beatsPerCycle) / secondsPerMinute
+
+
+        cps = (@sessionState\tempo! / @beatsPerCycle) / 60
+
         cycleFrom = @sessionState\beat_at_time(logicalNow, 0) / @beatsPerCycle
+
         cycleTo = @sessionState\beat_at_time(logicalNext, 0) / @beatsPerCycle
 
         for sub in *@subscribers
           sub\notifyTick cycleFrom, cycleTo, @sessionState, cps, @beatsPerCycle, mill, now
-        -- print("the coroutine is running? ... ", coroutine.running!)
         coroutine.yield!
 
-        -- print @running
-      @linkEnabled = false --?
+      @linkEnabled = false
 
 return { :Clock }

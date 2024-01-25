@@ -256,9 +256,9 @@ class Pattern
 
   combineLeft:(other) => @fmap((x) -> (y) -> union(x, y))\appLeft(other)
 
-  -- metamethods
   __eq: (other) => @show! == other\show!
 
+  -- metamethods equal to tidal's |x ops
   __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(reify(other))
 
   __div:(other) => @fmap((x) -> (y) -> y / x)\appLeft(reify(other))

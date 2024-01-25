@@ -12,7 +12,7 @@ describe "Stream", ->
       stream = Stream!
       assert.are.same stream.target, StreamTarget
       assert.are.equal stream.isPlaying, false
-      assert.are.equal stream.latency, 0.2
+      assert.are.equal stream.latency, 0.3
       assert.is_nil stream.pattern
 
 
