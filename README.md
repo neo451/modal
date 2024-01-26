@@ -15,7 +15,7 @@ liblua5.4-dev, openssl, libssl-dev, and libasio-dev, luarocks
 ## trying out
 
 1. start supercollider and (in supercollider) run SuperDirt.start;
-2. checkout (xi.nvim)[] to try in neovim, write a text file (see example.yue), then run `moon boot.moon` in a terminal, then start evaluating with `Ctrl-a` (send-all) or `Ctrl-e` (send-current-line)
+2. checkout (xi.nvim)[https://github.com/noearc/xi.nvim] to try in neovim, write a text file (see example.yue), then run `moon boot.moon` in a terminal, then start evaluating with `Ctrl-a` (send-all) or `Ctrl-e` (send-current-line)
 3. or run `moon repl.moon` and `moon boot.moon` in two terminal windows
 
 ## Collaboration
