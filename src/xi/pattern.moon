@@ -29,10 +29,14 @@ for name in *genericParams
     alias = aliasParams[param]
     C[alias] = C[param]
 
+notemt =
+  __add: (other) =>
+    { note: @note + other.note }
+
 C.note = (args) ->
   args = reify(args)
   chordToStack = (thing) -> stack(parseChord thing)
-  withVal = (v) -> { note: v }
+  withVal = (v) -> setmetatable { note: v }, notemt
   return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
 
 class Interpreter
@@ -633,7 +637,6 @@ compress = _patternify_p_p _compress
 euclid = _patternify_p_p_p _euclid
 jux = _patternify _jux
 juxBy = _patternify_p_p _juxBy
-
 
 apply = (x, pat) -> pat .. x
 
