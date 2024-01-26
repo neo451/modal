@@ -634,12 +634,16 @@ euclid = _patternify_p_p_p _euclid
 jux = _patternify _jux
 juxBy = _patternify_p_p _juxBy
 
+
+apply = (x, pat) -> pat .. x
+
 -- TODO: wchoose, tests for the new functions
 
 return {
   :when_
   :C
   :Pattern
+  :apply
   :id
   :pure
   :silence
