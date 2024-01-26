@@ -16,7 +16,8 @@ print("Connected to Xi")
 
 getstring = (a) ->
   if a
-    func, err = yue.loadstring(a)
+    lua_code = yue.to_lua(a)
+    func, err = loadstring(lua_code)
     if func
       ok, res = pcall(func)
       if ok
