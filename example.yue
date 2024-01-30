@@ -1,0 +1,12 @@
+s"[bd|~] east"
+  |> apply room"0.8", _
+  |> d1
+
+note scale "ritusen", "[0|0|1] <4(3,8)/2 5(5,8)/3 8(3,9)/2>"
+  |> apply s"superpiano", _
+  |> jux rev, _
+  |> apply vowel"<a e i o u>", _
+  |> apply room"<0.1!!!! 0.5>", _
+  |> apply delay"<0.1 0.2 0.4 0.8>", _
+  |> degradeBy 0.2, _
+  |> d2

@@ -1,10 +1,8 @@
 socket = require "socket"
 print "xi repl"
-host = host or "localhost"
-port = port or 8080
--- print("Attempting connection to host '" .. host .. "' and port " .. port .. "...")
+host = "localhost"
+port = 8080
 c = assert(socket.connect(host, port))
--- print("Connected! Please type stuff (empty line to stop):")
 io.write "> "
 l = io.read()
 while l and l ~= "" and not e

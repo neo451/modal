@@ -1,8 +1,5 @@
 socket = require "socket"
--- moonscript = require "moonscript.base"
 yue = require "yue"
--- import dump from "xi.moondump"
--- require "moon.all"
 for k, v in pairs(require "xi")
   _G[k] = v
 
@@ -19,7 +16,8 @@ print("Connected to Xi")
 
 getstring = (a) ->
   if a
-    func, err = loadstring(a)
+    lua_code = yue.to_lua(a)
+    func, err = loadstring(lua_code)
     if func
       ok, res = pcall(func)
       if ok

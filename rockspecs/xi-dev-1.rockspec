@@ -7,7 +7,7 @@ description = {
 	summary = "a port of the tidalcycles pattern language to lua",
 	detailed = [[
 xi is an experimental port of the livecoding music language [Tidalcycles](http://tidalcycles.org/) to the lua programming language.
-This project follows the footsteps of [vortex](https://github.com/tidalcycles/vortex) and [strudel](https://strudel.tidalcycles.org).]],
+This project follows the footsteps of [vortex](https://github.com/tidalcycles/vortex) and [strudel](https://strudel.tidalcycles.org) and tranquility.]],
 	homepage = "https://github.com/noearc/xi",
 	license = "GPL3",
 }
@@ -20,6 +20,7 @@ dependencies = {
 	"lpeg >= 1.1.0-1",
 	"ldoc >= 1.0.1-1",
 	"moonscript >= 0.5.0-1",
+	"yuescript >= 0.21.3-1",
 	"fun >= 0.1.3-1",
 }
 build = {
