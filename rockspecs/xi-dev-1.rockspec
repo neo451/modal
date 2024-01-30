@@ -21,7 +21,6 @@ dependencies = {
 	"ldoc >= 1.0.1-1",
 	"moonscript >= 0.5.0-1",
 	"fun >= 0.1.3-1",
-	"bitop-lua >= 1.0.0",
 }
 build = {
 	type = "builtin",
@@ -37,6 +36,7 @@ build = {
 		["xi.pattern"] = "src/xi/pattern.lua",
 		["xi.control"] = "src/xi/control.lua",
 		["xi.clock"] = "src/xi/clock.lua",
+		["xi.bitop"] = "src/xi/bitop.lua",
 		["xi.theory.euclid"] = "src/xi/theory/euclid.lua",
 		["xi.theory.scales"] = "src/xi/theory/scales.lua",
 		["xi.theory.chords"] = "src/xi/theory/chords.lua",
