@@ -1,4 +1,4 @@
-import flatten, zipWith, concat, splitAt, rotate from require "xi.utils"
+-- import flatten, zipWith, concat, splitAt, rotate from require "xi.utils"
 
 left = (n, m) ->
   { ons, offs } = n
@@ -26,8 +26,8 @@ _bjork = (n, m) ->
 
 bjork = (ons, steps, offset = 0) ->
   offs = steps - ons
-  x = [ {true} for i = 1, ons ]
-  y = [ {false} for i = 1, offs ]
+  x = [ { true } for i = 1, ons ]
+  y = [ { false } for i = 1, offs ]
   result = _bjork { ons, offs }, { x, y }
   result = concat flatten(result[2][1]), flatten(result[2][2])
   rotate result, offset

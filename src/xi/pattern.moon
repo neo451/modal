@@ -1,6 +1,6 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
+import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, xi_type from require "xi.utils"
 import bjork from require "xi.theory.euclid"
 import parseChord from require "xi.theory.chords"
 import getScale from require "xi.theory.scales"
@@ -71,7 +71,7 @@ class Interpreter
     return stack([_fast fp, @eval(seq) for _, seq, fp in fun.zip(node.seqs, fast_params)])
 
   element:(node) =>
-    modifiers = [ @eval(mod) for mod in *node.modifiers]
+    modifiers = [ @eval(mod) for mod in *node.modifiers ]
     pat = @eval(node.value)
 
     if node.euclid_modifier != nil
@@ -126,8 +126,6 @@ class Interpreter
 
 class Pattern
   new:(query = -> {}) => @query = query
-
-  type: -> "pattern"
 
   querySpan:(b, e) =>
     span = Span b, e
@@ -307,7 +305,7 @@ mini = (string) ->
 -- @local
 -- @return pattern
 reify = (thing) ->
-  switch type thing
+  switch xi_type thing
     when "string" then mini thing
     when "table" then fastcat thing
     when "pattern" then thing
@@ -575,7 +573,7 @@ _compress = (b, e, pat) ->
 
 _degradeByWith = (prand, by, pat) ->
   pat = reify pat
-  if type(by) == "fraction" then by = by\asFloat!
+  if xi_type(by) == "fraction" then by = by\asFloat!
   f = (v) -> v > by
   return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 

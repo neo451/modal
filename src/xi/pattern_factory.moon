@@ -1,7 +1,7 @@
 import C from require "xi.pattern"
 import Stream from require "xi.stream"
 import Clock from require "xi.clock"
-moon = require "moon"
+
 Streams = {}
 DefaultClock = Clock!
 

@@ -1,4 +1,4 @@
-import compare, dumpval, dump from require "xi.utils"
+import compare, dump from require "xi.utils"
 import Span from require "xi.span"
 
 class Event
@@ -7,8 +7,6 @@ class Event
       error("Event: stateful event values must be of type function")
 
     @whole, @part, @value, @context, @stateful = whole, part, value, context, stateful
-
-  type: -> "event"
 
   duration: => @whole._end - @whole._begin
 

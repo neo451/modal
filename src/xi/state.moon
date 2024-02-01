@@ -6,8 +6,6 @@ class State
     @span = span
     @controls = controls
 
-  type: -> "state"
-
   setSpan:(span) => State span, @controls
 
   withSpan:(func) => @setSpan(func @span)

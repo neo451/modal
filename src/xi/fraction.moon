@@ -1,4 +1,4 @@
-import reduce from require 'xi.utils'
+import reduce from require 'fun'
 local *
 
 decimaltofraction = (x0, err) ->
@@ -42,8 +42,6 @@ class Fraction
 
     @numerator = n
     @denominator = d
-
-  type: => 'fraction'
 
   __add: (f2) =>
     f2 = tofrac f2

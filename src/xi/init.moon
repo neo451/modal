@@ -11,14 +11,14 @@ xi = {
 
 xi.drawline = drawline
 
-for i, v in pairs pattern
+for name, func in pairs pattern
   if i != "C" and i != "Pattern"
-    xi[i] = v
+    xi[name] = func
 
-for i, v in pairs pattern_factory
-  xi[i] = v
+for name, func in pairs pattern_factory
+  xi[name] = func
 
-for i, v in pairs C
-  xi[i] = v
+for name, func in pairs C
+  xi[name] = func
 
 return xi

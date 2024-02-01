@@ -4,7 +4,6 @@ bundle = require "losc.bundle"
 import sound from require "xi.control"
 import Fraction from require "xi.fraction"
 import dump from require "xi.utils"
-require "moon.all"
 
 export StreamTarget = { name: "SuperDirt", address: "127.0.0.1", port: 57120, latency: 0.2, handshake: true }
 
@@ -34,8 +33,6 @@ class Stream
     @isPlaying = false
     @latency = 0.3
     @pattern = nil
-
-  type: -> "stream"
 
   notifyTick: (cycleFrom, cycleTo, s, cps, bpc, mill, now) =>
     if not @pattern

@@ -1,6 +1,7 @@
 require "moon.all"
 fun = require "fun"
-bit = require "xi.bitop" --compatability for 5.3 5.4??
+-- bit = require "xi.bitop" --compatability for 5.3 5.4??
+bit = require "bitop.funcs" --compatability for 5.3 5.4??
 
 utils = {}
 
@@ -24,7 +25,7 @@ utils.compare = (rhs, lhs) ->
     return rhs == lhs
   return true
 
-utils.type = (obj) -> is_object(obj) and obj\type! or type(obj)
+utils.xi_type = (obj) -> obj.__name or type(obj)
 
 utils.flatten = (t) ->
   flat = {}
@@ -40,9 +41,8 @@ utils.filter = (func, table) -> fun.totable fun.filter func, table
 
 utils.map = (func, table) -> fun.totable fun.map func, table
 
-utils.reduce = (func, init, table) -> fun.reduce func, init, table
+utils.reduce = fun.reduce
 
--- TODO: line breaks
 utils.dump = (o) ->
   if type(o) == 'table'
     -- if tsize(o) then return "{}"
@@ -114,14 +114,6 @@ timeToIntSeed = (x) ->
 intSeedToRand = (x) -> (x % 536870912) / 536870912
 
 utils.timeToRand = (x) -> math.abs intSeedToRand timeToIntSeed x
-
-utils.dumpval = (thing) ->
-  switch type(thing)
-    when "table"
-      tab = [v for k, v in pairs thing]
-      return tab[1]
-    when "string"
-      return thing
 
 utils.union = (a, b) ->
   new_map = {}

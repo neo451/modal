@@ -1,7 +1,6 @@
 socket = require "socket"
 link = require "abletonlink"
 Timetag = require "losc.timetag"
-import type from require "xi.utils"
 sleep = (sec) -> socket.sleep sec
 
 class Clock
@@ -13,8 +12,6 @@ class Clock
     @running = false
     @notifyCoroutine = nil
     @latency = 0.2
-
-  type: -> "clock"
 
   start: =>
     if not @running

@@ -1,5 +1,4 @@
-(require"fun")!
-require "moon.all"
+-- (require"fun")!
 import concat from require "xi.utils"
 -- major chords
 major = { 0,4,7 }
