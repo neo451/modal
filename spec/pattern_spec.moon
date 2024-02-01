@@ -1,7 +1,5 @@
-import Span from require "xi.span"
 import Fraction from require "xi.fraction"
-import Event from require "xi.event"
-import State from require "xi.state"
+import Span, State, Event from require "xi.types"
 import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, fastgap, compress, degradeBy from require "xi.pattern"
 
 describe "Pattern", ->
@@ -14,10 +12,6 @@ describe "Pattern", ->
       pattern = Pattern( -> { Event! })
       events = pattern\query State!
       assert.are.same { Event! }, events
-
-    it "should have a function declaring its type", ->
-      pattern = Pattern!
-      assert.are.equal "pattern", pattern\type!
 
   describe "withValue", ->
     it "should return new pattern with function mapped over event values on query", ->

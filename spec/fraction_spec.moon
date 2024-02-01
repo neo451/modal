@@ -38,10 +38,6 @@ describe("Fraction", ->
 		assert.are.equal(f.denominator, 1)
 	)
 
-	it("should have a function declaring its type", ->
-		fraction = Fraction()
-		assert.are.equal("fraction", fraction\type!)
-	)
 	it("should throw on divide by zero", ->
 		assert.has_error( ->
 			Fraction(1, 0)

@@ -25,7 +25,7 @@ utils.compare = (rhs, lhs) ->
     return rhs == lhs
   return true
 
-utils.xi_type = (obj) -> obj.__name or type(obj)
+utils.type = (obj) -> is_object(obj) and obj.__name or type(obj)
 
 utils.flatten = (t) ->
   flat = {}

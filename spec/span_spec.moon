@@ -1,4 +1,4 @@
-import Span from require "xi.span"
+import Span from require "xi.types"
 import Fraction from require "xi.fraction"
 
 describe "Span", ->
@@ -35,10 +35,6 @@ describe "Span", ->
       t = Span 0.5, 0.75
       assert.are.same Fraction(1, 2), t._begin
       assert.are.same Fraction(3, 4), t._end
-
-    it "should have a type", ->
-      t = Span!
-      assert.are.same 'span', t\type!
 
   describe "spanCycles", ->
     it "should break multi cycle span into pieces", ->

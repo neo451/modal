@@ -1,6 +1,5 @@
 import Fraction from require "xi.fraction"
-import Span from require "xi.span"
-import Event from require "xi.event"
+import Span, Event from require "xi.types"
 
 describe "Event", ->
   describe "constructors", ->
@@ -26,11 +25,6 @@ describe "Event", ->
       assert.is_false event.stateful
 
       assert.has_error -> Event expectedWhole, expectedPart, expectedValue, expectedContext, true
-
-
-    it "should have a function declaring its type", ->
-      event = Event()
-      assert.are.equal "event", event\type!
 
   describe "duration", ->
     it "should return duration of event in cycles", ->

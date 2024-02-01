@@ -1,5 +1,4 @@
-import Span from require "xi.span"
-import State from require "xi.state"
+import Span, State from require "xi.types"
 
 describe "State", ->
   describe "new", ->
@@ -14,10 +13,6 @@ describe "State", ->
       state = State expectedSpan, expectedControls
       assert.are.same expectedSpan, state.span
       assert.are.same expectedControls, state.controls
-
-    it "should have a function declaring its type", ->
-      state = State!
-      assert.are.equal "state", state\type!
 
   describe "setSpan", ->
     it "should return new state with specified span", ->

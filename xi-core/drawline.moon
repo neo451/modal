@@ -1,7 +1,7 @@
 --- drawline.moon
 -- @module drawline
 
-import filter, reduce, flatten, dump, dumpval, type from require "xi.utils"
+import filter, reduce, flatten, dump, dumpval, xi_type from require "xi.utils"
 import Fraction, gcd_reduce from require "xi.fraction"
 import Pattern, reify from require "xi.pattern"
 import sound from require "xi.control"

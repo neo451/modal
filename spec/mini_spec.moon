@@ -1,4 +1,4 @@
-import Span from require "xi.span"
+import Span from require "xi.types"
 import visit from require "xi.mini.visitor"
 import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
 

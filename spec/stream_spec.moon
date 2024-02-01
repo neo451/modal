@@ -15,11 +15,6 @@ describe "Stream", ->
       assert.are.equal stream.latency, 0.3
       assert.is_nil stream.pattern
 
-
-    it "should have a function declaring its type", ->
-      stream = Stream!
-      assert.are.equal "stream", stream\type!
-
   -- describe "notifyTick", ->
   --   it "should s osc message when called", ->
   --     stream = Stream!

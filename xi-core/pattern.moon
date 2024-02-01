@@ -1,15 +1,13 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
-import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, xi_type from require "xi.utils"
+import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.theory.euclid"
 import parseChord from require "xi.theory.chords"
 import getScale from require "xi.theory.scales"
-import Span from require "xi.span"
 import Fraction, tofrac, tofloat from require "xi.fraction"
-import Event from require "xi.event"
-import State from require "xi.state"
-import visit from require "xi.mini.visitor"
 import genericParams, aliasParams from require "xi.control"
+import Event, Span, State from require "xi.types"
+import visit from require "xi.mini.visitor"
 import op from require "fun"
 local *
 
@@ -141,16 +139,17 @@ class Pattern
   show: => @__tostring!
 
   bindWhole: (choose_whole, func) =>
-    pat_val = @
     query = (_, state) ->
       withWhole = (a, b) ->
-        Event (choose_whole a.whole, b.whole), b.part, b.value --context?
+        new_whole = choose_whole a.whole, b.whole
+        return Event new_whole, b.part, b.value --context?
       match = (a) ->
-        events = func(a.value)\query(state\setSpan a.part)
-        map ((b) -> withWhole a, b), events
-      events = pat_val\query(state)
-      flatten (map ((a) -> match a), events)
-    Pattern query
+        events = func(a.value)\querySpan(a.part._begin, a.part._end)
+        f = (b) -> withWhole(a, b)
+        return map f, events
+      events = @query(state)
+      return flatten (map ((a) -> match a), events)
+    return Pattern query
 
   outerBind:(func) => @bindWhole ((a) -> a), func
 
@@ -305,7 +304,7 @@ mini = (string) ->
 -- @local
 -- @return pattern
 reify = (thing) ->
-  switch xi_type thing
+  switch type thing
     when "string" then mini thing
     when "table" then fastcat thing
     when "pattern" then thing
@@ -573,7 +572,7 @@ _compress = (b, e, pat) ->
 
 _degradeByWith = (prand, by, pat) ->
   pat = reify pat
-  if xi_type(by) == "fraction" then by = by\asFloat!
+  if type(by) == "fraction" then by = by\asFloat!
   f = (v) -> v > by
   return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
@@ -640,6 +639,14 @@ apply = (x, pat) -> pat .. x
 
 -- TODO: wchoose, tests for the new functions
 
+-- print fast 2, pure"bd"
+
+patOfPats = pure(fastcat("a", "b"))
+expectedEvents = {
+  Event Span(0, 1), Span(0, 1/2), "a"
+  Event Span(0, 1), Span(1/2, 1), "b"
+}
+actualEvents = patOfPats\outerJoin!\firstCycle!
 return {
   :when_
   :C

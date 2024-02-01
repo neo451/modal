@@ -1,6 +1,6 @@
 import Clock from require "xi.clock"
 import Stream from require "xi.stream"
-import Event from require "xi.event"
+import Event from require "xi.types"
 import pure from require "xi.pattern"
 
 
@@ -16,10 +16,6 @@ describe "Clock", ->
       assert.is_not_nil clock.link
       assert.is_not_nil clock.sessionState
       assert.is_nil clock.notifyCoroutine
-
-    it "should have a function declaring its type", ->
-      clock = Clock!
-      assert.are.equal "clock", clock\type!
 
   describe "subscribe/unsubscribe", ->
     it "should add/remove to list of subscribers", ->

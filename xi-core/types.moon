@@ -1,5 +1,64 @@
+import Fraction, tofrac from require "xi.fraction"
 import compare, dump from require "xi.utils"
-import Span from require "xi.span"
+
+class Span
+  new:(b = 1, e = 1) =>
+    @_begin, @_end = tofrac(b), tofrac(e)
+
+  spanCycles: =>
+    spans = {}
+
+    if @_begin == @_end
+      { Span(@_begin, @_end) }
+
+    while @_end > @_begin
+      if @_begin\sam! == @_end\sam!
+        table.insert(spans, Span(@_begin, @_end))
+        break
+
+      table.insert(spans, Span(@_begin, @_begin\nextSam!))
+      @_begin = @_begin\nextSam!
+
+    spans
+
+  duration: => @_end - @_begin
+
+  midpoint: => @_begin + (@duration! / 2)
+
+  cycleSpan: => Span @cyclePos(@_begin), @cyclePos(@_begin) + @duration!
+
+  __eq:(rhs) => @_begin == rhs._begin and @_end == rhs._end
+
+  __tostring: => string.format "%s → %s", @_begin\show!, @_end\show!
+
+  show: => @__tostring!
+
+  withTime:(func) => Span func(@_begin), func(@_end)
+
+  withEnd:(func) => Span @_begin, func(@_end)
+
+  wholeCycle:(frac) => Span frac\sam!, frac\nextSam!
+
+  cyclePos:(frac) => frac - frac\sam!
+
+  sect:(other) =>
+    maxOfStart = @_begin\max(other._begin)
+    minOfEnd = @_end\min(other._end)
+
+    if maxOfStart > minOfEnd
+      return nil
+    if maxOfStart == minOfEnd
+      if maxOfStart == @_end and @_begin < @_end
+        return nil
+      if maxOfStart == other._end and other._begin < other._end
+        return nil
+    Span maxOfStart, minOfEnd
+
+  sect_e:(other) =>
+    result = @sect(other)
+    if not result
+      error("Span: Arcs do not intersect")
+    result
 
 class Event
   new: (whole = nil, part = Span!, value = nil, context = {}, stateful = false) =>
@@ -70,4 +129,23 @@ class Event
     newContext.locations = newloc
     newContext
 
-return { :Event }
+class State
+  new:(span = Span!, controls = {}) =>
+    @span = span
+    @controls = controls
+
+  setSpan:(span) => State span, @controls
+
+  withSpan:(func) => @setSpan(func @span)
+
+  setControls:(controls) => State @span, controls
+
+  __tostring: => "span: ".. @span\show! .. "  controls: " .. dump @controls
+
+  __eq:(other) => @span == other.span and compare @controls, other.controls
+
+return {
+  :Span
+  :Event
+  :State
+}

@@ -1,4 +1,5 @@
 import reduce from require 'fun'
+import type from require "xi.utils"
 local *
 
 decimaltofraction = (x0, err) ->

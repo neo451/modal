@@ -14,12 +14,3 @@ describe "compare", ->
     assert.is_false compare table1, table3
     assert.is_False compare table1, table4
     assert.is_False compare table1, table5
-
-describe "Type", ->
-  it "should return the tranquility class type or the value of type operator if not defined", ->
-    hasClassType = Fraction()
-    doesNotHaveClassType = { thing: "value" }
-    doesNotHaveClassType2 = 3
-    assert.are.equal "fraction", type(hasClassType)
-    assert.are.equal "table", type(doesNotHaveClassType)
-    assert.are.equal "number", type(doesNotHaveClassType2)
