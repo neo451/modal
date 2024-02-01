@@ -9,6 +9,9 @@ local Clock
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "clock"
+    end,
     start = function(self)
       if not self.running then
         self.running = true

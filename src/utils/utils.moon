@@ -1,7 +1,6 @@
 require "moon.all"
 fun = require "fun"
--- bit = require "xi.bitop" --compatability for 5.3 5.4??
-bit = require "bitop.funcs" --compatability for 5.3 5.4??
+bit = require "xi.bitop" --compatability for 5.3 5.4??
 
 utils = {}
 
@@ -25,7 +24,7 @@ utils.compare = (rhs, lhs) ->
     return rhs == lhs
   return true
 
-utils.type = (obj) -> is_object(obj) and obj.__name or type(obj)
+utils.type = (obj) -> is_object(obj) and obj\type! or type(obj)
 
 utils.flatten = (t) ->
   flat = {}

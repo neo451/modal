@@ -44,6 +44,8 @@ class Fraction
     @numerator = n
     @denominator = d
 
+  type: -> "fraction"
+
   __add: (f2) =>
     f2 = tofrac f2
     na = @numerator

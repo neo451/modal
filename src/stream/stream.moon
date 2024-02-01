@@ -34,6 +34,8 @@ class Stream
     @latency = 0.3
     @pattern = nil
 
+  type: -> "stream"
+
   notifyTick: (cycleFrom, cycleTo, s, cps, bpc, mill, now) =>
     if not @pattern
       return

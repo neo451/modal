@@ -5,6 +5,8 @@ class Span
   new:(b = 1, e = 1) =>
     @_begin, @_end = tofrac(b), tofrac(e)
 
+  type: -> "span"
+
   spanCycles: =>
     spans = {}
 
@@ -66,6 +68,8 @@ class Event
       error("Event: stateful event values must be of type function")
 
     @whole, @part, @value, @context, @stateful = whole, part, value, context, stateful
+
+  type: -> "event"
 
   duration: => @whole._end - @whole._begin
 
@@ -133,6 +137,8 @@ class State
   new:(span = Span!, controls = {}) =>
     @span = span
     @controls = controls
+
+  type: -> "state"
 
   setSpan:(span) => State span, @controls
 

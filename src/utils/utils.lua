@@ -1,6 +1,6 @@
 require("moon.all")
 local fun = require("fun")
-local bit = require("bitop.funcs")
+local bit = require("xi.bitop")
 local utils = { }
 local tsize
 tsize = function(t)
@@ -30,7 +30,7 @@ utils.compare = function(rhs, lhs)
   return true
 end
 utils.type = function(obj)
-  return is_object(obj) and obj.__name or type(obj)
+  return is_object(obj) and obj:type() or type(obj)
 end
 utils.flatten = function(t)
   local flat = { }

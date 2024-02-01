@@ -34,6 +34,9 @@ end
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "fraction"
+    end,
     __add = function(self, f2)
       f2 = tofrac(f2)
       local na = self.numerator

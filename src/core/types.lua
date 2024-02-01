@@ -12,6 +12,9 @@ local Span
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "span"
+    end,
     spanCycles = function(self)
       local spans = { }
       if self._begin == self._end then
@@ -111,6 +114,9 @@ local Event
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "event"
+    end,
     duration = function(self)
       return self.whole._end - self.whole._begin
     end,
@@ -223,6 +229,9 @@ local State
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "state"
+    end,
     setSpan = function(self, span)
       return State(span, self.controls)
     end,

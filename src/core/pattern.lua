@@ -4,11 +4,11 @@ do
   map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
 end
 local bjork
-bjork = require("xi.theory.euclid").bjork
+bjork = require("xi.euclid").bjork
 local parseChord
-parseChord = require("xi.theory.chords").parseChord
+parseChord = require("xi.chords").parseChord
 local getScale
-getScale = require("xi.theory.scales").getScale
+getScale = require("xi.scales").getScale
 local Fraction, tofrac, tofloat
 do
   local _obj_0 = require("xi.fraction")
@@ -334,6 +334,9 @@ end
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "pattern"
+    end,
     querySpan = function(self, b, e)
       local span = Span(b, e)
       local state = State(span)

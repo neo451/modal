@@ -36,6 +36,9 @@ local Stream
 do
   local _class_0
   local _base_0 = {
+    type = function()
+      return "stream"
+    end,
     notifyTick = function(self, cycleFrom, cycleTo, s, cps, bpc, mill, now)
       if not self.pattern then
         return 

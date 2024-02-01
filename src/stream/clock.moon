@@ -13,6 +13,8 @@ class Clock
     @notifyCoroutine = nil
     @latency = 0.2
 
+  type: -> "clock"
+
   start: =>
     if not @running
       @running = true

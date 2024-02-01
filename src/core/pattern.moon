@@ -1,9 +1,9 @@
 --- Core pattern representation for strudel
 -- @module xi.pattern
 import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
-import bjork from require "xi.theory.euclid"
-import parseChord from require "xi.theory.chords"
-import getScale from require "xi.theory.scales"
+import bjork from require "xi.euclid"
+import parseChord from require "xi.chords"
+import getScale from require "xi.scales"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import genericParams, aliasParams from require "xi.control"
 import Event, Span, State from require "xi.types"
@@ -124,6 +124,8 @@ class Interpreter
 
 class Pattern
   new:(query = -> {}) => @query = query
+
+  type: -> "pattern"
 
   querySpan:(b, e) =>
     span = Span b, e

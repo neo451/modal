@@ -30,22 +30,27 @@ build = {
 	modules = {},
 	install = {
 		lua = {
-			["xi.init"] = "xi-core/init.lua",
-			["xi.utils"] = "xi-core/utils.lua",
-			["xi.fraction"] = "xi-core/fraction.lua",
-			["xi.drawline"] = "xi-core/drawline.lua",
-			["xi.types"] = "xi-core/types.lua",
-			["xi.stream"] = "xi-core/stream.lua",
-			["xi.pattern"] = "xi-core/pattern.lua",
-			["xi.control"] = "xi-core/control.lua",
-			["xi.clock"] = "xi-core/clock.lua",
-			["xi.bitop"] = "xi-core/bitop.lua",
-			["xi.theory.euclid"] = "xi-theory/euclid.lua",
-			["xi.theory.scales"] = "xi-theory/scales.lua",
-			["xi.theory.chords"] = "xi-theory/chords.lua",
-			["xi.pattern_factory"] = "xi-core/pattern_factory.lua",
-			["xi.mini.grammar"] = "xi-mini/grammar.lua",
-			["xi.mini.visitor"] = "xi-mini/visitor.lua",
+			["xi.init"] = "src/init.lua",
+
+			["xi.utils"] = "src/utils/utils.lua",
+			["xi.fraction"] = "src/utils/fraction.lua",
+			["xi.bitop"] = "src/utils/bitop.lua",
+			["xi.drawline"] = "src/utils/drawline.lua",
+
+			["xi.types"] = "src/core/types.lua",
+			["xi.pattern"] = "src/core/pattern.lua",
+			["xi.control"] = "src/core/control.lua",
+			["xi.pattern_factory"] = "src/core/pattern_factory.lua",
+
+			["xi.clock"] = "src/stream/clock.lua",
+			["xi.stream"] = "src/stream/stream.lua",
+
+			["xi.euclid"] = "src/theory/euclid.lua",
+			["xi.scales"] = "src/theory/scales.lua",
+			["xi.chords"] = "src/theory/chords.lua",
+
+			["xi.mini.grammar"] = "src/mini/grammar.lua",
+			["xi.mini.visitor"] = "src/mini/visitor.lua",
 		},
 	},
 	-- bin = {"bin/xi"}
