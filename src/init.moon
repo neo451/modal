@@ -12,7 +12,7 @@ xi = {
 xi.drawline = drawline
 
 for name, func in pairs pattern
-  if i != "C" and i != "Pattern"
+  if name != "C" and name != "Pattern"
     xi[name] = func
 
 for name, func in pairs pattern_factory
@@ -21,4 +21,17 @@ for name, func in pairs pattern_factory
 for name, func in pairs C
   xi[name] = func
 
+setmetatable(xi, {
+  __call: (t, override) ->
+    for k, v in pairs(t)
+      if _G[k] ~= nil
+        msg = 'function ' .. k .. ' already exists in global scope.'
+        if override
+          _G[k] = v
+          print('WARNING: ' .. msg .. ' Overwritten.')
+        else
+          print('NOTICE: ' .. msg .. ' Skipped.')
+      else
+        _G[k] = v
+})
 return xi

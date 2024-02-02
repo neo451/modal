@@ -67,6 +67,5 @@ return {
   d5 = d5,
   d6 = d6,
   d7 = d7,
-  d8 = d8,
-  setcps = setcps
+  d8 = d8
 }

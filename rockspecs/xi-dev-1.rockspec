@@ -14,12 +14,10 @@ This project follows the footsteps of [vortex](https://github.com/tidalcycles/vo
 
 dependencies = {
 	"lua >= 5.1",
-	"luasec >= 1.2.0-1",
 	"losc >= 1.0.1-1",
 	"luasocket >= 3.1.0-1",
 	"abletonlink >= 1.0.0-1",
 	"lpeg >= 1.1.0-1",
-	"ldoc >= 1.0.1-1",
 	"moonscript >= 0.5.0-1",
 	"yuescript >= 0.21.3-1",
 	"fun >= 0.1.3-1",
@@ -27,31 +25,36 @@ dependencies = {
 
 build = {
 	type = "builtin",
-	modules = {},
+	modules = {
+		["xi.init"] = "src/init.lua",
+
+		["xi.utils"] = "src/utils/utils.lua",
+		["xi.fraction"] = "src/utils/fraction.lua",
+		["xi.bitop"] = "src/utils/bitop.lua",
+		["xi.drawline"] = "src/utils/drawline.lua",
+
+		["xi.types"] = "src/core/types.lua",
+		["xi.pattern"] = "src/core/pattern.lua",
+		["xi.control"] = "src/core/control.lua",
+		["xi.pattern_factory"] = "src/core/pattern_factory.lua",
+
+		["xi.clock"] = "src/stream/clock.lua",
+		["xi.stream"] = "src/stream/stream.lua",
+
+		["xi.euclid"] = "src/theory/euclid.lua",
+		["xi.scales"] = "src/theory/scales.lua",
+		["xi.chords"] = "src/theory/chords.lua",
+
+		["xi.mini.grammar"] = "src/mini/grammar.lua",
+		["xi.mini.visitor"] = "src/mini/visitor.lua",
+
+		["xi.luaish"] = "src/repl/luaish.lua",
+		["xi.repl"] = "src/repl/init.lua",
+	},
 	install = {
-		lua = {
-			["xi.init"] = "src/init.lua",
-
-			["xi.utils"] = "src/utils/utils.lua",
-			["xi.fraction"] = "src/utils/fraction.lua",
-			["xi.bitop"] = "src/utils/bitop.lua",
-			["xi.drawline"] = "src/utils/drawline.lua",
-
-			["xi.types"] = "src/core/types.lua",
-			["xi.pattern"] = "src/core/pattern.lua",
-			["xi.control"] = "src/core/control.lua",
-			["xi.pattern_factory"] = "src/core/pattern_factory.lua",
-
-			["xi.clock"] = "src/stream/clock.lua",
-			["xi.stream"] = "src/stream/stream.lua",
-
-			["xi.euclid"] = "src/theory/euclid.lua",
-			["xi.scales"] = "src/theory/scales.lua",
-			["xi.chords"] = "src/theory/chords.lua",
-
-			["xi.mini.grammar"] = "src/mini/grammar.lua",
-			["xi.mini.visitor"] = "src/mini/visitor.lua",
+		bin = {
+			"bin/xi",
+			"bin/xii",
 		},
 	},
-	-- bin = {"bin/xi"}
 }

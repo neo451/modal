@@ -233,7 +233,7 @@ class Pattern
           new_context = event_val\combineContext event_func
           if new_part ~= nil
             new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value
+            table.insert events, Event new_whole, new_part, new_value, new_context
       return events
     Pattern query
 
@@ -251,7 +251,7 @@ class Pattern
           new_context = event_val\combineContext event_func
           if new_part ~= nil
             new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value
+            table.insert events, Event new_whole, new_part, new_value, new_context
         return events
     Pattern query
 
@@ -403,7 +403,7 @@ waveform = (func) ->
     return { Event nil, state.span, func state.span\midpoint! }
   Pattern query
 
-steady = (value) -> return new Pattern((state) -> { Event nil, state.span, value })
+steady = (value) -> return Pattern((state) -> { Event nil, state.span, value })
 
 toBipolar = (pat) -> pat\fmap (x) -> x * 2 - 1
 
@@ -617,6 +617,7 @@ _scale = (name, pat) ->
 scale = _patternify _scale
 fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
+undegradeBy = _patternify _undegradeBy
 segment = _patternify _segment
 fast = _patternify _fast
 slow = _patternify _slow

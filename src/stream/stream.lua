@@ -1,8 +1,6 @@
 local losc = require("losc")
 local plugin = require("losc.plugins.udp-socket")
 local bundle = require("losc.bundle")
-local sound
-sound = require("xi.control").sound
 local Fraction
 Fraction = require("xi.fraction").Fraction
 local dump

@@ -1,7 +1,6 @@
 losc = require "losc"
 plugin = require "losc.plugins.udp-socket"
 bundle = require "losc.bundle"
-import sound from require "xi.control"
 import Fraction from require "xi.fraction"
 import dump from require "xi.utils"
 

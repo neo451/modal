@@ -1,6 +1,5 @@
 socket = require "socket"
 link = require "abletonlink"
-Timetag = require "losc.timetag"
 sleep = (sec) -> socket.sleep sec
 
 class Clock

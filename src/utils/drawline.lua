@@ -1,7 +1,7 @@
-local filter, reduce, flatten, dump, dumpval, xi_type
+local filter, reduce, flatten, dump
 do
   local _obj_0 = require("xi.utils")
-  filter, reduce, flatten, dump, dumpval, xi_type = _obj_0.filter, _obj_0.reduce, _obj_0.flatten, _obj_0.dump, _obj_0.dumpval, _obj_0.xi_type
+  filter, reduce, flatten, dump = _obj_0.filter, _obj_0.reduce, _obj_0.flatten, _obj_0.dump
 end
 local Fraction, gcd_reduce
 do
@@ -13,8 +13,6 @@ do
   local _obj_0 = require("xi.pattern")
   Pattern, reify = _obj_0.Pattern, _obj_0.reify
 end
-local sound
-sound = require("xi.control").sound
 local map
 map = function(func, items)
   local _accum_0 = { }
@@ -71,7 +69,7 @@ drawline = function(pat, chars)
           local isOnset = event.whole._begin == _begin
           local char = nil
           if isOnset then
-            char = dumpval(event.value)
+            char = dump(event.value)
           else
             char = "-"
           end

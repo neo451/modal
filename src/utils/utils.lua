@@ -1,4 +1,5 @@
-require("moon.all")
+local is_object
+is_object = require("moon.all").is_object
 local fun = require("fun")
 local bit = require("xi.bitop")
 local utils = { }
@@ -129,11 +130,11 @@ utils.pipe = function(...)
   local funcs = {
     ...
   }
-  return reduce((function(f, g)
+  return fun.reduce((function(f, g)
     return function(...)
       return f(g(...))
     end
-  end), id, funcs)
+  end), utils.id, funcs)
 end
 utils.curry = function(func, num_args)
   num_args = num_args or 2

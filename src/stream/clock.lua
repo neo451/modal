@@ -1,6 +1,5 @@
 local socket = require("socket")
 local link = require("abletonlink")
-local Timetag = require("losc.timetag")
 local sleep
 sleep = function(sec)
   return socket.sleep(sec)

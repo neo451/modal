@@ -1,5 +1,4 @@
--- (require"fun")!
-import concat from require "xi.utils"
+import concat, map from require "xi.utils"
 -- major chords
 major = { 0,4,7 }
 aug = { 0,4,8 }
@@ -194,7 +193,6 @@ chordTable =
 import P, S, V, R, C, Ct, Cc from require("lpeg")
 
 token = (id) -> Ct Cc(id) * C(V(id))
-root = token"root"
 note = token"note"
 chord = token"chord"
 chordname = token"chordname"
@@ -308,7 +306,7 @@ parseChord = (chord) ->
   rootnote = notename + offset + (octave - 5) * 12
   if ast[3][2] == "" then return rootnote
   chordtable = chordTable[ast[3][2]]
-  chordtable = totable map ((x) -> x + rootnote), chordtable
+  chordtable = map ((x) -> x + rootnote), chordtable
   if ast[4][2] != "" then
     for mod in *ast[4][3, #ast[4]]
       if mod[1] == "open" then chordtable = open chordtable

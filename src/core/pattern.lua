@@ -28,7 +28,7 @@ local visit
 visit = require("xi.mini.visitor").visit
 local op
 op = require("fun").op
-local fun, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, _slow, _early, _late, _inside, _outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _patternify, _patternify_p_p, _patternify_p_p_p, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, segment, fast, slow, iter, reviter, early, late, inside, outside, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, patOfPats, expectedEvents, actualEvents
+local fun, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, _slow, _early, _late, _inside, _outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _patternify, _patternify_p_p, _patternify_p_p_p, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, fast, slow, iter, reviter, early, late, inside, outside, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, patOfPats, expectedEvents, actualEvents
 fun = require("fun")
 C = { }
 create = function(name)
@@ -503,7 +503,7 @@ do
             local new_context = event_val:combineContext(event_func)
             if new_part ~= nil then
               local new_value = event_func.value(event_val.value)
-              table.insert(events, Event(new_whole, new_part, new_value))
+              table.insert(events, Event(new_whole, new_part, new_value, new_context))
             end
           end
         end
@@ -528,7 +528,7 @@ do
             local new_context = event_val:combineContext(event_func)
             if new_part ~= nil then
               local new_value = event_func.value(event_val.value)
-              table.insert(events, Event(new_whole, new_part, new_value))
+              table.insert(events, Event(new_whole, new_part, new_value, new_context))
             end
           end
           return events
@@ -758,11 +758,11 @@ waveform = function(func)
   return Pattern(query)
 end
 steady = function(value)
-  return new(Pattern(function(state)
+  return Pattern(function(state)
     return {
       Event(nil, state.span, value)
     }
-  end))
+  end)
 end
 toBipolar = function(pat)
   return pat:fmap(function(x)
@@ -1136,6 +1136,7 @@ end
 scale = _patternify(_scale)
 fastgap = _patternify(_fastgap)
 degradeBy = _patternify(_degradeBy)
+undegradeBy = _patternify(_undegradeBy)
 segment = _patternify(_segment)
 fast = _patternify(_fast)
 slow = _patternify(_slow)

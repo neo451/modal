@@ -1,5 +1,8 @@
-local concat
-concat = require("xi.utils").concat
+local concat, map
+do
+  local _obj_0 = require("xi.utils")
+  concat, map = _obj_0.concat, _obj_0.map
+end
 local major = {
   0,
   4,
@@ -457,7 +460,6 @@ local token
 token = function(id)
   return Ct(Cc(id) * C(V(id)))
 end
-local root = token("root")
 local note = token("note")
 local chord = token("chord")
 local chordname = token("chordname")
@@ -636,9 +638,9 @@ parseChord = function(chord)
     return rootnote
   end
   local chordtable = chordTable[ast[3][2]]
-  chordtable = totable(map((function(x)
+  chordtable = map((function(x)
     return x + rootnote
-  end), chordtable))
+  end), chordtable)
   if ast[4][2] ~= "" then
     local _list_0 = ast[4]
     local _max_0 = #ast[4]

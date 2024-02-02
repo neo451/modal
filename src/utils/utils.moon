@@ -1,4 +1,4 @@
-require "moon.all"
+import is_object from require "moon.all"
 fun = require "fun"
 bit = require "xi.bitop" --compatability for 5.3 5.4??
 
@@ -75,7 +75,7 @@ utils.id = (x) -> x
 
 utils.pipe = (...) ->
   funcs = { ... }
-  reduce ((f, g) -> (...) -> f(g(...))), id, funcs
+  fun.reduce ((f, g) -> (...) -> f(g(...))), utils.id, funcs
 
 utils.curry = (func, num_args) ->
   num_args = num_args or 2
