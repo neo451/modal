@@ -50,8 +50,8 @@ class Stream
       linkOff = s\time_at_beat cycleOff\asFloat! * bpc, 0
       deltaSeconds = (linkOff - linkOn) / mill
       linkSecs = now / mill
-      libloDiff = losc\now! + (-linkSecs)
-      ts = libloDiff + @latency + (linkOn / mill)
+      -- libloDiff = losc\now! + (-linkSecs)
+      -- ts = libloDiff + @latency + (linkOn / mill)
 
       value = event.value
       value.cps = event.value.cps or cps --???
@@ -68,8 +68,9 @@ class Stream
 
       b = @osc.new_message msg
 
-      bundle = bundle.new(ts, b)
+      -- bundle = bundle.new(ts, b)
 
-      @osc\send bundle
+      -- @osc\send bundle
+      @osc\send b
 
 return { :Stream }

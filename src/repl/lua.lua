@@ -1,14 +1,12 @@
 local LUA_INIT = "LUA_INIT"
 local LUA_PROGNAME = "lua"
-local LUA_PROMPT = "> "
-local LUA_PROMPT2 = ">> "
+local prompt1 = "> "
+local prompt2 = ">> "
 local LUA_QL
 LUA_QL = function(x)
   return "'" .. x .. "'"
 end
-local lua51 = {
-  _VERSION = match("5%.1$")
-}
+local lua51 = _VERSION:match("5%.1$")
 local _ = LUA_RELEASE, LUA_COPYRIGHT, eof_ender
 if lua51 then
   local LUA_RELEASE = "Lua 5.1.4"
@@ -88,3 +86,103 @@ l_message = function(pname, msg)
   io_stderr:write(string_format("%s\n", msg))
   return io_stderr:flush()
 end
+local socket = require("socket")
+local host = "localhost"
+local port = 8080
+local c = assert(socket.connect(host, port))
+local get_prompt
+get_prompt = function(firstline)
+  local pmt = firstline and prompt1 or prompt2
+  local tp = type(pmpt)
+  if tp == "string" or tp == "number" then
+    return tostring(pmt)
+  end
+  return firstline and prompt1 or prompt2
+end
+local fetchline
+fetchline = function(firstline)
+  return getline(get_prompt(firstline))
+end
+local imcomplete
+imcomplete = function(msg)
+  if msg then
+    if string_sub(msg, -#eof_ender) == eof_ender then
+      return true
+    end
+  end
+  return false
+end
+local pushline
+pushline = function(firstline)
+  local b, fine = true, nil
+  while fine do
+    b = fetchline(firstline)
+    if not b then
+      return 
+    end
+    if using_lsh then
+      fine = lsh.checkline(b)
+    end
+  end
+  if firstline and string_sub(b, 1, 1) == "=" then
+    return "return " .. string_sub(b, 2)
+  else
+    return b
+  end
+end
+local loadline
+loadline = function()
+  local b = pushline(true)
+  if not b then
+    return -1
+  end
+  _ = f, msg
+  while true do
+    if not incomplete(msg) then
+      break
+    end
+    local b2 = pushline(false)
+    if not b2 then
+      return -1
+    end
+    b = b .. "\n" .. b2
+  end
+  saveline(b)
+  _ = {
+    c = send(b .. "\n")
+  }
+  return f, msg
+end
+local dotty
+dotty = function()
+  local oldprogname = progname
+  progname = nil
+  using_lsh, lsh = pcall(require, "luaish")
+  if using_lsh then
+    our_tostring = lsh.tostring
+  else
+    print("no luaish")
+  end
+  while true do
+    local result = nil
+    local status, msg = loadline()
+    if status == -1 then
+      break
+    end
+    if status then
+      result = tuple(docall(status))
+      status, msg = result[1], result[2]
+    end
+    report(status, msg)
+    if status and result.n > 1 then
+      status, msg = pcall(our_print, unpack(result, 2, result.n))
+      if not status then
+        l_message(progname, string_format("error calling %s (%s)", LUA_QL("print"), msg))
+      end
+    end
+  end
+  io_stdout:write("\n")
+  io_stdout:flush()
+  progname = oldprogname
+end
+return dotty()
