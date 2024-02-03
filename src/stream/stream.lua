@@ -50,8 +50,6 @@ do
         local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
         local deltaSeconds = (linkOff - linkOn) / mill
         local linkSecs = now / mill
-        local libloDiff = losc:now() + (-linkSecs)
-        local ts = libloDiff + self.latency + (linkOn / mill)
         local value = event.value
         value.cps = event.value.cps or cps
         value.cycle = cycleOn:asFloat()
@@ -64,8 +62,7 @@ do
         msg.types = GenerateTypesString(msg)
         msg.address = "/dirt/play"
         local b = self.osc.new_message(msg)
-        bundle = bundle.new(ts, b)
-        self.osc:send(bundle)
+        self.osc:send(b)
       end
     end
   }

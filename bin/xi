@@ -10,12 +10,14 @@ local clock = DefaultClock
 clock:start()
 local host = "*"
 local port = 8080
-local s = socket.bind(host, port)
-local c = s:accept()
+local sk = socket.bind(host, port)
+local c = sk:accept()
 
 c:settimeout(0)
 
 print("Connected to Xi")
+
+-- TODO: move to repl/
 
 local getstring = function(a)
 	if a then
