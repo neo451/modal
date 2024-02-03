@@ -10,6 +10,7 @@ import Event, Span, State from require "xi.types"
 import visit from require "xi.mini.visitor"
 import op from require "fun"
 local *
+import string_lambda from require("pl.utils")
 
 fun = require "fun"
 
@@ -307,7 +308,11 @@ mini = (string) ->
 -- @return pattern
 reify = (thing) ->
   switch type thing
-    when "string" then mini thing
+    when "string" then
+      if string_lambda thing
+        return string_lambda thing
+      else
+        return mini thing
     when "table" then fastcat thing
     when "pattern" then thing
     else pure thing
@@ -642,16 +647,11 @@ apply = (x, pat) -> pat .. x
 
 -- TODO: wchoose, tests for the new functions
 
--- print fast 2, pure"bd"
+sl = string_lambda
 
-patOfPats = pure(fastcat("a", "b"))
-expectedEvents = {
-  Event Span(0, 1), Span(0, 1/2), "a"
-  Event Span(0, 1), Span(1/2, 1), "b"
-}
-actualEvents = patOfPats\outerJoin!\firstCycle!
 return {
   :when_
+  :sl
   :C
   :Pattern
   :apply
