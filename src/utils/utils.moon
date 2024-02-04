@@ -4,6 +4,9 @@ bit = require "xi.bitop" --compatability for 5.3 5.4??
 
 utils = {}
 
+floor = math.floor
+abs = math.abs
+
 tsize = (t) ->
   size = 0
   for _ in pairs(t)
@@ -107,12 +110,12 @@ xorwise = (x) ->
 _frac = (x) -> (x - x\floor!)\asFloat!
 
 timeToIntSeed = (x) ->
-  xorwise math.floor (_frac(x / 300) * 536870912)
+  xorwise floor (_frac(x / 300) * 536870912)
 
 -- output a bit differnet than strudel??
 intSeedToRand = (x) -> (x % 536870912) / 536870912
 
-utils.timeToRand = (x) -> math.abs intSeedToRand timeToIntSeed x
+utils.timeToRand = (x) -> abs intSeedToRand timeToIntSeed x
 
 utils.union = (a, b) ->
   new_map = {}

@@ -3,6 +3,8 @@ is_object = require("moon.all").is_object
 local fun = require("fun")
 local bit = require("xi.bitop")
 local utils = { }
+local floor = math.floor
+local abs = math.abs
 local tsize
 tsize = function(t)
   local size = 0
@@ -180,14 +182,14 @@ _frac = function(x)
 end
 local timeToIntSeed
 timeToIntSeed = function(x)
-  return xorwise(math.floor((_frac(x / 300) * 536870912)))
+  return xorwise(floor((_frac(x / 300) * 536870912)))
 end
 local intSeedToRand
 intSeedToRand = function(x)
   return (x % 536870912) / 536870912
 end
 utils.timeToRand = function(x)
-  return math.abs(intSeedToRand(timeToIntSeed(x)))
+  return abs(intSeedToRand(timeToIntSeed(x)))
 end
 utils.union = function(a, b)
   local new_map = { }

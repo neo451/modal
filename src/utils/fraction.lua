@@ -2,23 +2,25 @@ local reduce
 reduce = require('fun').reduce
 local type
 type = require("xi.utils").type
-local decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac, tofloat
+local abs, floor, decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac, tofloat
+abs = math.abs
+floor = math.floor
 decimaltofraction = function(x0, err)
   err = err or 0.0000000001
   local num, den
-  local g = math.abs(x0)
+  local g = abs(x0)
   local sign = x0 / g
   local a, b, c, d = 0, 1, 1, 0
   local s
   local iter = 0
   while iter < 1000000 do
-    s = math.floor(g)
+    s = floor(g)
     num = a + s * c
     den = b + s * d
     a, b, c, d = c, d, num, den
     g = 1.0 / (g - s)
     iter = iter + 1
-    if err > math.abs(sign * num / den - x0) then
+    if err > abs(sign * num / den - x0) then
       return sign * num, den
     end
   end
@@ -29,7 +31,7 @@ gcd = function(a, b)
   return (b == 0) and a or gcd(b, a % b)
 end
 lcm = function(a, b)
-  return (a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
+  return (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
 end
 do
   local _class_0
@@ -47,13 +49,13 @@ do
       if g == 1 then
         Fraction(na * db + da * nb, da * db, false)
       end
-      local s = math.floor(da / g)
-      local t = na * math.floor(db / g) + nb * s
+      local s = floor(da / g)
+      local t = na * floor(db / g) + nb * s
       local g2 = gcd(t, g)
       if g2 == 1 then
         Fraction(t, s * db, false)
       end
-      return Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
+      return Fraction(floor(t / g2), s * floor(db / g2), false)
     end,
     __sub = function(self, f2)
       f2 = tofrac(f2)
@@ -65,13 +67,13 @@ do
       if g == 1 then
         Fraction(na * db - da * nb, da * db, false)
       end
-      local s = math.floor(da / g)
-      local t = na * math.floor(db / g) - nb * s
+      local s = floor(da / g)
+      local t = na * floor(db / g) - nb * s
       local g2 = gcd(t, g)
       if g2 == 1 then
         Fraction(t, s * db, false)
       end
-      return Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
+      return Fraction(floor(t / g2), s * floor(db / g2), false)
     end,
     __div = function(self, f2)
       f2 = tofrac(f2)
@@ -81,13 +83,13 @@ do
       local db = f2.denominator
       local g1 = gcd(na, nb)
       if g1 > 1 then
-        na = math.floor(na / g1)
-        nb = math.floor(nb / g1)
+        na = floor(na / g1)
+        nb = floor(nb / g1)
       end
       local g2 = gcd(db, da)
       if g2 > 1 then
-        da = math.floor(da / g2)
-        db = math.floor(db / g2)
+        da = floor(da / g2)
+        db = floor(db / g2)
       end
       local n = na * db
       local d = nb * da
@@ -105,13 +107,13 @@ do
       local db = f2.denominator
       local g1 = gcd(na, db)
       if g1 > 1 then
-        na = math.floor(na / g1)
-        db = math.floor(db / g1)
+        na = floor(na / g1)
+        db = floor(db / g1)
       end
       local g2 = gcd(nb, da)
       if g2 > 1 then
-        nb = math.floor(nb / g2)
-        da = math.floor(da / g2)
+        nb = floor(nb / g2)
+        da = floor(da / g2)
       end
       return Fraction(na * nb, da * db, false)
     end,
@@ -151,7 +153,7 @@ do
       return self.numerator / self.denominator <= rhs.numerator / rhs.denominator
     end,
     floor = function(self)
-      return math.floor(self.numerator / self.denominator)
+      return floor(self.numerator / self.denominator)
     end,
     sam = function(self)
       return Fraction(self:floor())
@@ -210,9 +212,9 @@ do
         error("Fraction: divide by zero")
       end
       if normalize and (n ~= 0) then
-        local g = math.floor(gcd(n, d))
-        n = math.floor(n / g)
-        d = math.floor(d / g)
+        local g = floor(gcd(n, d))
+        n = floor(n / g)
+        d = floor(d / g)
       end
       self.numerator = n
       self.denominator = d

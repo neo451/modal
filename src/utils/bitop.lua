@@ -1,6 +1,7 @@
 local M = { }
 local MOD = 2 ^ 32
 local MODM = MOD - 1
+local floor = math.floor
 local memoize
 memoize = function(f)
   local mt = { }
@@ -66,7 +67,7 @@ M.rshift = function(a, disp)
   if disp < 0 then
     return M.lshift(a, -disp)
   end
-  return math.floor(a % 2 ^ 32 / 2 ^ disp)
+  return floor(a % 2 ^ 32 / 2 ^ disp)
 end
 M.lshift = function(a, disp)
   if disp < 0 then

@@ -28,8 +28,15 @@ local visit
 visit = require("xi.mini.visitor").visit
 local op
 op = require("fun").op
-local fun, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, _slow, _early, _late, _inside, _outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _patternify, _patternify_p_p, _patternify_p_p_p, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, fast, slow, iter, reviter, early, late, inside, outside, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, patOfPats, expectedEvents, actualEvents
+local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, _slow, _early, _late, _inside, _outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _patternify, _patternify_p_p, _patternify_p_p_p, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, fast, slow, iter, reviter, early, late, inside, outside, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, sl
+string_lambda = require("pl.utils").string_lambda
 fun = require("fun")
+sin = math.sin
+min = math.min
+max = math.max
+pi = math.pi
+floor = math.floor
+tinsert = table.insert
 C = { }
 create = function(name)
   local withVal
@@ -112,7 +119,7 @@ do
           end
           pats = _accum_0
         end
-        table.insert(tc_args, {
+        tinsert(tc_args, {
           #es * weight,
           degradeBy(deg_ratio, fastcat(pats))
         })
@@ -503,7 +510,7 @@ do
             local new_context = event_val:combineContext(event_func)
             if new_part ~= nil then
               local new_value = event_func.value(event_val.value)
-              table.insert(events, Event(new_whole, new_part, new_value, new_context))
+              tinsert(events, Event(new_whole, new_part, new_value, new_context))
             end
           end
         end
@@ -528,7 +535,7 @@ do
             local new_context = event_val:combineContext(event_func)
             if new_part ~= nil then
               local new_value = event_func.value(event_val.value)
-              table.insert(events, Event(new_whole, new_part, new_value, new_context))
+              tinsert(events, Event(new_whole, new_part, new_value, new_context))
             end
           end
           return events
@@ -645,7 +652,11 @@ end
 reify = function(thing)
   local _exp_0 = type(thing)
   if "string" == _exp_0 then
-    return mini(thing)
+    if string_lambda(thing) then
+      return string_lambda(thing)
+    else
+      return mini(thing)
+    end
   elseif "table" == _exp_0 then
     return fastcat(thing)
   elseif "pattern" == _exp_0 then
@@ -717,7 +728,7 @@ timecat = function(tuples)
     local b = accum / total
     local e = (accum + time) / total
     local new_pat = _compress(b, e, pat)
-    table.insert(pats, new_pat)
+    tinsert(pats, new_pat)
     accum = accum + time
   end
   return stack(pats)
@@ -775,13 +786,13 @@ fromBipolar = function(pat)
   end)
 end
 sine2 = waveform(function(t)
-  return math.sin(t:asFloat() * math.pi * 2)
+  return sin(t:asFloat() * pi * 2)
 end)
 sine = fromBipolar(sine2)
 cosine2 = _late(1 / 4, sine2)
 cosine = fromBipolar(cosine2)
 square = waveform(function(t)
-  return math.floor((t * 2) % 2)
+  return floor((t * 2) % 2)
 end)
 square2 = toBipolar(square)
 isaw = waveform(function(t)
@@ -798,7 +809,7 @@ time = waveform(id)
 rand = waveform(timeToRand)
 _irand = function(i)
   return rand:fmap(function(x)
-    return math.floor(x * i)
+    return floor(x * i)
   end)
 end
 irand = function(ipat)
@@ -832,7 +843,7 @@ _chooseWith = function(pat, ...)
     return silence()
   end
   return range(1, #vals + 1, pat):fmap(function(i)
-    local key = math.min(math.max(math.floor(i), 0), #vals)
+    local key = min(max(floor(i), 0), #vals)
     return vals[key]
   end)
 end
@@ -878,7 +889,7 @@ _patternify_p_p = function(func)
       return func(a, b, pat)
     end
     mapFn = curry(mapFn, 2)
-    patOfPats = apat:fmap(mapFn):appLeft(bpat)
+    local patOfPats = apat:fmap(mapFn):appLeft(bpat)
     return patOfPats:innerJoin()
   end
   return patterned
@@ -895,7 +906,7 @@ _patternify_p_p_p = function(func)
       return func(a, b, c, pat)
     end
     mapFn = curry(mapFn, 3)
-    patOfPats = apat:fmap(mapFn):appLeft(bpat):appLeft(cpat)
+    local patOfPats = apat:fmap(mapFn):appLeft(bpat):appLeft(cpat)
     return patOfPats:innerJoin()
   end
   return patterned
@@ -1159,14 +1170,10 @@ juxBy = _patternify_p_p(_juxBy)
 apply = function(x, pat)
   return pat .. x
 end
-patOfPats = pure(fastcat("a", "b"))
-expectedEvents = {
-  Event(Span(0, 1), Span(0, 1 / 2), "a"),
-  Event(Span(0, 1), Span(1 / 2, 1), "b")
-}
-actualEvents = patOfPats:outerJoin():firstCycle()
+sl = string_lambda
 return {
   when_ = when_,
+  sl = sl,
   C = C,
   Pattern = Pattern,
   apply = apply,

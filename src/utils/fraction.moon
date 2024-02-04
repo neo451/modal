@@ -2,23 +2,26 @@ import reduce from require 'fun'
 import type from require "xi.utils"
 local *
 
+abs = math.abs
+floor = math.floor
+
 decimaltofraction = (x0, err) ->
   err = err or 0.0000000001
   local num, den
-  g = math.abs x0 -- or x0:abs()
+  g = abs x0 -- or x0:abs()
   sign = x0 / g
   a, b, c, d = 0, 1, 1, 0
   local s
   iter = 0
   while iter < 1000000
-    s = math.floor g
+    s = floor g
     num = a + s * c
     den = b + s * d
     a, b, c, d = c, d, num, den
     g = 1.0 / (g - s)
     iter = iter + 1
 
-    if err > math.abs sign * num / den - x0
+    if err > abs sign * num / den - x0
       return sign * num, den
 
   error "Fraction: failed to find a fraction for " .. x0
@@ -26,7 +29,7 @@ decimaltofraction = (x0, err) ->
 
 gcd = (a, b) -> (b == 0) and a or gcd(b, a % b)
 
-lcm = (a, b) -> (a == 0 or b == 0) and 0 or math.abs(a * b) / gcd(a, b)
+lcm = (a, b) -> (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
 
 class Fraction
   new: (n = 0, d = 1, normalize = true) =>
@@ -37,9 +40,9 @@ class Fraction
       error("Fraction: divide by zero")
 
     if normalize and (n ~= 0)
-      g = math.floor gcd(n, d)
-      n = math.floor n / g
-      d = math.floor d / g
+      g = floor gcd(n, d)
+      n = floor n / g
+      d = floor d / g
 
     @numerator = n
     @denominator = d
@@ -57,13 +60,13 @@ class Fraction
     if g == 1
       Fraction(na * db + da * nb, da * db, false)
 
-    s = math.floor(da / g)
-    t = na * math.floor(db / g) + nb * s
+    s = floor(da / g)
+    t = na * floor(db / g) + nb * s
     g2 = gcd(t, g)
     if g2 == 1
       Fraction(t, s * db, false)
 
-    Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
+    Fraction(floor(t / g2), s * floor(db / g2), false)
 
   __sub: (f2) =>
     f2 = tofrac f2
@@ -75,14 +78,14 @@ class Fraction
 
     if g == 1
       Fraction(na * db - da * nb, da * db, false)
-    s = math.floor(da / g)
-    t = na * math.floor(db / g) - nb * s
+    s = floor(da / g)
+    t = na * floor(db / g) - nb * s
     g2 = gcd(t, g)
 
     if g2 == 1 then
       Fraction(t, s * db, false)
 
-    Fraction(math.floor(t / g2), s * math.floor(db / g2), false)
+    Fraction(floor(t / g2), s * floor(db / g2), false)
 
   __div: (f2) =>
     f2 = tofrac f2
@@ -93,13 +96,13 @@ class Fraction
 
     g1 = gcd(na, nb)
     if g1 > 1
-      na = math.floor(na / g1)
-      nb = math.floor(nb / g1)
+      na = floor(na / g1)
+      nb = floor(nb / g1)
 
     g2 = gcd(db, da)
     if g2 > 1
-      da = math.floor(da / g2)
-      db = math.floor(db / g2)
+      da = floor(da / g2)
+      db = floor(db / g2)
 
     n = na * db
     d = nb * da
@@ -118,13 +121,13 @@ class Fraction
 
     g1 = gcd(na, db)
     if g1 > 1
-      na = math.floor(na / g1)
-      db = math.floor(db / g1)
+      na = floor(na / g1)
+      db = floor(db / g1)
 
     g2 = gcd(nb, da)
     if g2 > 1
-      nb = math.floor(nb / g2)
-      da = math.floor(da / g2)
+      nb = floor(nb / g2)
+      da = floor(da / g2)
 
     Fraction(na * nb, da * db, false)
 
@@ -158,7 +161,7 @@ class Fraction
 
   __lte:(rhs) => @numerator / @denominator <= rhs.numerator / rhs.denominator
 
-  floor: => math.floor @numerator / @denominator
+  floor: => floor @numerator / @denominator
 
   sam: => Fraction @floor!
 

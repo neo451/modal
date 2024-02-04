@@ -5,6 +5,8 @@ M = {}
 MOD = 2 ^ 32
 MODM = MOD - 1
 
+floor = math.floor
+
 memoize = (f) ->
   mt = {}
   t = setmetatable {}, mt
@@ -48,7 +50,7 @@ M.bor = (a, b) -> MODM - M.band(MODM - a, MODM - b)
 M.rshift = (a, disp) ->
   if disp < 0
     return M.lshift(a, -disp)
-  return math.floor(a % 2 ^ 32 / 2 ^ disp)
+  return floor(a % 2 ^ 32 / 2 ^ disp)
 
 M.lshift = (a, disp) ->
   if disp < 0

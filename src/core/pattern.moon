@@ -11,8 +11,14 @@ import visit from require "xi.mini.visitor"
 import op from require "fun"
 local *
 import string_lambda from require("pl.utils")
-
 fun = require "fun"
+
+sin = math.sin
+min = math.min
+max = math.max
+pi = math.pi
+floor = math.floor
+tinsert = table.insert
 
 C = {}
 
@@ -54,7 +60,7 @@ class Interpreter
       weight = es[1][1] or 1
       deg_ratio = es[1][3] or 0
       pats = [e[2] for e in *es]
-      table.insert tc_args, { #es * weight, degradeBy(deg_ratio, fastcat(pats)) }
+      tinsert tc_args, { #es * weight, degradeBy(deg_ratio, fastcat(pats)) }
     return timecat tc_args
 
   random_sequence:(node) =>
@@ -234,7 +240,7 @@ class Pattern
           new_context = event_val\combineContext event_func
           if new_part ~= nil
             new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value, new_context
+            tinsert events, Event new_whole, new_part, new_value, new_context
       return events
     Pattern query
 
@@ -252,7 +258,7 @@ class Pattern
           new_context = event_val\combineContext event_func
           if new_part ~= nil
             new_value = event_func.value event_val.value
-            table.insert events, Event new_whole, new_part, new_value, new_context
+            tinsert events, Event new_whole, new_part, new_value, new_context
         return events
     Pattern query
 
@@ -386,7 +392,7 @@ timecat = (tuples) ->
     b = accum / total
     e = (accum + time) / total
     new_pat = _compress b, e, pat
-    table.insert pats, new_pat
+    tinsert pats, new_pat
     accum = accum + time
   stack(pats)
 
@@ -414,7 +420,7 @@ toBipolar = (pat) -> pat\fmap (x) -> x * 2 - 1
 
 fromBipolar = (pat) -> pat\fmap((x) -> (x + 1) / 2)
 
-sine2 = waveform (t) -> math.sin(t\asFloat! * math.pi * 2)
+sine2 = waveform (t) -> sin(t\asFloat! * pi * 2)
 
 sine = fromBipolar sine2
 
@@ -422,7 +428,7 @@ cosine2 = _late 1/4, sine2
 
 cosine = fromBipolar cosine2
 
-square = waveform (t) -> math.floor ( t * 2 ) % 2
+square = waveform (t) -> floor ( t * 2 ) % 2
 
 square2 = toBipolar square
 
@@ -440,7 +446,7 @@ time = waveform id
 -- ** randoms
 rand = waveform timeToRand
 
-_irand = (i) -> rand\fmap (x) -> math.floor x * i
+_irand = (i) -> rand\fmap (x) -> floor x * i
 
 irand = (ipat) -> reify(ipat)\fmap(_irand)\innerJoin!
 
@@ -453,7 +459,7 @@ _chooseWith = (pat, ...) ->
   if #vals == 0 then return silence!
   return range(1, #vals + 1, pat)\fmap(
     (i) ->
-      key = math.min(math.max(math.floor(i), 0), #vals)
+      key = min(max(floor(i), 0), #vals)
       return vals[key]
   )
 
