@@ -3,6 +3,9 @@
 [![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen.svg)](https://luarocks.org/modules/neo451/xi)
 [![Licence](https://img.shields.io/github/license/noearc/xi)](LICENSE)
 [![Version](https://img.shields.io/luarocks/v/neo451/xi)](https://luarocks.org/modules/neo451/xi)
+![Read the Docs](https://img.shields.io/readthedocs/docs)
+
+
 
 moonscript port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
 

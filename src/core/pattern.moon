@@ -352,8 +352,6 @@ slowcatPrime = (...) ->
   Pattern(query)\splitQueries!
 
 --- Concatenation: combines a list of patterns, switching between them successively, one per cycle:
--- @param items to concatenate
--- @return Pattern
 -- @usage
 -- slowcat("e5", "b4", {"d5", "c5"})
 slowcat = (...) ->
@@ -369,8 +367,6 @@ slowcat = (...) ->
   Pattern(query)\splitQueries!
 
 --- Like slowcat, but the items are crammed into one cycle.
--- @param items to concatenate
--- @return Pattern
 -- @usage
 -- fastcat("e5", "b4", {"d5", "c5"})
 fastcat = (...) ->
@@ -378,8 +374,6 @@ fastcat = (...) ->
   _fast #pats, slowcat(...)
 
 --- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
--- @param tuples
--- @return Pattern
 -- @usage
 -- timecat({{3,"e3"},{1, "g3"}}) // "e3@3 g3"
 timecat = (tuples) ->
@@ -396,10 +390,7 @@ timecat = (tuples) ->
     accum = accum + time
   stack(pats)
 
-
 --- Speed up a pattern by the given factor. Used by "*" in mini notation.
--- @param speed up factor
--- @return Pattern
 -- @usage
 -- fast(2, s"bd") // s"bd*2"
 fast = _patternify _fast
@@ -407,37 +398,32 @@ _fast = (factor, pat) ->
   (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 
 --- Slow down a pattern over the given number of cycles. Like the "/" operator in mini notation.
--- @param slow down factor
--- @return Pattern
 -- @usage
 -- slow(2, s("<bd sd> hh")) // s"[<bd sd> hh]/2"
 slow = _patternify _slow
 _slow = (factor, pat) -> _fast (1 / factor), pat
 
 --- Nudge a pattern to start earlier in time. Equivalent of Tidal's <~ operator
--- @param number of cycles to nudge left
--- @return Pattern
 -- @usage
 -- s(stack("bd ~", early(0.1, "hh ~")))
 early = _patternify _early
 _early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
 
 --- Nudge a pattern to start later in time. Equivalent of Tidal's ~> operator
--- @param number of cycles to nudge right
--- @return Pattern
 -- @usage
 -- s(stack("bd ~", late(0.1, "hh ~")))
 late = _patternify _late
 _late = (offset, pat) -> _early -offset, pat
 
 --- Carries out an operation 'inside' a cycle.
--- @param cycles
--- @return Pattern
 -- @usage
 -- inside(4, rev, "0 1 2 3 4 3 2 1") // fast(4, rev(slow(4, "0 1 2 3 4 3 2 1")))
 inside = _patternify_p_p _inside
 _inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
 
+-- Carries out an operation 'outside' a cycle.
+-- @example
+-- outside(4, rev, "<[0 1] 2 [3 4] 5>") // slow(4, rev(fast(4, "<[0 1] 2 [3 4] 5>")))
 _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 outside = _patternify_p_p _outside
 
