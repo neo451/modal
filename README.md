@@ -2,7 +2,7 @@
 
 [![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen?style=for-the-badge&color=violet)](https://luarocks.org/modules/neo451/xi)
 [![Docs](https://img.shields.io/github/actions/workflow/status/noearc/xi/docs.yml?style=for-the-badge&label=docs)](https://noearc.github.io/xi/)
-[![Tests](https://img.shields.io/github/actions/workflow/status/noearc/xi/test.yml?style=for-the-badge&label=tests)]
+![Tests](https://img.shields.io/github/actions/workflow/status/noearc/xi/test.yml?style=for-the-badge&label=tests)
 ![License](https://img.shields.io/github/license/noearc/xi?style=for-the-badge)
 ![Version](https://img.shields.io/luarocks/v/neo451/xi?style=for-the-badge)
 
