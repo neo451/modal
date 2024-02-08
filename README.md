@@ -1,10 +1,11 @@
 # xi
 
-[![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen.svg)](https://luarocks.org/modules/neo451/xi)
-[![Read the Docs](https://github.com/noearc/xi/workflows/docs/badge.svg)](https://noearc.github.io/xi/)
-[![Tests](https://github.com/noearc/xi/workflows/test/badge.svg)](https://github.com/noearc/xi/actions/workflows/docs.yml)
-[![Licence](https://img.shields.io/github/license/noearc/xi)](LICENSE)
-[![Version](https://img.shields.io/luarocks/v/neo451/xi)](https://luarocks.org/modules/neo451/xi)
+[![Install](https://img.shields.io/badge/Install-LuaRocks-brightgreen?style=for-the-badge&color=violet)](https://luarocks.org/modules/neo451/xi)
+[![Docs](https://img.shields.io/github/actions/workflow/status/noearc/xi/docs.yml?style=for-the-badge&label=docs)](https://noearc.github.io/xi/)
+[![Tests](https://img.shields.io/github/actions/workflow/status/noearc/xi/test.yml?style=for-the-badge&label=tests)]
+![License](https://img.shields.io/github/license/noearc/xi?style=for-the-badge)
+![Version](https://img.shields.io/luarocks/v/neo451/xi?style=for-the-badge)
+
 
 moonscript port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
 
