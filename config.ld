@@ -1,2 +1,3 @@
 description='Tidal Cycles'
-file = {'src/xi/pattern.moon'}
+file = {'src/core/pattern.moon'}
+dir = 'docs/'

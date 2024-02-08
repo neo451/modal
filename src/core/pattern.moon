@@ -377,8 +377,8 @@ fastcat = (...) ->
   pats = map reify, totable(...)
   _fast #pats, slowcat(...)
 
--- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
--- @param table of time-pat tables
+--- Concatsenation: takes a table of time-pat tables, each duration relative to the whole
+-- @param tuples
 -- @return Pattern
 -- @usage
 -- timecat({{3,"e3"},{1, "g3"}}) // "e3@3 g3"
@@ -396,17 +396,50 @@ timecat = (tuples) ->
     accum = accum + time
   stack(pats)
 
-_fast = (rate, pat) -> return (reify pat)\withTime ((t) -> t * rate), ((t) -> t / rate)
 
+--- Speed up a pattern by the given factor. Used by "*" in mini notation.
+-- @param speed up factor
+-- @return Pattern
+-- @usage
+-- fast(2, s"bd") // s"bd*2"
+fast = _patternify _fast
+_fast = (factor, pat) ->
+  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
+
+--- Slow down a pattern over the given number of cycles. Like the "/" operator in mini notation.
+-- @param slow down factor
+-- @return Pattern
+-- @usage
+-- slow(2, s("<bd sd> hh")) // s"[<bd sd> hh]/2"
+slow = _patternify _slow
 _slow = (factor, pat) -> _fast (1 / factor), pat
 
+--- Nudge a pattern to start earlier in time. Equivalent of Tidal's <~ operator
+-- @param number of cycles to nudge left
+-- @return Pattern
+-- @usage
+-- s(stack("bd ~", early(0.1, "hh ~")))
+early = _patternify _early
 _early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
 
+--- Nudge a pattern to start later in time. Equivalent of Tidal's ~> operator
+-- @param number of cycles to nudge right
+-- @return Pattern
+-- @usage
+-- s(stack("bd ~", late(0.1, "hh ~")))
+late = _patternify _late
 _late = (offset, pat) -> _early -offset, pat
 
+--- Carries out an operation 'inside' a cycle.
+-- @param cycles
+-- @return Pattern
+-- @usage
+-- inside(4, rev, "0 1 2 3 4 3 2 1") // fast(4, rev(slow(4, "0 1 2 3 4 3 2 1")))
+inside = _patternify_p_p _inside
 _inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
 
 _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
+outside = _patternify_p_p _outside
 
 -- ** waveforms
 waveform = (func) ->
@@ -630,14 +663,8 @@ fastgap = _patternify _fastgap
 degradeBy = _patternify _degradeBy
 undegradeBy = _patternify _undegradeBy
 segment = _patternify _segment
-fast = _patternify _fast
-slow = _patternify _slow
 iter = _patternify _iter
 reviter = _patternify _reviter
-early = _patternify _early
-late = _patternify _late
-inside = _patternify_p_p _inside
-outside = _patternify_p_p _outside
 when_ = _patternify_p_p _when -- when is a reserved keyword ...
 firstOf = _patternify_p_p _firstOf
 lastOf = _patternify_p_p _lastOf

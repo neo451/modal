@@ -1,0 +1,455 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><strong>xi.pattern</strong></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>xi.pattern</code></h1>
+<p>Core pattern representation for strudel</p>
+<p></p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#silence">silence ()</a></td>
+	<td class="summary">Does absolutely nothing..</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#pure">pure (value)</a></td>
+	<td class="summary">A discrete value that repeats once per cycle.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#mini">mini (string)</a></td>
+	<td class="summary">Turns mini-notation(string) into a pattern</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#slowcatPrime">slowcatPrime (items)</a></td>
+	<td class="summary">Concatenation: combines a list of patterns, switching between them successively, one per cycle.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#slowcat">slowcat (items)</a></td>
+	<td class="summary">Concatenation: combines a list of patterns, switching between them successively, one per cycle:</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fastcat">fastcat (items)</a></td>
+	<td class="summary">Like slowcat, but the items are crammed into one cycle.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#timecat">timecat (tuples)</a></td>
+	<td class="summary">Concatsenation: takes a table of time-pat tables, each duration relative to the whole</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fast">fast (speed)</a></td>
+	<td class="summary">Speed up a pattern by the given factor.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#slow">slow (slow)</a></td>
+	<td class="summary">Slow down a pattern over the given number of cycles.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#early">early (number)</a></td>
+	<td class="summary">Nudge a pattern to start earlier in time.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#late">late (number)</a></td>
+	<td class="summary">Nudge a pattern to start later in time.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#inside">inside (cycles)</a></td>
+	<td class="summary">Carries out an operation 'inside' a cycle.</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "silence"></a>
+    <strong>silence ()</strong>
+    </dt>
+    <dd>
+    Does absolutely nothing..
+
+
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">silence!</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "pure"></a>
+    <strong>pure (value)</strong>
+    </dt>
+    <dd>
+    A discrete value that repeats once per cycle.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">value</span>
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">pure</span>(<span class="string">'e4'</span>)</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "mini"></a>
+    <strong>mini (string)</strong>
+    </dt>
+    <dd>
+    Turns mini-notation(string) into a pattern
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">string</span>
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "slowcatPrime"></a>
+    <strong>slowcatPrime (items)</strong>
+    </dt>
+    <dd>
+    Concatenation: combines a list of patterns, switching between them successively, one per cycle.  Unlike slowcat, this version will skip cycles.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">items</span>
+         to concatenate
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "slowcat"></a>
+    <strong>slowcat (items)</strong>
+    </dt>
+    <dd>
+    Concatenation: combines a list of patterns, switching between them successively, one per cycle:
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">items</span>
+         to concatenate
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">slowcat</span>(<span class="string">"e5"</span>, <span class="string">"b4"</span>, {<span class="string">"d5"</span>, <span class="string">"c5"</span>})</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "fastcat"></a>
+    <strong>fastcat (items)</strong>
+    </dt>
+    <dd>
+    Like slowcat, but the items are crammed into one cycle.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">items</span>
+         to concatenate
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">fastcat</span>(<span class="string">"e5"</span>, <span class="string">"b4"</span>, {<span class="string">"d5"</span>, <span class="string">"c5"</span>})</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "timecat"></a>
+    <strong>timecat (tuples)</strong>
+    </dt>
+    <dd>
+    Concatsenation: takes a table of time-pat tables, each duration relative to the whole
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">tuples</span>
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">timecat</span>({{<span class="number">3</span>,<span class="string">"e3"</span>},{<span class="number">1</span>, <span class="string">"g3"</span>}}) // <span class="string">"e3@3 g3"</span></pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "fast"></a>
+    <strong>fast (speed)</strong>
+    </dt>
+    <dd>
+    Speed up a pattern by the given factor.  Used by "*" in mini notation.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">speed</span>
+         up factor
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">fast</span>(<span class="number">2</span>, <span class="function-name">s</span><span class="string">"bd"</span>) // <span class="function-name">s</span><span class="string">"bd*2"</span></pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "slow"></a>
+    <strong>slow (slow)</strong>
+    </dt>
+    <dd>
+    Slow down a pattern over the given number of cycles.  Like the "/" operator in mini notation.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">slow</span>
+         down factor
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">slow</span>(<span class="number">2</span>, <span class="function-name">s</span>(<span class="string">"&lt;bd sd&gt; hh"</span>)) // <span class="function-name">s</span><span class="string">"[&lt;bd sd&gt; hh]/2"</span></pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "early"></a>
+    <strong>early (number)</strong>
+    </dt>
+    <dd>
+    Nudge a pattern to start earlier in time.  Equivalent of Tidal's <~ operator
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">number</span>
+         of cycles to nudge left
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">s</span>(<span class="function-name">stack</span>(<span class="string">"bd ~"</span>, <span class="function-name">early</span>(<span class="number">0.1</span>, <span class="string">"hh ~"</span>)))</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "late"></a>
+    <strong>late (number)</strong>
+    </dt>
+    <dd>
+    Nudge a pattern to start later in time.  Equivalent of Tidal's ~> operator
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">number</span>
+         of cycles to nudge right
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">s</span>(<span class="function-name">stack</span>(<span class="string">"bd ~"</span>, <span class="function-name">late</span>(<span class="number">0.1</span>, <span class="string">"hh ~"</span>)))</pre>
+    </ul>
+
+</dd>
+    <dt>
+    <a name = "inside"></a>
+    <strong>inside (cycles)</strong>
+    </dt>
+    <dd>
+    Carries out an operation 'inside' a cycle.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">cycles</span>
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        Pattern
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example"><span class="function-name">inside</span>(<span class="number">4</span>, rev, <span class="string">"0 1 2 3 4 3 2 1"</span>) // <span class="function-name">fast</span>(<span class="number">4</span>, <span class="function-name">rev</span>(<span class="function-name">slow</span>(<span class="number">4</span>, <span class="string">"0 1 2 3 4 3 2 1"</span>)))</pre>
+    </ul>
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/lunarmodules/LDoc">LDoc 1.5.0</a></i>
+<i style="float:right;">Last updated 2024-02-08 22:20:18 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>
