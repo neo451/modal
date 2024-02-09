@@ -1,4 +1,27 @@
-include = {
-  'src%/core$',
-  'src%/core%/.+$',
+modules = {
+  ["xi.init"] = "src/init.lua",
+
+  ["xi.utils"] = "src/utils/utils.lua",
+  ["xi.fraction"] = "src/utils/fraction.lua",
+  ["xi.bitop"] = "src/utils/bitop.lua",
+  ["xi.drawline"] = "src/utils/drawline.lua",
+
+  ["xi.types"] = "src/core/types.lua",
+  ["xi.pattern"] = "src/core/pattern.lua",
+  ["xi.control"] = "src/core/control.lua",
+  ["xi.pattern_factory"] = "src/core/pattern_factory.lua",
+
+  ["xi.clock"] = "src/stream/clock.lua",
+  ["xi.stream"] = "src/stream/stream.lua",
+
+  ["xi.euclid"] = "src/theory/euclid.lua",
+  ["xi.scales"] = "src/theory/scales.lua",
+  ["xi.chords"] = "src/theory/chords.lua",
+
+  ["xi.mini.grammar"] = "src/mini/grammar.lua",
+  ["xi.mini.visitor"] = "src/mini/visitor.lua",
+
+  ["xi.luaish"] = "src/repl/luaish.lua",
+  ["xi.repl"] = "src/repl/init.lua",
 }
+
