@@ -1,0 +1,35 @@
+name: coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Install Lua/LuaJIT
+        uses: leafo/gh-actions-lua@v8.0.0
+      - name: Install luarocks
+        uses: leafo/gh-actions-luarocks@v4.0.0
+      - name: Install rocks
+        run: |
+          luarocks install busted
+          luarocks install luacov 
+          luarocks install luacov-reporter-lcov
+          exit 0
+      - name: Create coverage
+        run: |
+          busted --coverage --output plainTerminal
+          luacov -r lcov
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./luacov.report.out
