@@ -284,15 +284,14 @@ class Pattern
   __concat:(other) => @combineLeft(other)
 
 --- Does absolutely nothing..
--- @return Pattern
 -- @usage
--- silence!
+-- silence! \\ "~"
 silence = -> Pattern!
 
 --- A discrete value that repeats once per cycle.
 -- @return Pattern
 -- @usage
--- pure('e4')
+-- pure('e4') \\ "e4"
 pure = (value) ->
   query = (state) =>
     cycles = state.span\spanCycles!
@@ -325,7 +324,6 @@ reify = (thing) ->
 
 -- ** Combining patterns
 --- The given items are played at the same time at the same length.
--- @return Pattern
 -- @usage
 -- stack("g3", "b3", {"e4", "d4"})
 stack = (...) ->
@@ -340,8 +338,7 @@ stack = (...) ->
   Pattern query
 
 --- Concatenation: combines a list of patterns, switching between them successively, one per cycle. Unlike slowcat, this version will skip cycles.
--- @param items to concatenate
--- @return Pattern
+-- @local
 slowcatPrime = (...) ->
   pats = map reify, totable(...)
   query = (state) =>
@@ -353,7 +350,7 @@ slowcatPrime = (...) ->
 
 --- Concatenation: combines a list of patterns, switching between them successively, one per cycle:
 -- @usage
--- slowcat("e5", "b4", {"d5", "c5"})
+-- slowcat("e5", "b4", {"d5", "c5"}) // "<e5 b4 [d5 c5]>"
 slowcat = (...) ->
   pats = map reify, totable(...)
   query = (state) =>
@@ -368,7 +365,7 @@ slowcat = (...) ->
 
 --- Like slowcat, but the items are crammed into one cycle.
 -- @usage
--- fastcat("e5", "b4", {"d5", "c5"})
+-- fastcat("e5", "b4", {"d5", "c5"}) // "e5 b4 [d5 c5]"
 fastcat = (...) ->
   pats = map reify, totable(...)
   _fast #pats, slowcat(...)
