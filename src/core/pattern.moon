@@ -139,7 +139,9 @@ class Pattern
     state = State span
     @query state
 
-  firstCycle: => @querySpan 0, 1
+  __call:(b, e) => @querySpan(b, e)
+
+  firstCycle: => @ 0, 1
 
   __tostring: =>
     func = (event) -> event\show!
@@ -153,7 +155,7 @@ class Pattern
         new_whole = choose_whole a.whole, b.whole
         return Event new_whole, b.part, b.value --context?
       match = (a) ->
-        events = func(a.value)\querySpan(a.part._begin, a.part._end)
+        events = func(a.value)(a.part._begin, a.part._end)
         f = (b) -> withWhole(a, b)
         return map f, events
       events = @query(state)
@@ -233,7 +235,7 @@ class Pattern
       event_funcs = @query state
       for event_func in *event_funcs
         whole = event_func\wholeOrPart!
-        event_vals = pat_val\querySpan(whole._begin, whole._end)
+        event_vals = pat_val(whole._begin, whole._end)
         for event_val in *event_vals
           new_whole = event_func.whole
           new_part = event_func.part\sect event_val.part
@@ -250,7 +252,7 @@ class Pattern
       event_vals = pat_val\query state
       for event_val in *event_vals
         whole = event_val\wholeOrPart!
-        event_funcs = @querySpan(whole._begin, whole._end)
+        event_funcs = @(whole._begin, whole._end)
         event_val\wholeOrPart!
         for event_func in *event_funcs
           new_whole = event_val.whole
@@ -322,6 +324,35 @@ reify = (thing) ->
     when "pattern" then thing
     else pure thing
 
+_patternify = (func) ->
+  patterned = (apat, pat) ->
+    -- tmp hack for partial application, but apats are not patternified
+    if pat == nil then return curry(func, 2)(apat)
+    apat = reify apat
+    mapFn = (a) -> func(a, pat)
+    return apat\fmap(mapFn)\innerJoin!
+  return patterned
+
+_patternify_p_p = (func) ->
+  patterned = (apat, bpat, pat) ->
+    if pat == nil then return curry(func, 3)(apat)(bpat)
+    apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
+    mapFn = (a, b) -> func a, b, pat
+    mapFn = curry mapFn, 2
+    patOfPats = apat\fmap(mapFn)\appLeft(bpat)
+    return patOfPats\innerJoin!
+  return patterned
+
+_patternify_p_p_p = (func) ->
+  patterned = (apat, bpat, cpat, pat) ->
+    if pat == nil then return curry(func, 4)(apat)(bpat)(cpat)
+    apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
+    mapFn = (a, b, c) -> func a, b, c, pat
+    mapFn = curry mapFn, 3
+    patOfPats = apat\fmap(mapFn)\appLeft(bpat)\appLeft(cpat)
+    return patOfPats\innerJoin!
+  return patterned
+
 -- ** Combining patterns
 --- The given items are played at the same time at the same length.
 -- @usage
@@ -332,7 +363,7 @@ stack = (...) ->
     span = state.span
     f = (pat) ->
       -- tmp fix? same issue with appLeft why is state mutated? --weird
-      pat\querySpan(span._begin, span._end)
+      pat(span._begin, span._end)
     events = map f, pats
     flatten events
   Pattern query
@@ -387,41 +418,41 @@ timecat = (tuples) ->
     accum = accum + time
   stack(pats)
 
+_fast = (factor, pat) ->
+  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 --- Speed up a pattern by the given factor. Used by "*" in mini notation.
 -- @usage
 -- fast(2, s"bd") // s"bd*2"
 fast = _patternify _fast
-_fast = (factor, pat) ->
-  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 
+_slow = (factor, pat) -> _fast (1 / factor), pat
 --- Slow down a pattern over the given number of cycles. Like the "/" operator in mini notation.
 -- @usage
 -- slow(2, s("<bd sd> hh")) // s"[<bd sd> hh]/2"
 slow = _patternify _slow
-_slow = (factor, pat) -> _fast (1 / factor), pat
 
+_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
 --- Nudge a pattern to start earlier in time. Equivalent of Tidal's <~ operator
 -- @usage
 -- s(stack("bd ~", early(0.1, "hh ~")))
 early = _patternify _early
-_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
 
+_late = (offset, pat) -> _early -offset, pat
 --- Nudge a pattern to start later in time. Equivalent of Tidal's ~> operator
 -- @usage
 -- s(stack("bd ~", late(0.1, "hh ~")))
 late = _patternify _late
-_late = (offset, pat) -> _early -offset, pat
 
+_inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
 --- Carries out an operation 'inside' a cycle.
 -- @usage
 -- inside(4, rev, "0 1 2 3 4 3 2 1") // fast(4, rev(slow(4, "0 1 2 3 4 3 2 1")))
 inside = _patternify_p_p _inside
-_inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
 
+_outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 -- Carries out an operation 'outside' a cycle.
 -- @example
 -- outside(4, rev, "<[0 1] 2 [3 4] 5>") // slow(4, rev(fast(4, "<[0 1] 2 [3 4] 5>")))
-_outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 outside = _patternify_p_p _outside
 
 -- ** waveforms
@@ -489,35 +520,6 @@ chooseCycles = (...) -> segment 1, choose(...)
 randcat = (...) -> chooseCycles(...)
 
 polyrhythm = (...) -> stack(...)
-
-_patternify = (func) ->
-  patterned = (apat, pat) ->
-    -- tmp hack for partial application, but apats are not patternified
-    if pat == nil then return curry(func, 2)(apat)
-    apat = reify apat
-    mapFn = (a) -> func(a, pat)
-    return apat\fmap(mapFn)\innerJoin!
-  return patterned
-
-_patternify_p_p = (func) ->
-  patterned = (apat, bpat, pat) ->
-    if pat == nil then return curry(func, 3)(apat)(bpat)
-    apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
-    mapFn = (a, b) -> func a, b, pat
-    mapFn = curry mapFn, 2
-    patOfPats = apat\fmap(mapFn)\appLeft(bpat)
-    return patOfPats\innerJoin!
-  return patterned
-
-_patternify_p_p_p = (func) ->
-  patterned = (apat, bpat, cpat, pat) ->
-    if pat == nil then return curry(func, 4)(apat)(bpat)(cpat)
-    apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
-    mapFn = (a, b, c) -> func a, b, c, pat
-    mapFn = curry mapFn, 3
-    patOfPats = apat\fmap(mapFn)\appLeft(bpat)\appLeft(cpat)
-    return patOfPats\innerJoin!
-  return patterned
 
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 

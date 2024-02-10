@@ -28,7 +28,7 @@ local visit
 visit = require("xi.mini.visitor").visit
 local op
 op = require("fun").op
-local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, _slow, _early, _late, _inside, _outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _patternify, _patternify_p_p, _patternify_p_p_p, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, fast, slow, iter, reviter, early, late, inside, outside, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, sl
+local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, iter, reviter, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, sl
 string_lambda = require("pl.utils").string_lambda
 fun = require("fun")
 sin = math.sin
@@ -349,8 +349,11 @@ do
       local state = State(span)
       return self:query(state)
     end,
+    __call = function(self, b, e)
+      return self:querySpan(b, e)
+    end,
     firstCycle = function(self)
-      return self:querySpan(0, 1)
+      return self(0, 1)
     end,
     __tostring = function(self)
       local func
@@ -372,7 +375,7 @@ do
         end
         local match
         match = function(a)
-          local events = func(a.value):querySpan(a.part._begin, a.part._end)
+          local events = func(a.value)(a.part._begin, a.part._end)
           local f
           f = function(b)
             return withWhole(a, b)
@@ -502,7 +505,7 @@ do
         for _index_0 = 1, #event_funcs do
           local event_func = event_funcs[_index_0]
           local whole = event_func:wholeOrPart()
-          local event_vals = pat_val:querySpan(whole._begin, whole._end)
+          local event_vals = pat_val(whole._begin, whole._end)
           for _index_1 = 1, #event_vals do
             local event_val = event_vals[_index_1]
             local new_whole = event_func.whole
@@ -526,7 +529,7 @@ do
         for _index_0 = 1, #event_vals do
           local event_val = event_vals[_index_0]
           local whole = event_val:wholeOrPart()
-          local event_funcs = self:querySpan(whole._begin, whole._end)
+          local event_funcs = self(whole._begin, whole._end)
           event_val:wholeOrPart()
           for _index_1 = 1, #event_funcs do
             local event_func = event_funcs[_index_1]
@@ -665,6 +668,55 @@ reify = function(thing)
     return pure(thing)
   end
 end
+_patternify = function(func)
+  local patterned
+  patterned = function(apat, pat)
+    if pat == nil then
+      return curry(func, 2)(apat)
+    end
+    apat = reify(apat)
+    local mapFn
+    mapFn = function(a)
+      return func(a, pat)
+    end
+    return apat:fmap(mapFn):innerJoin()
+  end
+  return patterned
+end
+_patternify_p_p = function(func)
+  local patterned
+  patterned = function(apat, bpat, pat)
+    if pat == nil then
+      return curry(func, 3)(apat)(bpat)
+    end
+    apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
+    local mapFn
+    mapFn = function(a, b)
+      return func(a, b, pat)
+    end
+    mapFn = curry(mapFn, 2)
+    local patOfPats = apat:fmap(mapFn):appLeft(bpat)
+    return patOfPats:innerJoin()
+  end
+  return patterned
+end
+_patternify_p_p_p = function(func)
+  local patterned
+  patterned = function(apat, bpat, cpat, pat)
+    if pat == nil then
+      return curry(func, 4)(apat)(bpat)(cpat)
+    end
+    apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
+    local mapFn
+    mapFn = function(a, b, c)
+      return func(a, b, c, pat)
+    end
+    mapFn = curry(mapFn, 3)
+    local patOfPats = apat:fmap(mapFn):appLeft(bpat):appLeft(cpat)
+    return patOfPats:innerJoin()
+  end
+  return patterned
+end
 stack = function(...)
   local pats = map(reify, totable(...))
   local query
@@ -672,7 +724,7 @@ stack = function(...)
     local span = state.span
     local f
     f = function(pat)
-      return pat:querySpan(span._begin, span._end)
+      return pat(span._begin, span._end)
     end
     local events = map(f, pats)
     return flatten(events)
@@ -733,16 +785,18 @@ timecat = function(tuples)
   end
   return stack(pats)
 end
-_fast = function(rate, pat)
+_fast = function(factor, pat)
   return (reify(pat)):withTime((function(t)
-    return t * rate
+    return t * factor
   end), (function(t)
-    return t / rate
+    return t / factor
   end))
 end
+fast = _patternify(_fast)
 _slow = function(factor, pat)
   return _fast((1 / factor), pat)
 end
+slow = _patternify(_slow)
 _early = function(offset, pat)
   return (reify(pat)):withTime((function(t)
     return t + offset
@@ -750,15 +804,19 @@ _early = function(offset, pat)
     return t - offset
   end))
 end
+early = _patternify(_early)
 _late = function(offset, pat)
   return _early(-offset, pat)
 end
+late = _patternify(_late)
 _inside = function(factor, f, pat)
   return _fast(factor, f(_slow(factor, pat)))
 end
+inside = _patternify_p_p(_inside)
 _outside = function(factor, f, pat)
   return _inside(1 / factor, f, pat)
 end
+outside = _patternify_p_p(_outside)
 waveform = function(func)
   local query
   query = function(self, state)
@@ -861,55 +919,6 @@ randcat = function(...)
 end
 polyrhythm = function(...)
   return stack(...)
-end
-_patternify = function(func)
-  local patterned
-  patterned = function(apat, pat)
-    if pat == nil then
-      return curry(func, 2)(apat)
-    end
-    apat = reify(apat)
-    local mapFn
-    mapFn = function(a)
-      return func(a, pat)
-    end
-    return apat:fmap(mapFn):innerJoin()
-  end
-  return patterned
-end
-_patternify_p_p = function(func)
-  local patterned
-  patterned = function(apat, bpat, pat)
-    if pat == nil then
-      return curry(func, 3)(apat)(bpat)
-    end
-    apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
-    local mapFn
-    mapFn = function(a, b)
-      return func(a, b, pat)
-    end
-    mapFn = curry(mapFn, 2)
-    local patOfPats = apat:fmap(mapFn):appLeft(bpat)
-    return patOfPats:innerJoin()
-  end
-  return patterned
-end
-_patternify_p_p_p = function(func)
-  local patterned
-  patterned = function(apat, bpat, cpat, pat)
-    if pat == nil then
-      return curry(func, 4)(apat)(bpat)(cpat)
-    end
-    apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
-    local mapFn
-    mapFn = function(a, b, c)
-      return func(a, b, c, pat)
-    end
-    mapFn = curry(mapFn, 3)
-    local patOfPats = apat:fmap(mapFn):appLeft(bpat):appLeft(cpat)
-    return patOfPats:innerJoin()
-  end
-  return patterned
 end
 _off = function(time_pat, f, pat)
   return stack(pat, f(late(time_pat, pat)))
@@ -1149,14 +1158,8 @@ fastgap = _patternify(_fastgap)
 degradeBy = _patternify(_degradeBy)
 undegradeBy = _patternify(_undegradeBy)
 segment = _patternify(_segment)
-fast = _patternify(_fast)
-slow = _patternify(_slow)
 iter = _patternify(_iter)
 reviter = _patternify(_reviter)
-early = _patternify(_early)
-late = _patternify(_late)
-inside = _patternify_p_p(_inside)
-outside = _patternify_p_p(_outside)
 when_ = _patternify_p_p(_when)
 firstOf = _patternify_p_p(_firstOf)
 lastOf = _patternify_p_p(_lastOf)
