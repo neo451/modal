@@ -467,7 +467,7 @@ inside = _patternify_p_p _inside
 
 _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 --- Carries out an operation 'outside' a cycle.
--- @example
+-- @usage
 -- outside(4, rev, "<[0 1] 2 [3 4] 5>") // slow(4, rev(fast(4, "<[0 1] 2 [3 4] 5>")))
 outside = _patternify_p_p _outside
 
