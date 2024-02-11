@@ -21,15 +21,15 @@ jobs:
       - name: Install rocks
         run: |
           luarocks install busted
-          luarocks install luacov 
-          luarocks install luacov-reporter-lcov
+          luarocks install luacov-coveralls
           exit 0
       - name: Create coverage
         run: |
           busted --coverage --output plainTerminal
-          luacov -r lcov
-      - name: Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./luacov.report.out
+
+      - name: Report test coverage
+        if: success()
+        continue-on-error: true
+        run: luacov-coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ github.token }}
