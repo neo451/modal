@@ -28,7 +28,7 @@ local visit
 visit = require("xi.mini.visitor").visit
 local op
 op = require("fun").op
-local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, run, scan, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _off, struct, _euclid, _juxBy, _jux, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _fastgap, _compress, _degradeByWith, _degradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, _when, _firstOf, _lastOf, _scale, scale, fastgap, degradeBy, undegradeBy, segment, iter, reviter, when_, firstOf, lastOf, every, off, range, compress, euclid, jux, juxBy, apply, sl
+local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _fastgap, fastgap, _compress, compress, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _off, _when, _firstOf, _lastOf, _jux, _juxBy, _scale, scale, segment, iter, reviter, when_, firstOf, lastOf, every, off, range, euclid, jux, juxBy, apply, sl
 string_lambda = require("pl.utils").string_lambda
 fun = require("fun")
 sin = math.sin
@@ -471,10 +471,22 @@ do
         return span:withTime(func)
       end)
     end,
-    withTime = function(self, q_func, e_func)
-      local query = self:withQueryTime(q_func)
-      local pattern = query:withEventTime(e_func)
+    withTime = function(self, qf, ef)
+      local query = self:withQueryTime(qf)
+      local pattern = query:withEventTime(ef)
       return pattern
+    end,
+    withEventSpan = function(self, func)
+      local query
+      query = function(_, state)
+        local events = self:query(state)
+        local f
+        f = function(event)
+          return event:withSpan(func)
+        end
+        return map(f, events)
+      end
+      return Pattern(query)
     end,
     withEventTime = function(self, func)
       local query
@@ -785,6 +797,10 @@ timecat = function(tuples)
   end
   return stack(pats)
 end
+_cpm = function(cpm, pat)
+  return (reify(pat)):_fast(cpm / 60)
+end
+cpm = _patternify(_cpm)
 _fast = function(factor, pat)
   return (reify(pat)):withTime((function(t)
     return t * factor
@@ -817,6 +833,92 @@ _outside = function(factor, f, pat)
   return _inside(1 / factor, f, pat)
 end
 outside = _patternify_p_p(_outside)
+_fastgap = function(factor, pat)
+  pat = reify(pat)
+  factor = tofrac(factor)
+  if factor <= Fraction(0) then
+    return silence()
+  end
+  factor = factor:max(1)
+  local mungeQuery
+  mungeQuery = function(t)
+    return t:sam() + ((t - t:sam()) * factor):min(1)
+  end
+  local eventSpanFunc
+  eventSpanFunc = function(span)
+    local b = span._begin:sam() + (span._begin - span._begin:sam()) / factor
+    local e = span._begin:sam() + (span._end - span._begin:sam()) / factor
+    return Span(b, e)
+  end
+  local query
+  query = function(_, state)
+    local span = state.span
+    local new_span = Span(mungeQuery(span._begin), mungeQuery(span._end))
+    if new_span._begin == new_span._begin:nextSam() then
+      return { }
+    end
+    local new_state = State(new_span)
+    local events = pat:query(new_state)
+    local f
+    f = function(event)
+      return event:withSpan(eventSpanFunc)
+    end
+    return map(f, events)
+  end
+  return Pattern(query):splitQueries()
+end
+fastgap = _patternify(_fastgap)
+_compress = function(b, e, pat)
+  pat = reify(pat)
+  b, e = tofrac(b), tofrac(e)
+  if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
+    return silence()
+  end
+  local fasted = _fastgap((Fraction(1) / (e - b)), pat)
+  return _late(b, fasted)
+end
+compress = _patternify_p_p(_compress)
+_zoom = function(s, e, pat)
+  pat = reify(pat)
+  s, e = tofrac(s), tofrac(e)
+  local dur = e - s
+  local qf
+  qf = function(span)
+    return span:withCycle(function(t)
+      return t * dur + s
+    end)
+  end
+  local ef
+  ef = function(span)
+    return span:withCycle(function(t)
+      return (t - s) / dur
+    end)
+  end
+  return pat:withQuerySpan(qf):withEventSpan(ef):splitQueries()
+end
+zoom = _patternify_p_p(_zoom)
+run = function(n)
+  return fastcat((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i in range(0, n - 1) do
+      _accum_0[_len_0] = i
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)())
+end
+scan = function(n)
+  return slowcat((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i in range(n) do
+      _accum_0[_len_0] = run(i)
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)())
+end
 waveform = function(func)
   local query
   query = function(self, state)
@@ -873,28 +975,6 @@ end
 irand = function(ipat)
   return reify(ipat):fmap(_irand):innerJoin()
 end
-run = function(n)
-  return fastcat((function()
-    local _accum_0 = { }
-    local _len_0 = 1
-    for i in range(0, n - 1) do
-      _accum_0[_len_0] = i
-      _len_0 = _len_0 + 1
-    end
-    return _accum_0
-  end)())
-end
-scan = function(n)
-  return slowcat((function()
-    local _accum_0 = { }
-    local _len_0 = 1
-    for i in range(n) do
-      _accum_0[_len_0] = run(i)
-      _len_0 = _len_0 + 1
-    end
-    return _accum_0
-  end)())
-end
 _chooseWith = function(pat, ...)
   local vals = map(reify, totable(...))
   if #vals == 0 then
@@ -920,8 +1000,44 @@ end
 polyrhythm = function(...)
   return stack(...)
 end
-_off = function(time_pat, f, pat)
-  return stack(pat, f(late(time_pat, pat)))
+_degradeByWith = function(prand, by, pat)
+  pat = reify(pat)
+  if type(by) == "fraction" then
+    by = by:asFloat()
+  end
+  local f
+  f = function(v)
+    return v > by
+  end
+  return pat:fmap(function(val)
+    return function(_)
+      return val
+    end
+  end):appLeft(prand:filterValues(f))
+end
+_degradeBy = function(by, pat)
+  return _degradeByWith(rand, by, pat)
+end
+degradeBy = _patternify(_degradeBy)
+undegradeBy = _patternify(_undegradeBy)
+_undegradeBy = function(by, pat)
+  return _degradeByWith(rand:fmap(function(r)
+    return 1 - r
+  end), by, pat)
+end
+degrade = function(pat)
+  return _degradeBy(0.5, pat)
+end
+undegrade = function(pat)
+  return _undegradeBy(0.5, pat)
+end
+sometimesBy = function(by, func, pat)
+  return (reify(by):fmap(function(by)
+    return stack(_degradeBy(by, pat), func(_undegradeBy(1 - by, pat)))
+  end)):innerJoin()
+end
+sometimes = function(func, pat)
+  return sometimesBy(0.5, func, pat)
 end
 struct = function(boolpat, pat)
   pat, boolpat = reify(pat), reify(boolpat)
@@ -937,30 +1053,6 @@ struct = function(boolpat, pat)
 end
 _euclid = function(n, k, offset, pat)
   return struct(bjork(n, k, offset), reify(pat))
-end
-_juxBy = function(by, f, pat)
-  by = by / 2
-  local elem_or
-  elem_or = function(dict, key, default)
-    if dict[key] ~= nil then
-      return dict[key]
-    end
-    return default
-  end
-  local left = pat:fmap(function(valmap)
-    return union({
-      pan = elem_or(valmap, "pan", 0.5) - by
-    }, valmap)
-  end)
-  local right = pat:fmap(function(valmap)
-    return union({
-      pan = elem_or(valmap, "pan", 0.5) + by
-    }, valmap)
-  end)
-  return stack(left, f(right))
-end
-_jux = function(f, pat)
-  return _juxBy(0.5, f, pat)
 end
 superimpose = function(f, pat)
   return stack(pat, f(pat))
@@ -1034,85 +1126,8 @@ _range = function(min, max, pat)
     return x * (max - min) + min
   end)
 end
-_fastgap = function(factor, pat)
-  pat = reify(pat)
-  factor = tofrac(factor)
-  if factor <= Fraction(0) then
-    return silence()
-  end
-  factor = factor:max(1)
-  local mungeQuery
-  mungeQuery = function(t)
-    return t:sam() + ((t - t:sam()) * factor):min(1)
-  end
-  local eventSpanFunc
-  eventSpanFunc = function(span)
-    local b = span._begin:sam() + (span._begin - span._begin:sam()) / factor
-    local e = span._begin:sam() + (span._end - span._begin:sam()) / factor
-    return Span(b, e)
-  end
-  local query
-  query = function(_, state)
-    local span = state.span
-    local new_span = Span(mungeQuery(span._begin), mungeQuery(span._end))
-    if new_span._begin == new_span._begin:nextSam() then
-      return { }
-    end
-    local new_state = State(new_span)
-    local events = pat:query(new_state)
-    local f
-    f = function(event)
-      return event:withSpan(eventSpanFunc)
-    end
-    return map(f, events)
-  end
-  return Pattern(query):splitQueries()
-end
-_compress = function(b, e, pat)
-  pat = reify(pat)
-  b, e = tofrac(b), tofrac(e)
-  if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
-    return silence()
-  end
-  local fasted = _fastgap((Fraction(1) / (e - b)), pat)
-  return _late(b, fasted)
-end
-_degradeByWith = function(prand, by, pat)
-  pat = reify(pat)
-  if type(by) == "fraction" then
-    by = by:asFloat()
-  end
-  local f
-  f = function(v)
-    return v > by
-  end
-  return pat:fmap(function(val)
-    return function(_)
-      return val
-    end
-  end):appLeft(prand:filterValues(f))
-end
-_degradeBy = function(by, pat)
-  return _degradeByWith(rand, by, pat)
-end
-_undegradeBy = function(by, pat)
-  return _degradeByWith(rand:fmap(function(r)
-    return 1 - r
-  end), by, pat)
-end
-degrade = function(pat)
-  return _degradeBy(0.5, pat)
-end
-undegrade = function(pat)
-  return _undegradeBy(0.5, pat)
-end
-sometimesBy = function(by, func, pat)
-  return (reify(by):fmap(function(by)
-    return stack(_degradeBy(by, pat), func(_undegradeBy(1 - by, pat)))
-  end)):innerJoin()
-end
-sometimes = function(func, pat)
-  return sometimesBy(0.5, func, pat)
+_off = function(time_pat, f, pat)
+  return stack(pat, f(late(time_pat, pat)))
 end
 _when = function(bool, f, pat)
   return bool and f(pat) or pat
@@ -1145,6 +1160,30 @@ _lastOf = function(n, f, pat)
   }))
   return when_(boolpat, f, pat)
 end
+_jux = function(f, pat)
+  return _juxBy(0.5, f, pat)
+end
+_juxBy = function(by, f, pat)
+  by = by / 2
+  local elem_or
+  elem_or = function(dict, key, default)
+    if dict[key] ~= nil then
+      return dict[key]
+    end
+    return default
+  end
+  local left = pat:fmap(function(valmap)
+    return union({
+      pan = elem_or(valmap, "pan", 0.5) - by
+    }, valmap)
+  end)
+  local right = pat:fmap(function(valmap)
+    return union({
+      pan = elem_or(valmap, "pan", 0.5) + by
+    }, valmap)
+  end)
+  return stack(left, f(right))
+end
 _scale = function(name, pat)
   pat = reify(pat)
   local toScale
@@ -1154,9 +1193,6 @@ _scale = function(name, pat)
   return pat:fmap(toScale)
 end
 scale = _patternify(_scale)
-fastgap = _patternify(_fastgap)
-degradeBy = _patternify(_degradeBy)
-undegradeBy = _patternify(_undegradeBy)
 segment = _patternify(_segment)
 iter = _patternify(_iter)
 reviter = _patternify(_reviter)
@@ -1166,7 +1202,6 @@ lastOf = _patternify_p_p(_lastOf)
 every = firstOf
 off = _patternify_p_p(_off)
 range = _patternify_p_p(_range)
-compress = _patternify_p_p(_compress)
 euclid = _patternify_p_p_p(_euclid)
 jux = _patternify(_jux)
 juxBy = _patternify_p_p(_juxBy)

@@ -1,4 +1,4 @@
---- Core pattern representation for strudel
+--- Core pattern representation
 -- @module xi.pattern
 import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
@@ -214,10 +214,17 @@ class Pattern
   withQueryTime:(func) =>
     @withQuerySpan (span) ->span\withTime func
 
-  withTime:(q_func, e_func) =>
-    query = @withQueryTime q_func
-    pattern = query\withEventTime e_func
+  withTime:(qf, ef) =>
+    query = @withQueryTime qf
+    pattern = query\withEventTime ef
     pattern
+
+  withEventSpan:(func) =>
+    query = (_, state) ->
+      events = @query state
+      f = (event) -> event\withSpan func
+      map f, events
+    Pattern query
 
   withEventTime:(func) =>
     query = (_, state) ->
@@ -353,7 +360,7 @@ _patternify_p_p_p = (func) ->
     return patOfPats\innerJoin!
   return patterned
 
--- ** Combining patterns
+-- @section Combining patterns
 --- The given items are played at the same time at the same length.
 -- @usage
 -- stack("g3", "b3", {"e4", "d4"})
@@ -418,6 +425,15 @@ timecat = (tuples) ->
     accum = accum + time
   stack(pats)
 
+-- @section manipulating time
+
+_cpm = (cpm, pat) ->
+  (reify pat)\_fast(cpm / 60)
+--- Plays the pattern at the given cycles per minute.
+-- @usage
+-- cpm 90, s"<bd sd>,hh*2" // = 90 bpm
+cpm = _patternify _cpm
+
 _fast = (factor, pat) ->
   (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
 --- Speed up a pattern by the given factor. Used by "*" in mini notation.
@@ -450,12 +466,70 @@ _inside = (factor, f, pat) -> _fast factor, f _slow(factor, pat)
 inside = _patternify_p_p _inside
 
 _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
--- Carries out an operation 'outside' a cycle.
+--- Carries out an operation 'outside' a cycle.
 -- @example
 -- outside(4, rev, "<[0 1] 2 [3 4] 5>") // slow(4, rev(fast(4, "<[0 1] 2 [3 4] 5>")))
 outside = _patternify_p_p _outside
 
--- ** waveforms
+_fastgap = (factor, pat) ->
+  pat = reify pat
+  factor = tofrac(factor)
+  if factor <= Fraction(0) then return silence!
+  factor = factor\max(1)
+  mungeQuery = (t) ->
+    t\sam! + ((t - t\sam!) * factor)\min(1)
+  eventSpanFunc = (span) ->
+    b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
+    e = span._begin\sam! + (span._end - span._begin\sam!) / factor
+    Span b, e
+  query = (_, state) ->
+    span = state.span
+    new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
+    if new_span._begin == new_span._begin\nextSam!
+      return {}
+    new_state = State new_span
+    events = pat\query new_state
+    f = (event) ->
+      event\withSpan eventSpanFunc
+    map f, events
+  Pattern(query)\splitQueries!
+
+--- speeds up a pattern like fast, but rather than it playing multiple times as fast would it instead leaves a gap in the remaining space of the cycle. For example, the following will play the sound pattern "bd sn" only once but compressed into the first half of the cycle, i.e. twice as fast.
+-- @usage
+-- fastgap(2, s("bd sd"))
+fastgap = _patternify _fastgap
+
+_compress = (b, e, pat) ->
+  pat = reify pat
+  b, e = tofrac(b), tofrac(e)
+  if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
+    return silence!
+  fasted = _fastgap (Fraction(1) / (e - b)), pat
+  _late b, fasted
+
+--- Compress each cycle into the given timespan, leaving a gap
+-- @usage
+-- compress(.25,.75, s"bd sd") // s"~ bd sd ~"
+compress = _patternify_p_p _compress
+
+_zoom = (s, e, pat) ->
+  pat = reify pat
+  s, e = tofrac(s), tofrac(e)
+  dur = e - s
+  qf = (span) -> span\withCycle (t) -> t * dur + s
+  ef = (span) -> span\withCycle (t) -> (t - s) / dur
+  return pat\withQuerySpan(qf)\withEventSpan(ef)\splitQueries!
+
+--- Plays a portion of a pattern, specified by the beginning and end of a time span. The new resulting pattern is played over the time period of the original pattern
+-- @usage
+-- zoom(0.25, 0.75, s"bd*2 hh*3 [sd bd]*2 perc") // s("hh*3 [sd bd]*2")
+zoom = _patternify_p_p _zoom
+
+-- @section waveforms
+run = (n) -> fastcat [i for i in range(0, n - 1)]
+
+scan = (n) -> slowcat [run(i) for i in range(n)]
+
 waveform = (func) ->
   query = (state) =>
     return { Event nil, state.span, func state.span\midpoint! }
@@ -480,26 +554,25 @@ square = waveform (t) -> floor ( t * 2 ) % 2
 square2 = toBipolar square
 
 isaw = waveform (t) -> -(t % 1) + 1
+
 isaw2 = toBipolar isaw
 
 saw = waveform (t) -> t % 1
+
 saw2 = toBipolar saw
 
 tri = fastcat isaw, saw
+
 tri2 = fastcat isaw2, saw2
 
 time = waveform id
 
--- ** randoms
+-- @section randoms
 rand = waveform timeToRand
 
 _irand = (i) -> rand\fmap (x) -> floor x * i
 
 irand = (ipat) -> reify(ipat)\fmap(_irand)\innerJoin!
-
-run = (n) -> fastcat [i for i in range(0, n - 1)]
-
-scan = (n) -> slowcat [run(i) for i in range(n)]
 
 _chooseWith = (pat, ...) ->
   vals = map reify, totable(...)
@@ -521,24 +594,35 @@ randcat = (...) -> chooseCycles(...)
 
 polyrhythm = (...) -> stack(...)
 
-_off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
+_degradeByWith = (prand, by, pat) ->
+  pat = reify pat
+  if type(by) == "fraction" then by = by\asFloat!
+  f = (v) -> v > by
+  return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
 
+_degradeBy = (by, pat) -> _degradeByWith(rand, by, pat)
+
+degradeBy = _patternify _degradeBy
+
+undegradeBy = _patternify _undegradeBy
+
+_undegradeBy = (by, pat) -> _degradeByWith(rand\fmap((r) -> 1 - r), by, pat)
+
+degrade = (pat) -> _degradeBy(0.5, pat)
+
+undegrade = (pat) -> _undegradeBy(0.5, pat)
+
+sometimesBy = (by, func, pat) ->
+  (reify(by)\fmap (by) ->  stack _degradeBy(by, pat), func _undegradeBy(1 - by, pat))\innerJoin!
+
+sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
+
+-- @section manipulating structure
 struct = (boolpat, pat) ->
   pat, boolpat = reify(pat), reify(boolpat)
   boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
-
-_juxBy = (by, f, pat) ->
-  by = by / 2
-  elem_or = (dict, key, default) ->
-    if dict[key] != nil then return dict[key]
-    return default
-  left = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) - by }, valmap)
-  right = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) + by }, valmap)
-  return stack left, f right
-
-_jux = (f, pat) -> _juxBy(0.5, f, pat)
 
 superimpose = (f, pat) -> stack(pat, f(pat))
 
@@ -570,56 +654,8 @@ _segment = (n, pat) -> fast(n, pure(id))\appLeft pat
 
 _range = (min, max, pat) -> pat\fmap((x) -> x * (max - min) + min)
 
-_fastgap = (factor, pat) ->
-  pat = reify pat
-  factor = tofrac(factor)
-  if factor <= Fraction(0) then return silence!
-  factor = factor\max(1)
-  mungeQuery = (t) ->
-    t\sam! + ((t - t\sam!) * factor)\min(1)
-  eventSpanFunc = (span) ->
-    b = span._begin\sam! + (span._begin - span._begin\sam!) / factor
-    e = span._begin\sam! + (span._end - span._begin\sam!) / factor
-    Span b, e
-  query = (_, state) ->
-    span = state.span
-    new_span = Span mungeQuery(span._begin), mungeQuery(span._end)
-    if new_span._begin == new_span._begin\nextSam!
-      return {}
-    new_state = State new_span
-    events = pat\query new_state
-    f = (event) ->
-      event\withSpan eventSpanFunc
-    map f, events
-  Pattern(query)\splitQueries!
-
-_compress = (b, e, pat) ->
-  pat = reify pat
-  b, e = tofrac(b), tofrac(e)
-  if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
-    return silence!
-  fasted = _fastgap (Fraction(1) / (e - b)), pat
-  _late b, fasted
-
-_degradeByWith = (prand, by, pat) ->
-  pat = reify pat
-  if type(by) == "fraction" then by = by\asFloat!
-  f = (v) -> v > by
-  return pat\fmap((val) -> (_) -> val)\appLeft(prand\filterValues(f))
-
-_degradeBy = (by, pat) -> _degradeByWith(rand, by, pat)
-
-_undegradeBy = (by, pat) -> _degradeByWith(rand\fmap((r) -> 1 - r), by, pat)
-
-degrade = (pat) -> _degradeBy(0.5, pat)
-
-undegrade = (pat) -> _undegradeBy(0.5, pat)
-
--- ** higher order functions
-sometimesBy = (by, func, pat) ->
-  (reify(by)\fmap (by) ->  stack _degradeBy(by, pat), func _undegradeBy(1 - by, pat))\innerJoin!
-
-sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
+-- @section higher order functions
+_off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 
 _when = (bool, f, pat) -> bool and f(pat) or pat
 
@@ -628,25 +664,33 @@ _firstOf = (n, f, pat) ->
   when_ boolpat, f, pat
 
 _lastOf = (n, f, pat) ->
-  boolpat = fastcat concat [false for i = 1, n - 1], {true}
+  boolpat = fastcat concat [ false for i = 1, n - 1 ], { true }
   when_ boolpat, f, pat
 
--- ** music theory
+_jux = (f, pat) -> _juxBy(0.5, f, pat)
+
+_juxBy = (by, f, pat) ->
+  by = by / 2
+  elem_or = (dict, key, default) ->
+    if dict[key] != nil then return dict[key]
+    return default
+  left = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) - by }, valmap)
+  right = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) + by }, valmap)
+  return stack left, f right
+
+-- @section music theory
 _scale = (name, pat) ->
   pat = reify pat
   toScale = (v) -> getScale(name, v)
   pat\fmap(toScale)
 
+scale = _patternify _scale
 
--- ** composing
+-- @section composing
 -- TODO: squeezeJoin!
 -- _inhabit = (tablepat, index) ->
 --   return fastcat tablepat[index]
 
-scale = _patternify _scale
-fastgap = _patternify _fastgap
-degradeBy = _patternify _degradeBy
-undegradeBy = _patternify _undegradeBy
 segment = _patternify _segment
 iter = _patternify _iter
 reviter = _patternify _reviter
@@ -656,7 +700,6 @@ lastOf = _patternify_p_p _lastOf
 every = firstOf
 off = _patternify_p_p _off
 range = _patternify_p_p _range
-compress = _patternify_p_p _compress
 euclid = _patternify_p_p_p _euclid
 jux = _patternify _jux
 juxBy = _patternify_p_p _juxBy
@@ -666,6 +709,15 @@ apply = (x, pat) -> pat .. x
 -- TODO: wchoose, tests for the new functions
 
 sl = string_lambda
+
+-- TODO: or bank from strudel
+-- let drumMachine name ps = stack 
+--                     (map (\ x -> 
+--                         (# s (name ++| (extractS "s" (x)))) $ x
+--                         ) ps)
+--     drumFrom name drum = s (name ++| drum)
+--     drumM = drumMachine
+--     drumF = drumFrom
 
 return {
   :when_

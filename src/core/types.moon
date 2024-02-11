@@ -39,6 +39,12 @@ class Span
 
   withEnd:(func) => Span @_begin, func(@_end)
 
+  withCycle:(func) =>
+    sam = @_begin\sam!
+    b = sam + func(@_begin - sam)
+    e = sam + func(@_end - sam)
+    return Span b, e
+
   wholeCycle:(frac) => Span frac\sam!, frac\nextSam!
 
   cyclePos:(frac) => frac - frac\sam!

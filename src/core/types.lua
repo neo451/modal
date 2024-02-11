@@ -56,6 +56,12 @@ do
     withEnd = function(self, func)
       return Span(self._begin, func(self._end))
     end,
+    withCycle = function(self, func)
+      local sam = self._begin:sam()
+      local b = sam + func(self._begin - sam)
+      local e = sam + func(self._end - sam)
+      return Span(b, e)
+    end,
     wholeCycle = function(self, frac)
       return Span(frac:sam(), frac:nextSam())
     end,

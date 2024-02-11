@@ -17,7 +17,7 @@ jobs:
     - name: build
       run: luarocks install ldoc
     - name: generate
-      run: ldoc -c ./config.ld .
+      run: ldoc .
     - uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
