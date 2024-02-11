@@ -32,3 +32,4 @@ jobs:
         run: luacov-coveralls -v
         env:
           COVERALLS_REPO_TOKEN: RX8ohETGdcPmYkOSaBzYTAMmAwAaxViTM
+          base_path: /home/runner/work/xi/xi
