@@ -1,0 +1,35 @@
+name: coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Install Lua/LuaJIT
+        uses: leafo/gh-actions-lua@v8.0.0
+      - name: Install luarocks
+        uses: leafo/gh-actions-luarocks@v4.0.0
+      - name: Install rocks
+        run: |
+          luarocks install busted
+          luarocks install luacov-coveralls
+          exit 0
+      - name: Create coverage
+        run: |
+          busted --coverage
+      - name: Report test coverage
+        if: success()
+        continue-on-error: true
+        run: luacov-coveralls -v
+        env:
+          COVERALLS_REPO_TOKEN: RX8ohETGdcPmYkOSaBzYTAMmAwAaxViTM
+          base_path: /home/runner/work/xi/xi
