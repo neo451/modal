@@ -75,7 +75,6 @@ describe "Span", ->
       t = Span 5/4, 11/4
       assert.are.same Span(1/4, 7/4), t\cycleSpan!
 
-
   describe "equals", ->
     it "should compare properties", ->
       t1 = Span 1/2, 5/4
