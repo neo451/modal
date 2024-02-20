@@ -1,5 +1,8 @@
-local C
-C = require("xi.pattern").C
+local C, cpm
+do
+  local _obj_0 = require("xi.pattern")
+  C, cpm = _obj_0.C, _obj_0.cpm
+end
 local Stream
 Stream = require("xi.stream").Stream
 local Clock

@@ -28,9 +28,10 @@ local visit
 visit = require("xi.mini.visitor").visit
 local op
 op = require("fun").op
-local string_lambda, fun, sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _fastgap, fastgap, _compress, compress, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, superimpose, layer, rev, palindrome, _iter, _reviter, _segment, _range, _off, _when, _firstOf, _lastOf, _jux, _juxBy, _scale, scale, segment, iter, reviter, when_, firstOf, lastOf, every, off, range, euclid, jux, juxBy, apply, sl
+local string_lambda
 string_lambda = require("pl.utils").string_lambda
-fun = require("fun")
+local fun = require("fun")
+local sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _scale, scale, apply, sl
 sin = math.sin
 min = math.min
 max = math.max
@@ -405,6 +406,45 @@ do
     innerJoin = function(self)
       return self:innerBind(id)
     end,
+    squeezeJoin = function(self)
+      local query
+      query = function(_, state)
+        local events = self:discreteOnly():query(state)
+        local flatEvent
+        flatEvent = function(outerEvent)
+          local innerPat = focusSpan(outerEvent:wholeOrPart(), outerEvent.value)
+          local innerEvents = innerPat:query(State(outerEvent.part))
+          local munge
+          munge = function(outer, inner)
+            local whole = nil
+            if inner.whole and outer.whole then
+              whole = inner.whole:sect(outer.whole)
+              if not whole then
+                return nil
+              end
+            end
+            local part = inner.part:sect(outer.part)
+            if not part then
+              return nil
+            end
+            return Event(whole, part, inner.value)
+          end
+          local f
+          f = function(innerEvent)
+            return munge(outerEvent, innerEvent)
+          end
+          return map(f, innerEvents)
+        end
+        local result = flatten(map(flatEvent, events))
+        return filter((function(x)
+          return x
+        end), result)
+      end
+      return Pattern(query)
+    end,
+    squeezeBind = function(self, func)
+      return self:fmap(func):squeezeJoin()
+    end,
     filterEvents = function(self, func)
       local query
       query = function(_, state)
@@ -507,6 +547,11 @@ do
     onsetsOnly = function(self)
       return self:filterEvents(function(event)
         return event:hasOnset()
+      end)
+    end,
+    discreteOnly = function(self)
+      return self:filterEvents(function(event)
+        return event.whole
       end)
     end,
     appLeft = function(self, pat_val)
@@ -833,6 +878,12 @@ _outside = function(factor, f, pat)
   return _inside(1 / factor, f, pat)
 end
 outside = _patternify_p_p(_outside)
+_ply = function(factor, pat)
+  pat = reify(pat)
+  pat = pure(_fast(factor, pat))
+  return pat:squeezeJoin()
+end
+ply = _patternify(_ply)
 _fastgap = function(factor, pat)
   pat = reify(pat)
   factor = tofrac(factor)
@@ -878,6 +929,16 @@ _compress = function(b, e, pat)
   return _late(b, fasted)
 end
 compress = _patternify_p_p(_compress)
+_focus = function(b, e, pat)
+  pat = reify(pat)
+  b, e = tofrac(b), tofrac(e)
+  local fasted = _fast((Fraction(1) / (e - b)), pat)
+  return _late(Span:cyclePos(b), fasted)
+end
+focusSpan = function(span, pat)
+  return _focus(span._begin, span._end, pat)
+end
+focus = _patternify_p_p(_focus)
 _zoom = function(s, e, pat)
   pat = reify(pat)
   s, e = tofrac(s), tofrac(e)
@@ -1054,21 +1115,7 @@ end
 _euclid = function(n, k, offset, pat)
   return struct(bjork(n, k, offset), reify(pat))
 end
-superimpose = function(f, pat)
-  return stack(pat, f(pat))
-end
-layer = function(table, pat)
-  return stack((function()
-    local _accum_0 = { }
-    local _len_0 = 1
-    for _index_0 = 1, #table do
-      local f = table[_index_0]
-      _accum_0[_len_0] = f(reify(pat))
-      _len_0 = _len_0 + 1
-    end
-    return _accum_0
-  end)())
-end
+euclid = _patternify_p_p_p(_euclid)
 rev = function(pat)
   pat = reify(pat)
   local query
@@ -1107,6 +1154,7 @@ _iter = function(n, pat)
     return _accum_0
   end)())
 end
+iter = _patternify(_iter)
 _reviter = function(n, pat)
   return slowcat((function()
     local _accum_0 = { }
@@ -1118,20 +1166,59 @@ _reviter = function(n, pat)
     return _accum_0
   end)())
 end
+reviter = _patternify(_reviter)
 _segment = function(n, pat)
   return fast(n, pure(id)):appLeft(pat)
 end
+segment = _patternify(_segment)
 _range = function(min, max, pat)
   return pat:fmap(function(x)
     return x * (max - min) + min
   end)
 end
+range = _patternify_p_p(_range)
+superimpose = function(f, pat)
+  return stack(pat, f(pat))
+end
+layer = function(table, pat)
+  return stack((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for _index_0 = 1, #table do
+      local f = table[_index_0]
+      _accum_0[_len_0] = f(reify(pat))
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)())
+end
 _off = function(time_pat, f, pat)
   return stack(pat, f(late(time_pat, pat)))
 end
+off = _patternify_p_p(_off)
+_echoWith = function(times, time, func, pat)
+  pat = reify(pat)
+  local f
+  f = function(index)
+    return func(_late(time * index, pat))
+  end
+  local ts
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i = 0, times - 1 do
+      _accum_0[_len_0] = i
+      _len_0 = _len_0 + 1
+    end
+    ts = _accum_0
+  end
+  return stack(map(f, ts))
+end
+echoWith = _patternify_p_p_p(_echoWith)
 _when = function(bool, f, pat)
   return bool and f(pat) or pat
 end
+when_ = _patternify_p_p(_when)
 _firstOf = function(n, f, pat)
   local boolpat = fastcat(concat({
     true
@@ -1146,6 +1233,8 @@ _firstOf = function(n, f, pat)
   end)()))
   return when_(boolpat, f, pat)
 end
+firstOf = _patternify_p_p(_firstOf)
+every = firstOf
 _lastOf = function(n, f, pat)
   local boolpat = fastcat(concat((function()
     local _accum_0 = { }
@@ -1160,9 +1249,11 @@ _lastOf = function(n, f, pat)
   }))
   return when_(boolpat, f, pat)
 end
+lastOf = _patternify_p_p(_lastOf)
 _jux = function(f, pat)
   return _juxBy(0.5, f, pat)
 end
+jux = _patternify(_jux)
 _juxBy = function(by, f, pat)
   by = by / 2
   local elem_or
@@ -1184,6 +1275,7 @@ _juxBy = function(by, f, pat)
   end)
   return stack(left, f(right))
 end
+juxBy = _patternify_p_p(_juxBy)
 _scale = function(name, pat)
   pat = reify(pat)
   local toScale
@@ -1193,44 +1285,31 @@ _scale = function(name, pat)
   return pat:fmap(toScale)
 end
 scale = _patternify(_scale)
-segment = _patternify(_segment)
-iter = _patternify(_iter)
-reviter = _patternify(_reviter)
-when_ = _patternify_p_p(_when)
-firstOf = _patternify_p_p(_firstOf)
-lastOf = _patternify_p_p(_lastOf)
-every = firstOf
-off = _patternify_p_p(_off)
-range = _patternify_p_p(_range)
-euclid = _patternify_p_p_p(_euclid)
-jux = _patternify(_jux)
-juxBy = _patternify_p_p(_juxBy)
 apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
 return {
-  when_ = when_,
-  sl = sl,
   C = C,
   Pattern = Pattern,
-  apply = apply,
   id = id,
   pure = pure,
   silence = silence,
   mini = mini,
   reify = reify,
+  sl = sl,
+  apply = apply,
   run = run,
   scan = scan,
   fastcat = fastcat,
   slowcat = slowcat,
   timecat = timecat,
   randcat = randcat,
+  struct = struct,
   euclid = euclid,
   stack = stack,
   layer = layer,
   superimpose = superimpose,
-  struct = struct,
   jux = jux,
   juxBy = juxBy,
   inside = inside,
@@ -1240,13 +1319,16 @@ return {
   every = every,
   rev = rev,
   off = off,
-  every = every,
+  when_ = when_,
   fast = fast,
   slow = slow,
+  ply = ply,
   early = early,
   late = late,
   fastgap = fastgap,
   compress = compress,
+  zoom = zoom,
+  focus = focus,
   degrade = degrade,
   degradeBy = degradeBy,
   undegradeBy = undegradeBy,

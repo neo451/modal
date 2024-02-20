@@ -1,5 +1,5 @@
 import Span, State, Event from require "xi.types"
-import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, degradeBy from require "xi.pattern"
+import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -43,6 +43,18 @@ describe "Pattern", ->
       assert.are.same expected, actual
       actual = patternWithOnsetsOnly 1/16, 1
       assert.are.same {}, actual
+
+  describe "discreteOnly", ->
+    it "should return only events where the start of the whole equals the start of the part", ->
+      ev1 = { Event! }
+      pat = Pattern (state) -> ev1
+      pat = pat\discreteOnly!
+      assert.are.same {}, pat 0, 1
+      ev2 = { Event!, Event Span!, Span!, 1 }
+      pat = Pattern (state) -> ev2
+      pat = pat\discreteOnly!
+      expected = { Event Span!, Span!, 1 }
+      assert.are.same expected, pat 0, 1
 
   describe "filterEvents", ->
     it "should return new pattern with values removed based on filter func", ->
@@ -114,6 +126,21 @@ describe "Pattern", ->
       expected = {
         Event Span(0, 1), Span(0, 1/2), "a"
         Event Span(0, 1), Span(1/2, 1), "b"
+      }
+      assert.are.same expected, pat 0, 1
+
+  describe "squeezeJoin", ->
+    it "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each event in the outer pattern.
+" , ->
+      patOfPats = fastcat "1 2 3", "1 2 3"
+      pat = patOfPats\squeezeJoin!
+      expected = {
+        Event Span(0, 1/6), Span(0, 1/6), 1
+        Event Span(1/6, 1/3), Span(1/6, 1/3), 2
+        Event Span(1/3, 1/2), Span(1/3, 1/2), 3
+        Event Span(1/2, 2/3), Span(1/2, 2/3), 1
+        Event Span(2/3, 5/6), Span(2/3, 5/6), 2
+        Event Span(5/6, 1), Span(5/6, 1), 3
       }
       assert.are.same expected, pat 0, 1
 
@@ -211,6 +238,26 @@ describe "Pattern", ->
       }
       assert.are.same expected, pat 0, 1
 
+  -- TODO: is this right?
+  describe "focus", ->
+    it "should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", ->
+      pat = focus 1/4, 3/4, "bd sd"
+      expected = {
+        Event Span(1/4, 1/2), Span(1/4, 1/2), "bd"
+        Event Span(3/4, 1), Span(3/4, 1), "bd"
+        Event Span(0, 1/4), Span(0, 1/4), "sd"
+        Event Span(1/2, 3/4), Span(1/2, 3/4), "sd"
+      }
+      assert.are.same expected, pat 0, 1
+
+  describe "zoom", ->
+    it "should play a portion of a pattern", ->
+      pat = zoom 1/4, 3/4, "~ bd sd ~"
+      expected = {
+        Event Span(0, 1/2), Span(0, 1/2), "bd"
+        Event Span(1/2, 1), Span(1/2, 1), "sd"
+      }
+      assert.are.same expected, pat 0, 1
 
   describe "degrade_by", ->
     it "should randomly drop events from a pattern", ->

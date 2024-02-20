@@ -1,4 +1,4 @@
-import C from require "xi.pattern"
+import C, cpm from require "xi.pattern"
 import Stream from require "xi.stream"
 import Clock from require "xi.clock"
 

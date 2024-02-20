@@ -1,4 +1,0 @@
-modules = {
-   ["xi"] = "src/init.lua",
-   ["xi.*"] = "src"
-}

@@ -9,9 +9,9 @@ import genericParams, aliasParams from require "xi.control"
 import Event, Span, State from require "xi.types"
 import visit from require "xi.mini.visitor"
 import op from require "fun"
-local *
 import string_lambda from require("pl.utils")
 fun = require "fun"
+local *
 
 sin = math.sin
 min = math.min
@@ -170,6 +170,31 @@ class Pattern
 
   innerJoin: => @innerBind id
 
+  squeezeJoin: =>
+    query = (_, state) ->
+      events = @discreteOnly!\query(state)
+      flatEvent = (outerEvent) ->
+        innerPat = focusSpan outerEvent\wholeOrPart!, outerEvent.value
+        innerEvents = innerPat\query(State outerEvent.part)
+        munge = (outer, inner) ->
+          whole = nil
+          if inner.whole and outer.whole
+            whole = inner.whole\sect(outer.whole)
+            if not whole
+              return nil
+          part = inner.part\sect(outer.part)
+          if not part then return nil
+          -- context = inner\combineContext(outer)
+          return Event whole, part, inner.value -- context
+        f = (innerEvent) -> munge(outerEvent, innerEvent)
+        return map f, innerEvents
+      result = flatten map flatEvent, events
+      -- remove nils?
+      return filter ((x) -> x), result
+    return Pattern query
+
+  squeezeBind:(func) => @fmap(func)\squeezeJoin!
+
   filterEvents:(func) =>
     query = (_, state) ->
       events = @query state
@@ -236,6 +261,8 @@ class Pattern
 
   onsetsOnly: => @filterEvents (event) -> event\hasOnset!
 
+  discreteOnly: => @filterEvents (event) -> event.whole
+
   appLeft:(pat_val) =>
     query = (_, state) ->
       events = {}
@@ -278,17 +305,17 @@ class Pattern
   __eq: (other) => @show! == other\show!
 
   -- metamethods equal to tidal's |x ops
-  __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft(reify(other))
+  __mul:(other) => @fmap((x) -> (y) -> y * x)\appLeft reify(other)
 
-  __div:(other) => @fmap((x) -> (y) -> y / x)\appLeft(reify(other))
+  __div:(other) => @fmap((x) -> (y) -> y / x)\appLeft reify(other)
 
-  __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft(reify(other))
+  __add:(other) => @fmap((x) -> (y) -> y + x)\appLeft reify(other)
 
-  __sub:(other) => @fmap((x) -> (y) -> y - x)\appLeft(reify(other))
+  __sub:(other) => @fmap((x) -> (y) -> y - x)\appLeft reify(other)
 
-  __mod:(other) => @fmap((x) -> (y) -> y % x)\appLeft(reify(other))
+  __mod:(other) => @fmap((x) -> (y) -> y % x)\appLeft reify(other)
 
-  __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft(reify(other))
+  __pow:(other) => @fmap((x) -> (y) -> y ^ x)\appLeft reify(other)
 
   __concat:(other) => @combineLeft(other)
 
@@ -471,6 +498,13 @@ _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 -- outside(4, rev, "<[0 1] 2 [3 4] 5>") // slow(4, rev(fast(4, "<[0 1] 2 [3 4] 5>")))
 outside = _patternify_p_p _outside
 
+_ply = (factor, pat) ->
+  pat = reify pat
+  pat = pure _fast factor, pat
+  pat\squeezeJoin!
+
+ply = _patternify _ply
+
 _fastgap = (factor, pat) ->
   pat = reify pat
   factor = tofrac(factor)
@@ -512,6 +546,19 @@ _compress = (b, e, pat) ->
 -- compress(.25,.75, s"bd sd") // s"~ bd sd ~"
 compress = _patternify_p_p _compress
 
+_focus = (b, e, pat) ->
+  pat = reify pat
+  b, e = tofrac(b), tofrac(e)
+  fasted = _fast (Fraction(1) / (e - b)), pat
+  _late Span\cyclePos(b), fasted
+
+focusSpan = (span, pat) -> _focus span._begin, span._end, pat
+
+-- Similar to compress, but doesn't leave gaps, and the 'focus' can be bigger than a cycle
+-- @usage
+-- focus(1/4, 3/4, s("bd hh sd hh"))
+focus = _patternify_p_p _focus
+
 _zoom = (s, e, pat) ->
   pat = reify pat
   s, e = tofrac(s), tofrac(e)
@@ -539,7 +586,7 @@ steady = (value) -> return Pattern((state) -> { Event nil, state.span, value })
 
 toBipolar = (pat) -> pat\fmap (x) -> x * 2 - 1
 
-fromBipolar = (pat) -> pat\fmap((x) -> (x + 1) / 2)
+fromBipolar = (pat) -> pat\fmap (x) -> (x + 1) / 2
 
 sine2 = waveform (t) -> sin(t\asFloat! * pi * 2)
 
@@ -549,7 +596,7 @@ cosine2 = _late 1/4, sine2
 
 cosine = fromBipolar cosine2
 
-square = waveform (t) -> floor ( t * 2 ) % 2
+square = waveform (t) -> floor (t * 2) % 2
 
 square2 = toBipolar square
 
@@ -623,10 +670,7 @@ struct = (boolpat, pat) ->
   boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
-
-superimpose = (f, pat) -> stack(pat, f(pat))
-
-layer = (table, pat) -> stack [f reify pat for f in *table]
+euclid = _patternify_p_p_p _euclid
 
 rev = (pat) ->
   pat = reify pat
@@ -647,27 +691,51 @@ rev = (pat) ->
 palindrome = (pat) -> slowcat pat, rev pat
 
 _iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in fun.range(n)]
+iter = _patternify _iter
 
 _reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in fun.range(n)]
+reviter = _patternify _reviter
 
 _segment = (n, pat) -> fast(n, pure(id))\appLeft pat
+segment = _patternify _segment
 
 _range = (min, max, pat) -> pat\fmap((x) -> x * (max - min) + min)
+range = _patternify_p_p _range
 
 -- @section higher order functions
+superimpose = (f, pat) -> stack(pat, f(pat))
+
+layer = (table, pat) -> stack [f reify pat for f in *table]
+
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
+off = _patternify_p_p _off
+
+_echoWith = (times, time, func, pat) ->
+  pat = reify pat
+  f = (index) -> func _late time * index, pat
+  ts = [ i for i = 0, times - 1 ]
+  stack map f, ts
+
+-- TODO: test!!
+echoWith = _patternify_p_p_p _echoWith
 
 _when = (bool, f, pat) -> bool and f(pat) or pat
+when_ = _patternify_p_p _when -- when is a reserved keyword ...
 
 _firstOf = (n, f, pat) ->
   boolpat = fastcat concat { true }, [false for i = 1, n - 1]
   when_ boolpat, f, pat
+firstOf = _patternify_p_p _firstOf
+
+every = firstOf
 
 _lastOf = (n, f, pat) ->
   boolpat = fastcat concat [ false for i = 1, n - 1 ], { true }
   when_ boolpat, f, pat
+lastOf = _patternify_p_p _lastOf
 
 _jux = (f, pat) -> _juxBy(0.5, f, pat)
+jux = _patternify _jux
 
 _juxBy = (by, f, pat) ->
   by = by / 2
@@ -677,6 +745,19 @@ _juxBy = (by, f, pat) ->
   left = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) - by }, valmap)
   right = pat\fmap((valmap) -> union { pan: elem_or(valmap, "pan", 0.5) + by }, valmap)
   return stack left, f right
+juxBy = _patternify_p_p _juxBy
+
+-- @section sampling
+-- _chop = (n, pat) ->
+--   f = (i) -> { _begin: i / n, _end: (i + 1) / n }
+--   silces = map f, [ i for i = 0, n - 1]
+--   -- p union {a: 1}, {b:2}
+--   f3 = (i) -> union o, i
+--   f2 = (o) -> map f3, silces
+--   pat\fmap(f2)
+--
+-- print _chop 8, pure"bd"
+
 
 -- @section music theory
 _scale = (name, pat) ->
@@ -687,83 +768,38 @@ _scale = (name, pat) ->
 scale = _patternify _scale
 
 -- @section composing
--- TODO: squeezeJoin!
 -- _inhabit = (tablepat, index) ->
 --   return fastcat tablepat[index]
 
-segment = _patternify _segment
-iter = _patternify _iter
-reviter = _patternify _reviter
-when_ = _patternify_p_p _when -- when is a reserved keyword ...
-firstOf = _patternify_p_p _firstOf
-lastOf = _patternify_p_p _lastOf
-every = firstOf
-off = _patternify_p_p _off
-range = _patternify_p_p _range
-euclid = _patternify_p_p_p _euclid
-jux = _patternify _jux
-juxBy = _patternify_p_p _juxBy
-
+-- helpers
 apply = (x, pat) -> pat .. x
+sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
 
-sl = string_lambda
-
--- TODO: or bank from strudel
--- let drumMachine name ps = stack 
---                     (map (\ x -> 
---                         (# s (name ++| (extractS "s" (x)))) $ x
---                         ) ps)
---     drumFrom name drum = s (name ++| drum)
---     drumM = drumMachine
---     drumF = drumFrom
-
 return {
-  :when_
-  :sl
   :C
   :Pattern
-  :apply
-  :id
-  :pure
-  :silence
-  :mini
-  :reify
-  :run
-  :scan
-  :fastcat
-  :slowcat
-  :timecat
-  :randcat
-  :euclid
-  :stack
-  :layer
-  :superimpose
-  :struct
-  :jux
-  :juxBy
-  :inside
-  :outside
-  :firstOf
-  :lastOf
-  :every
+  :id, :pure, :silence
+  :mini, :reify
+  :sl, :apply
+  :run, :scan
+  :fastcat, :slowcat, :timecat, :randcat
+  :struct, :euclid
+  :stack, :layer, :superimpose
+  :jux, :juxBy
+  :inside, :outside
+  :firstOf, :lastOf, :every
   :rev
   :off
-  :every
-  :fast
-  :slow
-  :early
-  :late
-  :fastgap
-  :compress
-  :degrade
-  :degradeBy
-  :undegradeBy
-  :undegrade
+  :when_
+  :fast, :slow, :ply
+  :early, :late
+  :fastgap, :compress, :zoom, :focus
+  :degrade, :degradeBy
+  :undegradeBy, :undegrade
   :sometimes
-  :iter
-  :reviter
+  :iter, :reviter
   :scale
   :sine, :sine2, :square, :square2, :saw, :saw2, :isaw, :isaw2, :tri, :tri2, :rand, :irand
 }
