@@ -169,7 +169,7 @@ do
       return ((other.whole == nil) and (self.whole == nil)) or (other.whole == self.whole)
     end,
     __eq = function(self, other)
-      return (self.part == other.part) and (self.whole == other.whole) and (self.value == other.value) and (compare(self.context, other.context)) and (self.stateful == other.stateful)
+      return (self.part == other.part) and (self.whole == other.whole) and (compare(self.value, other.value)) and (compare(self.context, other.context)) and (self.stateful == other.stateful)
     end,
     setContext = function(self, newContext)
       return Event(self.whole, self.part, self.value, newContext, self.stateful)

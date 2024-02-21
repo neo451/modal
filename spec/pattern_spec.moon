@@ -1,5 +1,5 @@
 import Span, State, Event from require "xi.types"
-import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy from require "xi.pattern"
+import Pattern, C, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -263,8 +263,44 @@ describe "Pattern", ->
     it "should randomly drop events from a pattern", ->
       pat = degradeBy 0.75, fast(8, "sd")
       expected = {
-          Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
-          Event Span(1/2, 5/8), Span(1/2, 5/8), "sd"
-          Event Span(3/4, 7/8), Span(3/4, 7/8), "sd"
+        Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
+        Event Span(1/2, 5/8), Span(1/2, 5/8), "sd"
+        Event Span(3/4, 7/8), Span(3/4, 7/8), "sd"
+      }
+      assert.are.same expected, pat 0, 1
+
+  describe "striate", ->
+    it "should play sample in any number of parts", ->
+      pat = striate 2, C.sound("bd")
+      expected = {
+        Event Span(0, 1/2), Span(0, 1/2), { sound: "bd", begin: 0, end: 0.5 }
+        Event Span(1/2, 1), Span(1/2, 1), { sound: "bd", begin: 0.5, end: 1 }
+      }
+      assert.are.same expected, pat(0, 1)
+
+    it "should interlace samples", ->
+      pat = slow 4, striate 3, C.sound("0 1 2 3")
+      expected = {
+        Event Span(0, 1/3), Span(0, 1/3), { sound: 0, begin: 0, end: 1/3 }
+        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: 1, begin: 0, end: 1/3 }
+        Event Span(2/3, 1), Span(2/3, 1), { sound: 2, begin: 0, end: 1/3 }
+      }
+      assert.are.same expected, pat 0, 1
+
+  describe "chop", ->
+    it "should play sample in any number of parts", ->
+      pat = chop 2, C.sound("bd")
+      expected = {
+        Event Span(0, 1/2), Span(0, 1/2), { sound: "bd", begin: 0, end: 0.5 }
+        Event Span(1/2, 1), Span(1/2, 1), { sound: "bd", begin: 0.5, end: 1 }
+      }
+      assert.are.same expected, pat(0, 1)
+
+    it "should play samples in turn", ->
+      pat = slow 4, chop 3, C.sound("0 1 2 3")
+      expected = {
+        Event Span(0, 1/3), Span(0, 1/3), { sound: 0, begin: 0, end: 1/3 }
+        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: 0, begin: 1/3, end: 2/3 }
+        Event Span(2/3, 1), Span(2/3, 1), { sound: 0, begin: 2/3, end: 1 }
       }
       assert.are.same expected, pat 0, 1

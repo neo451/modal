@@ -244,6 +244,10 @@ class Pattern
     pattern = query\withEventTime ef
     pattern
 
+  withEvents:(func) => Pattern (_, state) -> func @query(state)
+
+  withEvent:(func) => @withEvents (events) -> map func, events
+
   withEventSpan:(func) =>
     query = (_, state) ->
       events = @query state
@@ -354,7 +358,6 @@ reify = (thing) ->
         return string_lambda thing
       else
         return mini thing
-    when "table" then fastcat thing
     when "pattern" then thing
     else pure thing
 
@@ -390,7 +393,7 @@ _patternify_p_p_p = (func) ->
 -- @section Combining patterns
 --- The given items are played at the same time at the same length.
 -- @usage
--- stack("g3", "b3", {"e4", "d4"})
+-- stack("g3", "b3", "e4", "d4") // "[g3, b3, e4, d4]"
 stack = (...) ->
   pats = map reify, totable(...)
   query = (state) =>
@@ -415,7 +418,7 @@ slowcatPrime = (...) ->
 
 --- Concatenation: combines a list of patterns, switching between them successively, one per cycle:
 -- @usage
--- slowcat("e5", "b4", {"d5", "c5"}) // "<e5 b4 [d5 c5]>"
+-- slowcat("e5", "b4", "d5", "c5") // "<e5 b4 d5 c5>"
 slowcat = (...) ->
   pats = map reify, totable(...)
   query = (state) =>
@@ -430,7 +433,7 @@ slowcat = (...) ->
 
 --- Like slowcat, but the items are crammed into one cycle.
 -- @usage
--- fastcat("e5", "b4", {"d5", "c5"}) // "e5 b4 [d5 c5]"
+-- fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
 fastcat = (...) ->
   pats = map reify, totable(...)
   _fast #pats, slowcat(...)
@@ -748,16 +751,54 @@ _juxBy = (by, f, pat) ->
 juxBy = _patternify_p_p _juxBy
 
 -- @section sampling
--- _chop = (n, pat) ->
---   f = (i) -> { _begin: i / n, _end: (i + 1) / n }
---   silces = map f, [ i for i = 0, n - 1]
---   -- p union {a: 1}, {b:2}
---   f3 = (i) -> union o, i
---   f2 = (o) -> map f3, silces
---   pat\fmap(f2)
---
--- print _chop 8, pure"bd"
+_striate = (n, pat) ->
+  ranges = [ { begin: i / n, end: (i + 1) / n } for i = 0, n - 1 ]
+  merge_sample = (range) ->
+    f = (v) -> union range, { sound: v.sound }
+    pat\fmap f
+  return fastcat [merge_sample(r) for r in *ranges ]
 
+striate = _patternify _striate
+
+_chop = (n, pat) ->
+  ranges = [ { begin: i / n, end: (i + 1) / n } for i = 0, n - 1 ]
+  func = (o) ->
+    f = (slice) -> union slice, o
+    fastcat map f, ranges
+  return pat\squeezeBind func
+
+chop = _patternify _chop
+
+slice = (npat, ipat, opat) ->
+  npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
+  npat\innerBind (n) ->
+    ipat\outerBind (i) ->
+      opat\outerBind (o) ->
+        -- if type(o) != table then o = { sound: o }
+        begin = if type(n) == table then begin = n[i] else begin = i / n
+        _end = if type(n) == table then _end = n[i + 1] else _end = (i + 1) / n
+        return pure union o, { begin: begin, end: _end, _slices: n }
+
+splice = (npat, ipat, opat) ->
+  sliced = slice npat, ipat, opat
+  sliced\withEvent (event) ->
+    event\withValue (value) ->
+      new_attri = {
+        speed: (tofrac(1) / tofrac(value._slices) / event.whole\duration!) * (value.speed or 1),
+          unit: "c"
+      }
+      return union new_attri, value
+
+_loopAt = (factor, pat) ->
+  pat = pat .. C.speed(1 / factor) .. C.unit("c")
+  slow factor, pat
+
+loopAt = _patternify _loopAt
+
+fit = (pat) ->
+  pat\withEvent (event) ->
+    event\withValue (value) ->
+      union value, { speed: tofrac(1) / event.whole\duration!, unit: "c" }
 
 -- @section music theory
 _scale = (name, pat) ->
@@ -800,6 +841,9 @@ return {
   :undegradeBy, :undegrade
   :sometimes
   :iter, :reviter
+  :striate, :chop
+  :slice, :splice
+  :loopAt
   :scale
   :sine, :sine2, :square, :square2, :saw, :saw2, :isaw, :isaw2, :tri, :tri2, :rand, :irand
 }

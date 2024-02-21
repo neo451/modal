@@ -31,7 +31,7 @@ op = require("fun").op
 local string_lambda
 string_lambda = require("pl.utils").string_lambda
 local fun = require("fun")
-local sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _scale, scale, apply, sl
+local sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _scale, scale, apply, sl
 sin = math.sin
 min = math.min
 max = math.max
@@ -516,6 +516,16 @@ do
       local pattern = query:withEventTime(ef)
       return pattern
     end,
+    withEvents = function(self, func)
+      return Pattern(function(_, state)
+        return func(self:query(state))
+      end)
+    end,
+    withEvent = function(self, func)
+      return self:withEvents(function(events)
+        return map(func, events)
+      end)
+    end,
     withEventSpan = function(self, func)
       local query
       query = function(_, state)
@@ -717,8 +727,6 @@ reify = function(thing)
     else
       return mini(thing)
     end
-  elseif "table" == _exp_0 then
-    return fastcat(thing)
   elseif "pattern" == _exp_0 then
     return thing
   else
@@ -1276,6 +1284,120 @@ _juxBy = function(by, f, pat)
   return stack(left, f(right))
 end
 juxBy = _patternify_p_p(_juxBy)
+_striate = function(n, pat)
+  local ranges
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i = 0, n - 1 do
+      _accum_0[_len_0] = {
+        begin = i / n,
+        ["end"] = (i + 1) / n
+      }
+      _len_0 = _len_0 + 1
+    end
+    ranges = _accum_0
+  end
+  local merge_sample
+  merge_sample = function(range)
+    local f
+    f = function(v)
+      return union(range, {
+        sound = v.sound
+      })
+    end
+    return pat:fmap(f)
+  end
+  return fastcat((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for _index_0 = 1, #ranges do
+      local r = ranges[_index_0]
+      _accum_0[_len_0] = merge_sample(r)
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)())
+end
+striate = _patternify(_striate)
+_chop = function(n, pat)
+  local ranges
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i = 0, n - 1 do
+      _accum_0[_len_0] = {
+        begin = i / n,
+        ["end"] = (i + 1) / n
+      }
+      _len_0 = _len_0 + 1
+    end
+    ranges = _accum_0
+  end
+  local func
+  func = function(o)
+    local f
+    f = function(slice)
+      return union(slice, o)
+    end
+    return fastcat(map(f, ranges))
+  end
+  return pat:squeezeBind(func)
+end
+chop = _patternify(_chop)
+slice = function(npat, ipat, opat)
+  npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
+  return npat:innerBind(function(n)
+    return ipat:outerBind(function(i)
+      return opat:outerBind(function(o)
+        local begin
+        if type(n) == table then
+          begin = n[i]
+        else
+          begin = i / n
+        end
+        local _end
+        if type(n) == table then
+          _end = n[i + 1]
+        else
+          _end = (i + 1) / n
+        end
+        return pure(union(o, {
+          begin = begin,
+          ["end"] = _end,
+          _slices = n
+        }))
+      end)
+    end)
+  end)
+end
+splice = function(npat, ipat, opat)
+  local sliced = slice(npat, ipat, opat)
+  return sliced:withEvent(function(event)
+    return event:withValue(function(value)
+      local new_attri = {
+        speed = (tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
+        unit = "c"
+      }
+      return union(new_attri, value)
+    end)
+  end)
+end
+_loopAt = function(factor, pat)
+  pat = pat .. C.speed(1 / factor) .. C.unit("c")
+  return slow(factor, pat)
+end
+loopAt = _patternify(_loopAt)
+fit = function(pat)
+  return pat:withEvent(function(event)
+    return event:withValue(function(value)
+      return union(value, {
+        speed = tofrac(1) / event.whole:duration(),
+        unit = "c"
+      })
+    end)
+  end)
+end
 _scale = function(name, pat)
   pat = reify(pat)
   local toScale
@@ -1336,6 +1458,11 @@ return {
   sometimes = sometimes,
   iter = iter,
   reviter = reviter,
+  striate = striate,
+  chop = chop,
+  slice = slice,
+  splice = splice,
+  loopAt = loopAt,
   scale = scale,
   sine = sine,
   sine2 = sine2,

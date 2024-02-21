@@ -118,7 +118,7 @@ class Event
     ((other.whole == nil) and (@whole == nil)) or (other.whole == @whole)
 
   __eq:(other) =>
-    (@part == other.part) and (@whole == other.whole) and (@value == other.value) and (compare @context, other.context) and (@stateful == other.stateful)
+    (@part == other.part) and (@whole == other.whole) and (compare @value, other.value) and (compare @context, other.context) and (@stateful == other.stateful)
 
   setContext:(newContext) =>
     Event @whole, @part, @value, newContext, @stateful
