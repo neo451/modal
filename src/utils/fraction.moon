@@ -191,6 +191,8 @@ class Fraction
 
   __tostring: =>
     string.format "%d/%d", @numerator, @denominator
+    -- str = string.format "%d/%d", @numerator, @denominator
+    -- color("{red}str")
 
   show: => @__tostring!
 

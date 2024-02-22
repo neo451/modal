@@ -304,3 +304,24 @@ describe "Pattern", ->
         Event Span(2/3, 1), Span(2/3, 1), { sound: 0, begin: 2/3, end: 1 }
       }
       assert.are.same expected, pat 0, 1
+
+  describe "slice", ->
+    it "should arrange sample parts with a pattern", ->
+      pat = slice 3, "1 0 2", C.sound("bd")
+      expected = {
+        Event Span(0, 1/3), Span(0, 1/3), { sound: "bd", begin: 1/3, end: 2/3, _slices: 3 }
+        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: "bd", begin: 0, end: 1/3, _slices: 3}
+        Event Span(2/3, 1), Span(2/3, 1), { sound: "bd", begin: 2/3, end: 1, _slices: 3 }
+      }
+      assert.are.same expected, pat 0, 1
+
+  describe "splice", ->
+    it "should arrange sample parts with a pattern, with speed multiplied", ->
+      pat = splice 3, "1*2 0 2", C.sound("bd")
+      expected = {
+        Event Span(0, 1/6), Span(0, 1/6), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: c, _slices: 3 }
+        Event Span(1/6, 1/3), Span(1/6, 1/3), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: c, _slices: 3 }
+        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: "bd", begin: 0, end: 1/3, speed: 1/1, unit: c, _slices: 3}
+        Event Span(2/3, 1), Span(2/3, 1), { sound: "bd", begin: 2/3, end: 1, speed: 1/1, unit: c, _slices: 3 }
+      }
+      assert.are.same expected, pat 0, 1

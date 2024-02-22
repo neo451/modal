@@ -1,6 +1,8 @@
 import Fraction, tofrac from require "xi.fraction"
 import compare, dump from require "xi.utils"
 
+-- types = require "types"
+
 class Span
   new:(b = 1, e = 1) =>
     @_begin, @_end = tofrac(b), tofrac(e)

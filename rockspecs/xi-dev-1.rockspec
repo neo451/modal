@@ -19,7 +19,7 @@ dependencies = {
 	"abletonlink >= 1.0.0-1",
 	"lpeg >= 1.1.0-1",
 	"moonscript >= 0.5.0-1",
-	"yuescript >= 0.21.3-1",
+	-- "yuescript >= 0.21.3-1",
 	"fun >= 0.1.3-1",
 }
 

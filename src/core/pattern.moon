@@ -20,6 +20,10 @@ pi = math.pi
 floor = math.floor
 tinsert = table.insert
 
+p = (evs) ->
+  for ev in *evs 
+    print ev
+
 C = {}
 
 create = (name) ->
@@ -750,6 +754,12 @@ _juxBy = (by, f, pat) ->
   return stack left, f right
 juxBy = _patternify_p_p _juxBy
 
+-- _chunk = (n, func, pat, back = false, fast = false) ->
+--   pat = reify pat
+--   binary = concat { true }, [ false for i = 1, n - 1 ]
+--   binary_pat = _iter n, fastcat(binary) -- !back
+--   when_ binary_pat, func, pat
+
 -- @section sampling
 _striate = (n, pat) ->
   ranges = [ { begin: i / n, end: (i + 1) / n } for i = 0, n - 1 ]
@@ -800,6 +810,13 @@ fit = (pat) ->
     event\withValue (value) ->
       union value, { speed: tofrac(1) / event.whole\duration!, unit: "c" }
 
+_legato = (factor, pat) ->
+  factor = tofrac factor
+  pat\withEventSpan (span) ->
+    Span span._begin, (span._begin + span\duration! * factor)
+
+legato = _patternify _legato
+
 -- @section music theory
 _scale = (name, pat) ->
   pat = reify pat
@@ -817,6 +834,8 @@ apply = (x, pat) -> pat .. x
 sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
+
+print pure 1
 
 return {
   :C

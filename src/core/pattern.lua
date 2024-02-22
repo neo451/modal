@@ -31,13 +31,19 @@ op = require("fun").op
 local string_lambda
 string_lambda = require("pl.utils").string_lambda
 local fun = require("fun")
-local sin, min, max, pi, floor, tinsert, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _scale, scale, apply, sl
+local sin, min, max, pi, floor, tinsert, p, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
 sin = math.sin
 min = math.min
 max = math.max
 pi = math.pi
 floor = math.floor
 tinsert = table.insert
+p = function(evs)
+  for _index_0 = 1, #evs do
+    local ev = evs[_index_0]
+    print(ev)
+  end
+end
 C = { }
 create = function(name)
   local withVal
@@ -1398,6 +1404,13 @@ fit = function(pat)
     end)
   end)
 end
+_legato = function(factor, pat)
+  factor = tofrac(factor)
+  return pat:withEventSpan(function(span)
+    return Span(span._begin, (span._begin + span:duration() * factor))
+  end)
+end
+legato = _patternify(_legato)
 _scale = function(name, pat)
   pat = reify(pat)
   local toScale
@@ -1411,6 +1424,7 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
+print(pure(1))
 return {
   C = C,
   Pattern = Pattern,

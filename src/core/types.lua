@@ -8,6 +8,7 @@ do
   local _obj_0 = require("xi.utils")
   compare, dump = _obj_0.compare, _obj_0.dump
 end
+local types = require("types")
 local Span
 do
   local _class_0
