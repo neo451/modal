@@ -97,50 +97,17 @@ do
     other = function(self, _, children)
       return children or ""
     end,
-    element = function(self, _, children)
-      local value, eculid_modifier, modifiers, elongate
-      value, eculid_modifier, modifiers, elongate = children[1], children[2], children[3], children[4]
-      local weight_mods, n_mods = { }, { }
-      for _index_0 = 1, #modifiers do
-        local mod = modifiers[_index_0]
-        if mod.op == "weight" then
-          table.insert(weight_mods, mod)
-        else
-          table.insert(n_mods, mod)
-        end
-      end
-      local weight_mod = weight_mods[1] or {
-        type = "modifier",
-        op = "weight",
-        value = elongate
-      }
-      if weight_mod.value ~= 1 then
-        table.insert(n_mods, weight_mod)
-      end
-      return {
-        type = "element",
-        value = value,
-        modifiers = n_mods,
-        euclid_modifier = eculid_modifier
-      }
+    slice_with_ops = function(self, _, children)
+      local value, modifiers
+      value, modifiers = children[1], children[2]
     end,
-    m_element = function(self, _, children)
-      local value, eculid_modifier
-      value, eculid_modifier = children[1], children[2]
-      return {
-        type = "element",
-        value = value,
-        modifiers = { },
-        euclid_modifier = eculid_modifier
-      }
-    end,
-    polyrhythm_subseq = function(self, _, children)
+    sub_cycle = function(self, _, children)
       return {
         type = "polyrhythm",
         seqs = children[1]
       }
     end,
-    polymeter_subseq = function(self, _, children)
+    polymeter = function(self, _, children)
       local seqs, steps
       seqs, steps = children[1], children[2]
       return {
@@ -152,7 +119,7 @@ do
     polymeter_steps = function(self, _, children)
       return children[1]
     end,
-    polymeter1_subseq = function(self, _, children)
+    slow_sequence = function(self, _, children)
       return {
         type = "polymeter",
         seqs = children[1],
@@ -176,10 +143,10 @@ do
     elongate = function(self, node, _)
       return #node[2] / 2 + 1
     end,
-    element_value = function(self, _, children)
+    slice = function(self, _, children)
       return children[1]
     end,
-    term = function(self, _, children)
+    step = function(self, _, children)
       if type(children[1]) == "number" then
         return {
           type = "number",
@@ -193,19 +160,7 @@ do
         type = "rest"
       }
     end,
-    word_with_index = function(self, _, children)
-      local word, index
-      word, index = children[1], children[2]
-      return {
-        type = "word",
-        value = word,
-        index = index or 0
-      }
-    end,
-    index = function(self, _, children)
-      return children[1]
-    end,
-    euclid_modifier = function(self, _, children)
+    euclid = function(self, _, children)
       if children == "" then
         return 
       end
@@ -220,10 +175,10 @@ do
         }
       end
     end,
-    euclid_rotation_param = function(self, _, children)
+    euclid_rotation = function(self, _, children)
       return children[1]
     end,
-    modifiers = function(self, _, children)
+    ops = function(self, _, children)
       if children == "" then
         return { }
       end
@@ -270,7 +225,7 @@ do
       table.insert(mods, weight_mods[#weight_mods])
       return mods
     end,
-    modifier = function(self, _, children)
+    op = function(self, _, children)
       return children[1]
     end,
     fast = function(self, _, children)
@@ -287,7 +242,7 @@ do
         value = children[1]
       }
     end,
-    _repeat = function(self, _, children)
+    replicate = function(self, _, children)
       local count = reduce(op.add, 0, children)
       return {
         type = "modifier",

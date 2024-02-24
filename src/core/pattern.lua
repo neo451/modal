@@ -861,7 +861,7 @@ _cpm = function(cpm, pat)
 end
 cpm = _patternify(_cpm)
 _fast = function(factor, pat)
-  return (reify(pat)):withTime((function(t)
+  return pat:withTime((function(t)
     return t * factor
   end), (function(t)
     return t / factor
@@ -873,7 +873,7 @@ _slow = function(factor, pat)
 end
 slow = _patternify(_slow)
 _early = function(offset, pat)
-  return (reify(pat)):withTime((function(t)
+  return pat:withTime((function(t)
     return t + offset
   end), (function(t)
     return t - offset
@@ -893,13 +893,11 @@ _outside = function(factor, f, pat)
 end
 outside = _patternify_p_p(_outside)
 _ply = function(factor, pat)
-  pat = reify(pat)
   pat = pure(_fast(factor, pat))
   return pat:squeezeJoin()
 end
 ply = _patternify(_ply)
 _fastgap = function(factor, pat)
-  pat = reify(pat)
   factor = tofrac(factor)
   if factor <= Fraction(0) then
     return silence()
@@ -934,7 +932,6 @@ _fastgap = function(factor, pat)
 end
 fastgap = _patternify(_fastgap)
 _compress = function(b, e, pat)
-  pat = reify(pat)
   b, e = tofrac(b), tofrac(e)
   if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
     return silence()
@@ -944,17 +941,15 @@ _compress = function(b, e, pat)
 end
 compress = _patternify_p_p(_compress)
 _focus = function(b, e, pat)
-  pat = reify(pat)
   b, e = tofrac(b), tofrac(e)
   local fasted = _fast((Fraction(1) / (e - b)), pat)
   return _late(Span:cyclePos(b), fasted)
 end
 focusSpan = function(span, pat)
-  return _focus(span._begin, span._end, pat)
+  return _focus(span._begin, span._end, reify(pat))
 end
 focus = _patternify_p_p(_focus)
 _zoom = function(s, e, pat)
-  pat = reify(pat)
   s, e = tofrac(s), tofrac(e)
   local dur = e - s
   local qf
@@ -1115,7 +1110,6 @@ sometimes = function(func, pat)
   return sometimesBy(0.5, func, pat)
 end
 struct = function(boolpat, pat)
-  pat, boolpat = reify(pat), reify(boolpat)
   return boolpat:fmap(function(b)
     return function(val)
       if b then
@@ -1131,7 +1125,6 @@ _euclid = function(n, k, offset, pat)
 end
 euclid = _patternify_p_p_p(_euclid)
 rev = function(pat)
-  pat = reify(pat)
   local query
   query = function(_, state)
     local span = state.span
@@ -1162,7 +1155,7 @@ _iter = function(n, pat)
     local _accum_0 = { }
     local _len_0 = 1
     for i in fun.range(n) do
-      _accum_0[_len_0] = _early(Fraction(i - 1, n), reify(pat))
+      _accum_0[_len_0] = _early(Fraction(i - 1, n), pat)
       _len_0 = _len_0 + 1
     end
     return _accum_0
@@ -1174,7 +1167,7 @@ _reviter = function(n, pat)
     local _accum_0 = { }
     local _len_0 = 1
     for i in fun.range(n) do
-      _accum_0[_len_0] = _late(Fraction(i - 1, n), reify(pat))
+      _accum_0[_len_0] = _late(Fraction(i - 1, n), pat)
       _len_0 = _len_0 + 1
     end
     return _accum_0
@@ -1200,7 +1193,7 @@ layer = function(table, pat)
     local _len_0 = 1
     for _index_0 = 1, #table do
       local f = table[_index_0]
-      _accum_0[_len_0] = f(reify(pat))
+      _accum_0[_len_0] = f(pat)
       _len_0 = _len_0 + 1
     end
     return _accum_0
@@ -1211,7 +1204,6 @@ _off = function(time_pat, f, pat)
 end
 off = _patternify_p_p(_off)
 _echoWith = function(times, time, func, pat)
-  pat = reify(pat)
   local f
   f = function(index)
     return func(_late(time * index, pat))
@@ -1352,7 +1344,6 @@ _chop = function(n, pat)
 end
 chop = _patternify(_chop)
 slice = function(npat, ipat, opat)
-  npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
   return npat:innerBind(function(n)
     return ipat:outerBind(function(i)
       return opat:outerBind(function(o)
@@ -1382,7 +1373,7 @@ splice = function(npat, ipat, opat)
   return sliced:withEvent(function(event)
     return event:withValue(function(value)
       local new_attri = {
-        speed = (tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
+        speed = tofloat(tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
         unit = "c"
       }
       return union(new_attri, value)
@@ -1412,7 +1403,6 @@ _legato = function(factor, pat)
 end
 legato = _patternify(_legato)
 _scale = function(name, pat)
-  pat = reify(pat)
   local toScale
   toScale = function(v)
     return getScale(name, v)
@@ -1424,7 +1414,7 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(pure(1))
+print(_ply(2, mini("1 2")))
 return {
   C = C,
   Pattern = Pattern,

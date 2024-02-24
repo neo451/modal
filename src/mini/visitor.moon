@@ -56,33 +56,34 @@ class Visitor
 
   other:(_, children) => children or "" -- TODO: better way to do this?
 
-  element:(_, children) =>
-    { value, eculid_modifier, modifiers, elongate } = children
-    weight_mods, n_mods = {}, {}
-    for mod in *modifiers
-      if mod.op == "weight"
-        table.insert weight_mods, mod
-      else
-        table.insert n_mods, mod
-    weight_mod = weight_mods[1] or { type: "modifier", op: "weight", value: elongate }
-    if weight_mod.value ~= 1
-      table.insert n_mods, weight_mod
-    { type: "element", value: value, modifiers: n_mods, euclid_modifier: eculid_modifier }
+  slice_with_ops:(_, children) =>
+    -- { value, eculid_modifier, modifiers, elongate } = children
+    { value, modifiers } = children
+    -- weight_mods, n_mods = {}, {}
+    -- for mod in *modifiers
+    --   if mod.op == "weight"
+    --     table.insert weight_mods, mod
+    --   else
+    --     table.insert n_mods, mod
+    -- weight_mod = weight_mods[1] or { type: "modifier", op: "weight", value: elongate }
+    -- if weight_mod.value ~= 1
+    --   table.insert n_mods, weight_mod
+    -- { type: "element", value: value, modifiers: n_mods, euclid_modifier: eculid_modifier }
 
-  m_element:(_, children) =>
-    { value, eculid_modifier } = children
-    { type: "element", value: value, modifiers: {}, euclid_modifier: eculid_modifier }
+  -- m_element:(_, children) =>
+  --   { value, eculid_modifier } = children
+  --   { type: "element", value: value, modifiers: {}, euclid_modifier: eculid_modifier }
 
-  polyrhythm_subseq:(_, children) =>
+  sub_cycle:(_, children) =>
     { type: "polyrhythm", seqs: children[1] }
 
-  polymeter_subseq:(_, children) =>
+  polymeter:(_, children) =>
     { seqs, steps } = children
     { type: "polymeter", seqs: seqs, steps: steps or 1 }
 
   polymeter_steps:(_, children) => children[1]
 
-  polymeter1_subseq:(_, children) =>
+  slow_sequence:(_, children) =>
     { type: "polymeter", seqs: children[1], steps: 1 }
 
   subseq_body:(_, children) =>
@@ -95,31 +96,31 @@ class Visitor
 
   elongate:(node, _) => #node[2] / 2 + 1
 
-  element_value:(_, children) => children[1]
+  slice:(_, children) => children[1]
 
-  term:(_, children) =>
+  step:(_, children) =>
     if type(children[1]) == "number" then
       return { type: "number", value: children[1] }
     children[1]
 
   rest:(_, _) => { type: "rest" }
 
-  word_with_index:(_, children) =>
-    { word, index } = children
-    { type: "word", value: word, index: index or 0 }
+  -- word_with_index:(_, children) =>
+  --   { word, index } = children
+  --   { type: "word", value: word, index: index or 0 }
+  --
+  -- index:(_, children) => children[1]
 
-  index:(_, children) => children[1]
-
-  euclid_modifier:(_, children) =>
+  euclid:(_, children) =>
     if children == "" then
       return
     { k, n, rotation } = children
     if k ~= nil and n ~= nil
       return { type: "euclid_modifier", k: k, n: n, rotation: rotation }
 	
-  euclid_rotation_param: (_, children) => children[1]
+  euclid_rotation: (_, children) => children[1]
 
-  modifiers:(_, children) =>
+  ops:(_, children) =>
     if children == ""
       return {}
     mods, degrade_mods, weight_mods = {}, {}, {}
@@ -147,13 +148,13 @@ class Visitor
     table.insert mods, weight_mods[#weight_mods]
     return mods
 
-  modifier:(_, children) => children[1]
+  op:(_, children) => children[1]
 
   fast:(_, children) => { type: "modifier", op: "fast", value: children[1] }
 
   slow:(_, children) => { type: "modifier", op: "slow", value: children[1] }
 
-  _repeat:(_, children) =>
+  replicate:(_, children) =>
     count = reduce op.add, 0, children
     { type: "modifier", op: "repeat", count: count }
 

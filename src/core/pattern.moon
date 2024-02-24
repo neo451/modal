@@ -469,7 +469,7 @@ _cpm = (cpm, pat) ->
 cpm = _patternify _cpm
 
 _fast = (factor, pat) ->
-  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
+  pat\withTime ((t) -> t * factor), ((t) -> t / factor)
 --- Speed up a pattern by the given factor. Used by "*" in mini notation.
 -- @usage
 -- fast(2, s"bd") // s"bd*2"
@@ -481,7 +481,7 @@ _slow = (factor, pat) -> _fast (1 / factor), pat
 -- slow(2, s("<bd sd> hh")) // s"[<bd sd> hh]/2"
 slow = _patternify _slow
 
-_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
+_early = (offset, pat) -> pat\withTime ((t) -> t + offset), ((t) -> t - offset)
 --- Nudge a pattern to start earlier in time. Equivalent of Tidal's <~ operator
 -- @usage
 -- s(stack("bd ~", early(0.1, "hh ~")))
@@ -506,14 +506,12 @@ _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 outside = _patternify_p_p _outside
 
 _ply = (factor, pat) ->
-  pat = reify pat
   pat = pure _fast factor, pat
   pat\squeezeJoin!
 
 ply = _patternify _ply
 
 _fastgap = (factor, pat) ->
-  pat = reify pat
   factor = tofrac(factor)
   if factor <= Fraction(0) then return silence!
   factor = factor\max(1)
@@ -541,7 +539,6 @@ _fastgap = (factor, pat) ->
 fastgap = _patternify _fastgap
 
 _compress = (b, e, pat) ->
-  pat = reify pat
   b, e = tofrac(b), tofrac(e)
   if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
     return silence!
@@ -554,12 +551,11 @@ _compress = (b, e, pat) ->
 compress = _patternify_p_p _compress
 
 _focus = (b, e, pat) ->
-  pat = reify pat
   b, e = tofrac(b), tofrac(e)
   fasted = _fast (Fraction(1) / (e - b)), pat
   _late Span\cyclePos(b), fasted
 
-focusSpan = (span, pat) -> _focus span._begin, span._end, pat
+focusSpan = (span, pat) -> _focus span._begin, span._end, reify pat
 
 -- Similar to compress, but doesn't leave gaps, and the 'focus' can be bigger than a cycle
 -- @usage
@@ -567,7 +563,6 @@ focusSpan = (span, pat) -> _focus span._begin, span._end, pat
 focus = _patternify_p_p _focus
 
 _zoom = (s, e, pat) ->
-  pat = reify pat
   s, e = tofrac(s), tofrac(e)
   dur = e - s
   qf = (span) -> span\withCycle (t) -> t * dur + s
@@ -673,14 +668,12 @@ sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
 
 -- @section manipulating structure
 struct = (boolpat, pat) ->
-  pat, boolpat = reify(pat), reify(boolpat)
   boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 euclid = _patternify_p_p_p _euclid
 
 rev = (pat) ->
-  pat = reify pat
   query = (_, state) ->
     span = state.span
     cycle = span._begin\sam!
@@ -697,10 +690,10 @@ rev = (pat) ->
 
 palindrome = (pat) -> slowcat pat, rev pat
 
-_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in fun.range(n)]
+_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), pat for i in fun.range(n)]
 iter = _patternify _iter
 
-_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in fun.range(n)]
+_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), pat for i in fun.range(n)]
 reviter = _patternify _reviter
 
 _segment = (n, pat) -> fast(n, pure(id))\appLeft pat
@@ -712,13 +705,12 @@ range = _patternify_p_p _range
 -- @section higher order functions
 superimpose = (f, pat) -> stack(pat, f(pat))
 
-layer = (table, pat) -> stack [f reify pat for f in *table]
+layer = (table, pat) -> stack [f pat for f in *table]
 
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 off = _patternify_p_p _off
 
 _echoWith = (times, time, func, pat) ->
-  pat = reify pat
   f = (index) -> func _late time * index, pat
   ts = [ i for i = 0, times - 1 ]
   stack map f, ts
@@ -780,7 +772,6 @@ _chop = (n, pat) ->
 chop = _patternify _chop
 
 slice = (npat, ipat, opat) ->
-  npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
   npat\innerBind (n) ->
     ipat\outerBind (i) ->
       opat\outerBind (o) ->
@@ -794,7 +785,7 @@ splice = (npat, ipat, opat) ->
   sliced\withEvent (event) ->
     event\withValue (value) ->
       new_attri = {
-        speed: (tofrac(1) / tofrac(value._slices) / event.whole\duration!) * (value.speed or 1),
+        speed: tofloat(tofrac(1) / tofrac(value._slices) / event.whole\duration!) * (value.speed or 1),
           unit: "c"
       }
       return union new_attri, value
@@ -819,7 +810,6 @@ legato = _patternify _legato
 
 -- @section music theory
 _scale = (name, pat) ->
-  pat = reify pat
   toScale = (v) -> getScale(name, v)
   pat\fmap(toScale)
 
@@ -835,7 +825,7 @@ sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
 
-print pure 1
+print _ply 2, mini("1 2")
 
 return {
   :C

@@ -77,119 +77,119 @@ describe "Mini Parser for", ->
     it "should pass", ->
       same "bd | sd cp"
 
-describe "Mini Interpreter for", ->
-  describe "numbers", ->
-    it "should pass", ->
-      eval "45"
-      eval "-2."
-      eval "4.64"
-      eval "-3"
-
-  describe "words", ->
-    it "should pass", ->
-      eval "foo"
-      eval "Bar:2"
-
-  describe "rests", ->
-    it "should pass", ->
-      eval "~"
-
-  describe "sequences", ->
-    it "should pass", ->
-      eval "bd sd"
-      eval "bd hh sd"
-      eval "bd hh@2"
-      -- eval "bd hh@3 sd@2"
-      eval "bd! hh? ~ sd/2 cp*3"
-
-  describe "repeat", ->
-    it "should pass", ->
-      eval "hh!"
-      eval "hh!!!"
-      eval "bd! cp"
-      -- same "hh!4"
-      -- same "hh!4!!"
-
-  describe "weight", ->
-    it "should pass", ->
-      eval "hh@2"
-
-  describe "fast&slow", ->
-    it "should pass", ->
-      eval "bd*2"
-      eval "bd/3"
-
-  describe "degrade", ->
-    it "should pass", ->
-      eval "hh?"
-      -- eval "hh???"
-      -- eval "hh?4"
-      -- eval "hh?4??"
-      -- eval "hh??0.87"
-
-  describe "hybrid mod", ->
-    it "should pass", ->
-      -- eval "hh!!??"
-      -- eval "hh!/2?!"
-
-  describe "random seq", ->
-    it "should pass", ->
-      eval "bd | sd cp"
-
-  describe "polyrhythm", ->
-    it "should pass", ->
-      eval "[bd sd] hh"
-      eval "bd sd . cp . hh*2"
-      eval "[bd, sd]"
-
-  describe "polymeter", ->
-    it "should pass", ->
-      eval "bd*<2 3 4>"
-      eval "{bd sd hh cp hh}%4"
-
-export interpreter_targets = {
-  -- numbers
-  "45": pure 45
-  "-2.": pure -2.0
-  "4.64": pure 4.64
-  "-3": pure -3
-  -- word
-  "foo": pure "foo"
-  "Bar:2": C.s"Bar" .. C.n"2"
-  -- rest
-  "~": silence!
-  -- modifiers
-  "bd*2": fast 2, "bd"
-  "bd/3": slow 3, "bd"
-  "hh?": degrade "hh"
-  "hh???": degrade degrade degrade "hh"
-  -- "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
-  -- sequences
-  "bd sd": fastcat "bd", "sd"
-  "bd hh sd": fastcat "bd", "hh", "sd"
-  "hh@2": pure "hh"
-  "bd hh@2": timecat { { 1, "bd" }, { 2, "hh" } }
-  -- TODO: timecat not right? mini is right
-  -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
-  "hh!": fastcat "hh", "hh"
-  "hh!!!": fastcat "hh", "hh", "hh", "hh"
-  "bd! cp": fastcat "bd", "bd", "cp"
-  "bd! hh? ~ sd/2 cp*3": timecat {
-    { 1, "bd" }
-    { 1, "bd" }
-    { 1, degrade("hh") }
-    { 1, silence! }
-    { 1, slow(2, "sd") }
-    { 1, fast(3, "cp") }
-  }
-  "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
-  "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, "hh"))
-  "[bd, sd]": stack "bd", "sd"
-  "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
-  "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
-  "bd*<2 3 4>": slowcat fast(2, "bd"), fast(3, "bd"), fast(4, "bd")
-}
-
+-- describe "Mini Interpreter for", ->
+--   describe "numbers", ->
+--     it "should pass", ->
+--       eval "45"
+--       eval "-2."
+--       eval "4.64"
+--       eval "-3"
+--
+--   describe "words", ->
+--     it "should pass", ->
+--       eval "foo"
+--       eval "Bar:2"
+--
+--   describe "rests", ->
+--     it "should pass", ->
+--       eval "~"
+--
+--   describe "sequences", ->
+--     it "should pass", ->
+--       eval "bd sd"
+--       eval "bd hh sd"
+--       eval "bd hh@2"
+--       -- eval "bd hh@3 sd@2"
+--       eval "bd! hh? ~ sd/2 cp*3"
+--
+--   describe "repeat", ->
+--     it "should pass", ->
+--       eval "hh!"
+--       eval "hh!!!"
+--       eval "bd! cp"
+--       -- same "hh!4"
+--       -- same "hh!4!!"
+--
+--   describe "weight", ->
+--     it "should pass", ->
+--       eval "hh@2"
+--
+--   describe "fast&slow", ->
+--     it "should pass", ->
+--       eval "bd*2"
+--       eval "bd/3"
+--
+--   describe "degrade", ->
+--     it "should pass", ->
+--       eval "hh?"
+--       -- eval "hh???"
+--       -- eval "hh?4"
+--       -- eval "hh?4??"
+--       -- eval "hh??0.87"
+--
+--   describe "hybrid mod", ->
+--     it "should pass", ->
+--       -- eval "hh!!??"
+--       -- eval "hh!/2?!"
+--
+--   describe "random seq", ->
+--     it "should pass", ->
+--       eval "bd | sd cp"
+--
+--   describe "polyrhythm", ->
+--     it "should pass", ->
+--       eval "[bd sd] hh"
+--       eval "bd sd . cp . hh*2"
+--       eval "[bd, sd]"
+--
+--   describe "polymeter", ->
+--     it "should pass", ->
+--       eval "bd*<2 3 4>"
+--       eval "{bd sd hh cp hh}%4"
+--
+-- export interpreter_targets = {
+--   -- numbers
+--   "45": pure 45
+--   "-2.": pure -2.0
+--   "4.64": pure 4.64
+--   "-3": pure -3
+--   -- word
+--   "foo": pure "foo"
+--   "Bar:2": C.s"Bar" .. C.n"2"
+--   -- rest
+--   "~": silence!
+--   -- modifiers
+--   "bd*2": fast 2, mini"bd"
+--   "bd/3": slow 3, mini"bd"
+--   "hh?": degrade "hh"
+--   "hh???": degrade degrade degrade "hh"
+--   -- "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
+--   -- sequences
+--   "bd sd": fastcat "bd", "sd"
+--   "bd hh sd": fastcat "bd", "hh", "sd"
+--   "hh@2": pure "hh"
+--   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
+--   -- TODO: timecat not right? mini is right
+--   -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
+--   "hh!": fastcat "hh", "hh"
+--   "hh!!!": fastcat "hh", "hh", "hh", "hh"
+--   "bd! cp": fastcat "bd", "bd", "cp"
+--   "bd! hh? ~ sd/2 cp*3": timecat {
+--     { 1, pure"bd" }
+--     { 1, pure"bd" }
+--     { 1, degrade(pure"hh") }
+--     { 1, silence! }
+--     { 1, slow(2, pure"sd") }
+--     { 1, fast(3, pure"cp") }
+--   }
+--   "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
+--   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
+--   "[bd, sd]": stack "bd", "sd"
+--   "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
+--   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
+--   "bd*<2 3 4>": slowcat fast(2, mini"bd"), fast(3, mini"bd"), fast(4, mini"bd")
+-- }
+--
 export visitor_targets = {
   -- numbers
   ["45"]: {

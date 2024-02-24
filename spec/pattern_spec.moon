@@ -1,5 +1,5 @@
 import Span, State, Event from require "xi.types"
-import Pattern, C, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
+import Pattern, C, mini, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
 
 describe "Pattern", ->
   describe "new", ->
@@ -132,7 +132,7 @@ describe "Pattern", ->
   describe "squeezeJoin", ->
     it "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each event in the outer pattern.
 " , ->
-      patOfPats = fastcat "1 2 3", "1 2 3"
+      patOfPats = fastcat fastcat(mini"1 2 3"), fastcat(mini"1 2 3")
       pat = patOfPats\squeezeJoin!
       expected = {
         Event Span(0, 1/6), Span(0, 1/6), 1
@@ -176,7 +176,7 @@ describe "Pattern", ->
 
   describe "timecat", ->
     it "should return a pattern based one the time-pat 'tuples' passed in", ->
-      pat = timecat { { 3, fast(4, "bd") }, { 1, fast(8, "hh") } }
+      pat = timecat { { 3, fast(4, mini"bd") }, { 1, fast(8, mini"hh") } }
       expected = {
         Event Span(0, 3/16), Span(0, 3/16), "bd"
         Event Span(3/16, 3/8), Span(3/16, 3/8), "bd"
@@ -195,7 +195,7 @@ describe "Pattern", ->
 
   describe "fast", ->
     it "should return a pattern whose events are closer together in time", ->
-      pat = fast 2, "bd"
+      pat = fast 2, mini"bd"
       expected = {
         Event Span(0, 0.5), Span(0, 0.5), "bd"
         Event Span(0.5, 1), Span(0.5, 1), "bd"
@@ -204,7 +204,7 @@ describe "Pattern", ->
 
   describe "slow", ->
     it "should return a pattern whose events are closer together in time", ->
-      pat = slow 2, "bd sd"
+      pat = slow 2, mini"bd sd"
       expected = {
         Event Span(0, 1), Span(0, 1), "bd"
         Event Span(1, 2), Span(1, 2), "sd"
@@ -213,7 +213,7 @@ describe "Pattern", ->
 
   describe "early", ->
     it "should return a pattern whose events are moved backword in time", ->
-      pat = early 0.5, "bd sd"
+      pat = early 0.5, mini"bd sd"
       expected = {
         Event Span(1/2, 1), Span(1/2, 1), "bd"
         Event Span(0, 1/2), Span(0, 1/2), "sd"
@@ -222,7 +222,7 @@ describe "Pattern", ->
 
   describe "fastgap", ->
     it "should bring pattern closer together", ->
-      pat = fastgap 4, "bd sd"
+      pat = fastgap 4, mini"bd sd"
       expected = {
          Event Span(0, 1/8), Span(0, 1/8), "bd"
          Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
@@ -231,7 +231,7 @@ describe "Pattern", ->
 
   describe "compress", ->
     it "should bring pattern closer together", ->
-      pat = compress 1/4, 3/4, "bd sd"
+      pat = compress 1/4, 3/4, mini"bd sd"
       expected = {
         Event Span(1/4, 1/2), Span(1/4, 1/2), "bd"
         Event Span(1/2, 3/4), Span(1/2, 3/4), "sd"
@@ -241,7 +241,7 @@ describe "Pattern", ->
   -- TODO: is this right?
   describe "focus", ->
     it "should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", ->
-      pat = focus 1/4, 3/4, "bd sd"
+      pat = focus 1/4, 3/4, mini"bd sd"
       expected = {
         Event Span(1/4, 1/2), Span(1/4, 1/2), "bd"
         Event Span(3/4, 1), Span(3/4, 1), "bd"
@@ -252,7 +252,7 @@ describe "Pattern", ->
 
   describe "zoom", ->
     it "should play a portion of a pattern", ->
-      pat = zoom 1/4, 3/4, "~ bd sd ~"
+      pat = zoom 1/4, 3/4, mini"~ bd sd ~"
       expected = {
         Event Span(0, 1/2), Span(0, 1/2), "bd"
         Event Span(1/2, 1), Span(1/2, 1), "sd"
@@ -261,7 +261,7 @@ describe "Pattern", ->
 
   describe "degrade_by", ->
     it "should randomly drop events from a pattern", ->
-      pat = degradeBy 0.75, fast(8, "sd")
+      pat = degradeBy 0.75, fast(8, mini"sd")
       expected = {
         Event Span(1/8, 1/4), Span(1/8, 1/4), "sd"
         Event Span(1/2, 5/8), Span(1/2, 5/8), "sd"
@@ -271,7 +271,7 @@ describe "Pattern", ->
 
   describe "striate", ->
     it "should play sample in any number of parts", ->
-      pat = striate 2, C.sound("bd")
+      pat = striate pure(2), C.sound("bd")
       expected = {
         Event Span(0, 1/2), Span(0, 1/2), { sound: "bd", begin: 0, end: 0.5 }
         Event Span(1/2, 1), Span(1/2, 1), { sound: "bd", begin: 0.5, end: 1 }
@@ -279,7 +279,7 @@ describe "Pattern", ->
       assert.are.same expected, pat(0, 1)
 
     it "should interlace samples", ->
-      pat = slow 4, striate 3, C.sound("0 1 2 3")
+      pat = slow 4, striate pure(3), C.sound("0 1 2 3")
       expected = {
         Event Span(0, 1/3), Span(0, 1/3), { sound: 0, begin: 0, end: 1/3 }
         Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: 1, begin: 0, end: 1/3 }
@@ -289,7 +289,7 @@ describe "Pattern", ->
 
   describe "chop", ->
     it "should play sample in any number of parts", ->
-      pat = chop 2, C.sound("bd")
+      pat = chop pure(2), C.sound("bd")
       expected = {
         Event Span(0, 1/2), Span(0, 1/2), { sound: "bd", begin: 0, end: 0.5 }
         Event Span(1/2, 1), Span(1/2, 1), { sound: "bd", begin: 0.5, end: 1 }
@@ -297,7 +297,7 @@ describe "Pattern", ->
       assert.are.same expected, pat(0, 1)
 
     it "should play samples in turn", ->
-      pat = slow 4, chop 3, C.sound("0 1 2 3")
+      pat = slow 4, chop pure(3), C.sound("0 1 2 3")
       expected = {
         Event Span(0, 1/3), Span(0, 1/3), { sound: 0, begin: 0, end: 1/3 }
         Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: 0, begin: 1/3, end: 2/3 }
@@ -307,7 +307,7 @@ describe "Pattern", ->
 
   describe "slice", ->
     it "should arrange sample parts with a pattern", ->
-      pat = slice 3, "1 0 2", C.sound("bd")
+      pat = slice pure(3), mini"1 0 2", C.sound("bd")
       expected = {
         Event Span(0, 1/3), Span(0, 1/3), { sound: "bd", begin: 1/3, end: 2/3, _slices: 3 }
         Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: "bd", begin: 0, end: 1/3, _slices: 3}
@@ -317,11 +317,11 @@ describe "Pattern", ->
 
   describe "splice", ->
     it "should arrange sample parts with a pattern, with speed multiplied", ->
-      pat = splice 3, "1*2 0 2", C.sound("bd")
+      pat = splice pure(3), mini"1*2 0 2", C.sound("bd")
       expected = {
-        Event Span(0, 1/6), Span(0, 1/6), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: c, _slices: 3 }
-        Event Span(1/6, 1/3), Span(1/6, 1/3), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: c, _slices: 3 }
-        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: "bd", begin: 0, end: 1/3, speed: 1/1, unit: c, _slices: 3}
-        Event Span(2/3, 1), Span(2/3, 1), { sound: "bd", begin: 2/3, end: 1, speed: 1/1, unit: c, _slices: 3 }
+        Event Span(0, 1/6), Span(0, 1/6), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: "c", _slices: 3 }
+        Event Span(1/6, 1/3), Span(1/6, 1/3), { sound: "bd", begin: 1/3, end: 2/3, speed: 2/1, unit: "c", _slices: 3 }
+        Event Span(1/3, 2/3), Span(1/3, 2/3), { sound: "bd", begin: 0, end: 1/3, speed: 1/1, unit: "c", _slices: 3}
+        Event Span(2/3, 1), Span(2/3, 1), { sound: "bd", begin: 2/3, end: 1, speed: 1/1, unit: "c", _slices: 3 }
       }
       assert.are.same expected, pat 0, 1
