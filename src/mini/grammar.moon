@@ -2,138 +2,161 @@
 -- @module mini.grammar
 import P, S, V, R, C, Ct, Cc from require("lpeg")
 require "moon.all"
--- TODO: support musical notation like e3, cmaj3
-token = (id) -> Ct Cc(id) * C(V(id))
-token_var = (id, patt) -> Ct Cc(id) * C(patt)
 
-sequence = token "sequence"
-group = token "group"
--- element = token "element"
--- m_element = token "m_element"
-slice = token "slice"
-sub_cycle = token "sub_cycle"
-polymeter = token "polymeter"
-slow_sequence = token "slow_sequence"
-polymeter_steps = token "polymeter_steps"
-subseq_body = token "subseq_body"
-step = token "step"
--- word_with_index = token "word_with_index"
--- index = token "index"
-slice_with_ops = token "slice_with_ops"
--- ops = token "ops"
-op = token "op"
-fast = token "fast"
-slow = token "slow"
-r1 = token "r1"
-rn = token "rn"
-replicate = token "replicate"
-degrade = token "degrade"
-degrade1 = token "degrade1"
-degrader = token "degrader"
-degraden = token "degraden"
-weight = token "weight"
-euclid = token "euclid"
-euclid_rotation = token "euclid_rotation"
-tail = token "tail"
-range = token "range"
-word = token "word"
-number = token "number"
-real = token "real"
-pos_real = token "pos_real"
-integer = token "integer"
-pos_integer = token "pos_integer"
-rest = token "rest"
-elongate = token "elongate"
--- other_groups = token_var "other", V("other_groups")
--- other_seqs = token_var "other", V("other_seqs")
--- other_subseqs = token_var "other", V("other_subseqs")
--- other_elements = token_var "other", V("other_elements")
--- chordmod = V "chordmod"
--- chordname = V "chordname"
-minus = V "minus"
-ws = V "ws"
+local *
 
+-- unpack = unpack or table.unpack
+tinsert = table.insert
+
+sequence = V "sequence"
+group = V "group"
+slice = V "slice"
+sub_cycle = V "sub_cycle"
+polymeter = V "polymeter"
+slow_sequence = V "slow_sequence"
+polymeter_steps = V "polymeter_steps"
+stack_tail = V "stack_tail"
+stack_or_choose = V "stack_or_choose"
+polymeter_stack = V "polymeter_stack"
+dot_tail = V "dot_tail"
+choose_tail = V "dot_tail"
+step = V "step"
+slice_with_ops = V "slice_with_ops"
+op = V "op"
+fast = V "fast"
+slow = V "slow"
+replicate = V "replicate"
+degrade = V "degrade"
+weight = V "weight"
+euclid = V "euclid"
+tail = V "tail"
+range = V "range"
+
+parseNumber = (num) -> tonumber num
+parseStep = (chars) -> if chars != "." and chars != "_" then return AtomStub chars
+
+AtomStub = (source) ->
+  {
+    type: "atom"
+    source: source
+    -- location: location() --?
+  }
+
+PatternStub = (source, alignment, seed) ->
+  {
+    type: "pattern"
+    arguments: { alignment: alignment, seed: seed } -- ? what condition?
+    source: source
+  }
+
+ElementStub = (source, options) ->
+  {
+    type: "element"
+    source: source
+    options: options
+    -- location: location! -- ?
+  }
+
+seed = 0 -- neccesary???
+
+--- non-recersive rules
+-- numbers
+minus = P("-")
+plus = P("+")
+zero = P("0")
+digit = R("09")
+decimal_point = P(".")
+digit1_9 = R("19")
+e = S("eE")
+int = zero + (digit1_9 * digit ^ 0)
+intneg = minus ^ -1 * int
+exp = e * (minus + plus) ^ -1 * digit ^ 1
+frac = decimal_point * digit ^ 1
+number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
+
+-- delimiters
+ws = S(" \n\r\t\u00A0") ^ 0
+comma = ws * P(",") * ws
+pipe = ws * P("|") * ws
+dot = ws * P(".") * ws
+quote = P("'") + P('"')
+
+-- chars
+step_char = R("az", "09") + P("-") + P("#") + P(".") + P("^") + P("_") -- upgrade to unicode
+step = ws * step_char ^ 1 / parseStep * ws
+rest = P("~")
+
+parseFast = (a) ->
+  (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "fast" } }
+
+parseSlow = (a) ->
+  (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "slow" } }
+
+parseTail = (s) ->
+  (x) -> tinsert x.options.ops, { type: "tail", arguments: { element: s } }
+
+parseRange = (s) ->
+  (x) -> tinsert x.options.ops, { type: "range", arguments: { element: s } }
+
+parseDegrade = (a) ->
+  (x) -> tinsert x.options.ops, { type: "degradeBy", arguments: { amount: a, seed: seed + 1 } }
+
+parseEuclid = (p, s, r = 0) ->
+  (x) -> tinsert x.options.ops, { type: "euclid", arguments: { pulse: p, steps: s, rotation: r } }
+
+parseWeight = (a) ->
+  (x) -> x.options.weight = ( x.options.weight or 1 ) + ( tonumber(a) or 2 ) - 1
+
+parseReplicate = (a) ->
+  (x) -> x.options.reps = ( x.options.reps or 1 ) + ( tonumber(a) or 2 ) - 1
+
+parseSlices = (slice, ...) ->
+  ops = { ... }
+  result = ElementStub(slice, { ops: {}, weight: 1, reps: 1})
+  for op in *ops
+    op(result)
+  return result
 
 --- table of PEG grammar rules
 -- @table grammar
 grammar = {
-  "root", -- initial rule, root
-  -- root
-  root: token_var "root", ws ^ -1 * sequence * ws ^ -1,
+  "polymeter_stack", -- initial rule
 
-  stack_or_choose: sequence * (stack_tail + choose_tail + dot_tail) ^ -1
-  polymeter_stack: sequence * stack_tail ^ -1
+  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / (head, tail) -> 
+    PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
+  polymeter_stack: (sequence * stack_tail ^ -1) / (head, tail) -> 
+    PatternStub(tail and { head, unpack(tail.list) } or { head }, "alignment")
 
-  -- sequence
-  -- sequence: group * other_groups * other_seqs,
-  sequence: slice_with_ops ^ 1
-  stack_tail: (comma * sequence) ^ 1 -- ??
-  dot_tail: (dot * sequence) ^ 1 -- ??
-  choose_tail: (pipe * sequence) ^ 1 -- ??
-  -- other_groups: (ws * -P("|") * P(".") * ws * group) ^ 0,
-  -- other_seqs: (ws ^ -1 * P("|") * ws ^ -1 * sequence) ^ 0,
-  -- group: slice_with_ops * other_elements,
-  -- other_elements: (ws * -P(".") * slice_with_ops) ^ 0,
+  -- sequence and tail
+  sequence: (slice_with_ops ^ 1) / (s) -> PatternStub(s, "fastcat")
+  stack_tail: (comma * sequence) ^ 1 / (...) -> { alignment: "stack", list: { ... } }
+  dot_tail: (dot * sequence) ^ 1 / (...) -> { alignment: "feet", list: { ... }, seed: seed + 1 }
+  choose_tail: (pipe * sequence) ^ 1 / (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
 
-  -- element
-  slice_with_ops: slice * op ^ 0
-  -- tmp fix?
-  -- m_element: element_value * euclid, --???euclidian neccssary?
+  -- slices
+  slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
 
   -- subsequences
-  sub_cycle: P("[") * ws ^ -1 * subseq_body * ws ^ -1 * P("]"),
-  polymeter: P("{") * ws ^ -1 * subseq_body * ws ^ -1 * P("}") * polymeter_steps ^ -1,
-  slow_sequence: P("<") * ws ^ -1 * subseq_body * ws ^ -1 * P(">"),
-  polymeter_steps: P("%") * slice,
-  subseq_body: sequence * other_subseqs,
-  -- other_subseqs: (ws ^ -1 * P(",") * ws ^ -1 * sequence) ^ 0,
+  sub_cycle: P("[") * ws * stack_or_choose * ws * P("]") / (s) -> s
+  polymeter: P("{") * ws * polymeter_stack * ws * P("}") * polymeter_steps ^ -1 * ws / (s, steps) ->
+    s.arguments.stepsPerCycle = steps
+    return s
+  polymeter_steps: P("%") * slice
+  slow_sequence: P("<") * ws * polymeter_stack * ws * P(">") * polymeter_steps ^ -1 * ws / (s, steps) ->
+    s.arguments.alignment = "polymeter_slowcat"
+    return s
 
-  -- step
-  step: word + rest + number
-  -- index: P(":") * number
-  -- word_with_index: word * index ^ -1
-
-  -- eculid modifier
-
-  -- term modifiers
-  op: fast + slow + replicate + degrade + weight + euclid + tail + range
-  fast: P("*") * slice
-  slow: P("/") * slice
-  replicate: (r1 + rn) ^ 1
-  rn: P("!") * -P("!") * pos_integer
-  r1: P("!") * -pos_integer
-  degrade: degrade1 + degraden + degrader
-  degrader: P("?") * -P("?") * pos_real
-  degraden: P("?") * -pos_real * -P("?") * pos_integer
-  degrade1: P("?") * -pos_integer * -pos_real
-  -- elongate: (ws ^ -1 * P("_")) ^ 0,
-  -- weight: P("@") * number
-  weight: ws * (P("@") + P("_")) * number
-  euclid: P("(") * ws * slice_with_ops * ws * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(")")
-  tail: P(":") * slice
-  range: P("..") * slice
-
-  -- primitives
-  word: R("az", "AZ") ^ 1 * R("09") ^ -1 * P("'") ^ -1 * chordname ^ -1 * chordmod ^ 0
-  chordname: R("az","09") ^ 1
-  chordmod: P("'") * ((S"id" + R"09") + P"o" + R"09")
-  number: real + integer
-  real: integer * P(".") * pos_integer ^ -1
-  pos_real: pos_integer * P(".") * pos_integer ^ -1
-  integer: minus ^ -1 * pos_integer
-  pos_integer: -minus * R("09") ^ 1
-  rest: P("~")
-
-  -- Misc
-  minus: P("-")
-
-  -- delimiters
-  ws: S(" \n\r\t\u00A0") ^ 0
-  comma: ws * P(",") * ws
-  pipe: ws * P("|") * ws
-  dot: ws * P(".") * ws
-  quote: P("'") + P('"')
+  -- ops
+  op: fast + slow + tail + range + replicate + degrade + weight + euclid
+  fast: P("*") * slice / parseFast
+  slow: P("/") * slice / parseSlow
+  tail: P(":") * slice / parseTail
+  range: P("..") * ws * slice / parseRange
+  degrade: P("?") * (number ^ -1) / parseDegrade
+  replicate: ws * P("!") * (number ^ -1) / parseReplicate
+  weight: ws * (P("@") + P("_")) * (number ^ -1) / parseWeight
+  euclid: P("(") * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(")") / parseEuclid
 }
 
 grammar = Ct C grammar
@@ -143,6 +166,6 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
--- p parse "45"
+p parse "1*2!, 2"
 
 return { :parse }
