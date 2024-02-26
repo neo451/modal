@@ -75,16 +75,16 @@ frac = decimal_point * digit ^ 1
 number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
 
 -- delimiters
-ws = S(" \n\r\t\u00A0") ^ 0
-comma = ws * P(",") * ws
-pipe = ws * P("|") * ws
-dot = ws * P(".") * ws
-quote = P("'") + P('"')
+ws = S" \n\r\t\u00A0" ^ 0
+comma = ws * P"," * ws
+pipe = ws * P"|" * ws
+dot = ws * P"." * ws
+quote = P"'" + P'"'
 
 -- chars
-step_char = R("az", "09") + P("-") + P("#") + P(".") + P("^") + P("_") -- upgrade to unicode
-step = ws * step_char ^ 1 / parseStep * ws
-rest = P("~")
+step_char = R("az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
+step = ws * step_char ^ 1 * ws / parseStep
+rest = P"~"
 
 parseFast = (a) ->
   (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "fast" } }
@@ -117,46 +117,63 @@ parseSlices = (slice, ...) ->
     op(result)
   return result
 
+parsePolymeter = (s, steps) ->
+  s.arguments.stepsPerCycle = steps
+  return s
+
+parseSlowSeq = (s, steps) ->
+  s.arguments.alignment = "polymeter_slowcat"
+  return s
+
+parseDotTail = (...) -> { alignment: "feet", list: { ... }, seed: seed + 1 }
+
+parseStackTail = (...) -> { alignment: "stack", list: { ... } }
+
+parseChooseTail = (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
+
+parseStackOrChoose = (head, tail) ->
+  p tail
+  if tail and #tail.list > 0
+    return PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
+  else
+    return head
+
+parsePolymeterStack = (head, tail) ->
+    PatternStub(tail and { head, unpack(tail.list) } or { head }, "alignment")
+
 --- table of PEG grammar rules
 -- @table grammar
 grammar = {
-  "polymeter_stack", -- initial rule
+  "stack_or_choose", -- initial rule
 
-  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / (head, tail) -> 
-    PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
-  polymeter_stack: (sequence * stack_tail ^ -1) / (head, tail) -> 
-    PatternStub(tail and { head, unpack(tail.list) } or { head }, "alignment")
+  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / parseStackOrChoose
+  polymeter_stack: (sequence * stack_tail ^ -1) / parsePolymeterStack
 
   -- sequence and tail
   sequence: (slice_with_ops ^ 1) / (s) -> PatternStub(s, "fastcat")
-  stack_tail: (comma * sequence) ^ 1 / (...) -> { alignment: "stack", list: { ... } }
-  dot_tail: (dot * sequence) ^ 1 / (...) -> { alignment: "feet", list: { ... }, seed: seed + 1 }
-  choose_tail: (pipe * sequence) ^ 1 / (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
+  stack_tail: (comma * sequence) ^ 1 / parseStackTail
+  dot_tail: (dot * sequence) ^ 1 
+  -- / parseDotTail
+  choose_tail: (pipe * sequence) ^ 1 / parseChooseTail
 
   -- slices
   slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
-
-  -- subsequences
-  sub_cycle: P("[") * ws * stack_or_choose * ws * P("]") / (s) -> s
-  polymeter: P("{") * ws * polymeter_stack * ws * P("}") * polymeter_steps ^ -1 * ws / (s, steps) ->
-    s.arguments.stepsPerCycle = steps
-    return s
-  polymeter_steps: P("%") * slice
-  slow_sequence: P("<") * ws * polymeter_stack * ws * P(">") * polymeter_steps ^ -1 * ws / (s, steps) ->
-    s.arguments.alignment = "polymeter_slowcat"
-    return s
+  sub_cycle: P"[" * ws * stack_or_choose * ws * P"]"
+  polymeter: P"{" * ws * polymeter_stack * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
+  slow_sequence: P"<" * ws * polymeter_stack * ws * P">" * ws / parseSlowSeq
+  polymeter_steps: P"%" * slice
 
   -- ops
   op: fast + slow + tail + range + replicate + degrade + weight + euclid
-  fast: P("*") * slice / parseFast
-  slow: P("/") * slice / parseSlow
-  tail: P(":") * slice / parseTail
-  range: P("..") * ws * slice / parseRange
-  degrade: P("?") * (number ^ -1) / parseDegrade
-  replicate: ws * P("!") * (number ^ -1) / parseReplicate
-  weight: ws * (P("@") + P("_")) * (number ^ -1) / parseWeight
-  euclid: P("(") * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(")") / parseEuclid
+  fast: P"*" * slice / parseFast
+  slow: P"/" * slice / parseSlow
+  tail: P":" * slice / parseTail
+  range: P".." * ws * slice / parseRange
+  degrade: P"?" * (number ^ -1) / parseDegrade
+  replicate: ws * P"!" * (number ^ -1) / parseReplicate
+  weight: ws * (P"@" + P"_") * (number ^ -1) / parseWeight
+  euclid: P"(" * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P")" / parseEuclid
 }
 
 grammar = Ct C grammar
@@ -166,6 +183,6 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
-p parse "1*2!, 2"
+p parse "1 . 2 . 3"
 
 return { :parse }
