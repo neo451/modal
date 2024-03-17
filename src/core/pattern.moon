@@ -778,7 +778,7 @@ _chop = (n, pat) ->
   return pat\squeezeBind func
 
 chop = _patternify _chop
-
+-- TODO
 slice = (npat, ipat, opat) ->
   npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
   npat\innerBind (n) ->
@@ -789,6 +789,7 @@ slice = (npat, ipat, opat) ->
         _end = if type(n) == table then _end = n[i + 1] else _end = (i + 1) / n
         return pure union o, { begin: begin, end: _end, _slices: n }
 
+-- TODO
 splice = (npat, ipat, opat) ->
   sliced = slice npat, ipat, opat
   sliced\withEvent (event) ->

@@ -1,0 +1,3 @@
+loopAt 2, chop "8 16", s"breaks125"
+  |> jux rev, _
+  |> d1
