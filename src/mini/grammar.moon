@@ -196,6 +196,6 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
-p parse("hh???")
+-- p parse("1(3,8)")
 
 return { :parse }

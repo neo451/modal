@@ -269,7 +269,6 @@ grammar = Ct(C(grammar))
 parse = function(string)
   return grammar:match(string)[2]
 end
-p(parse("hh???"))
 return {
   parse = parse
 }

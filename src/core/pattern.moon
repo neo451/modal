@@ -1,5 +1,6 @@
 --- Core pattern representation
 -- @module xi.pattern
+local *
 import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import parseChord from require "xi.chords"
@@ -11,11 +12,6 @@ import parse from require "xi.mini.grammar"
 import op from require "fun"
 import string_lambda from require("pl.utils")
 fun = require "fun"
-local *
-
--- p = (evs) ->
---   for ev in *evs 
---     print ev
 
 -- applyOpts = (parent, enter) ->
 --   (pat, i) ->
@@ -35,6 +31,33 @@ local *
 --             else
 --               print("mini: stretch: type must be one of ${legalTypes.join('|')} but got ${type}")
 
+resolveReplications = id
+applyOptions = id
+
+patternifyAST = (ast) ->
+  enter = (node) -> patternifyAST(node)
+  switch ast.type
+    when "pattern"
+      resolveReplications ast
+      children = ast.source
+      return map enter, children
+    when "element"
+      return enter(ast.source)
+    when "atom"
+      if ast.source == "~" then return silence!
+      value = ast.source
+      if (tonumber value)
+        value = tonumber value
+
+      return pure value
+
+  -- return ast
+
+helper = (code) ->
+  ast = parse code
+  patternifyAST(ast)
+
+
 
 --- Turns mini-notation(string) into a pattern
 -- @param string
@@ -43,8 +66,6 @@ mini = (string) ->
   ast = parse string
   return ast
   -- Interpreter\eval ast
-
-p mini "45"
 
 sin = math.sin
 min = math.min
@@ -764,8 +785,8 @@ sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
 
-print _ply 2, mini("1 2")
-
+print (helper "45")[1]
+-- print _ply 2, mini("1 2")
 return {
   :C
   :Pattern

@@ -31,12 +31,42 @@ op = require("fun").op
 local string_lambda
 string_lambda = require("pl.utils").string_lambda
 local fun = require("fun")
-local mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+local resolveReplications, applyOptions, patternifyAST, helper, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+print(pure(1))
+resolveReplications = id
+applyOptions = id
+patternifyAST = function(ast)
+  local enter
+  enter = function(node)
+    return patternifyAST(node)
+  end
+  local _exp_0 = ast.type
+  if "pattern" == _exp_0 then
+    resolveReplications(ast)
+    local children = ast.source
+    map(enter, children)
+    return p(children)
+  elseif "element" == _exp_0 then
+    return enter(ast.source)
+  elseif "atom" == _exp_0 then
+    if ast.source == "~" then
+      return silence()
+    end
+    local value = ast.source
+    if (tonumber(value)) then
+      value = tonumber(value)
+    end
+    return pure(value)
+  end
+end
+helper = function(code)
+  local ast = parse(code)
+  return patternifyAST(ast)
+end
 mini = function(string)
   local ast = parse(string)
   return ast
 end
-p(mini("45"))
 sin = math.sin
 min = math.min
 max = math.max
@@ -1152,7 +1182,6 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(_ply(2, mini("1 2")))
 return {
   C = C,
   Pattern = Pattern,

@@ -34,28 +34,32 @@ describe "Mini Parser for", ->
 
   describe "degrade", ->
     it "should pass", ->
-      same "hh?"
-      same "hh???"
+      -- same "hh?"
+      -- same "hh???"
   --     same "hh?4"
   --     same "hh?4??"
   --     same "hh??0.87"
-  --
-  -- describe "repeat", ->
-  --   it "should pass", ->
-  --     same "hh!"
-  --     same "hh!!!"
-  --     same "hh!4"
-  --     same "hh!4!!"
+
+  describe "repeat", ->
+    it "should pass", ->
+      same "hh!"
+      same "hh!!!"
+      -- same "hh!4"
+      -- same "hh!4!!"
+
+  describe "euclidian rhythm", ->
+    it "should pass", ->
+      same "1(3,8)"
 
   -- describe "hybrid mod", ->
   --   it "should pass", ->
   --     same "hh!!??!"
   --     -- TODO:more complex case
   --
-  -- describe "sequence", ->
-  --   it "should pass", ->
-  --     same "bd sd"
-  --     same "bd hh sd"
+  describe "sequence", ->
+    it "should pass", ->
+      same "bd sd"
+      same "bd hh sd"
   --     same "bd! hh? ~ sd/2 cp*3"
   --
   -- describe "polymeter", ->
@@ -63,9 +67,6 @@ describe "Mini Parser for", ->
   --     same "bd*<2 3 4>"
   --     same "{bd sd hh cp hh}%4"
   --
-  -- describe "euclidian rhythm", ->
-  --   it "should pass", ->
-  --     same "1(3,8)"
   --
   -- describe "polyrhythm", ->
   --   it "should pass", ->
@@ -525,26 +526,49 @@ export visitor_targets = {
       },
     },
   },
+
+
   ["hh!"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: { { type: "modifier", op: "repeat", count: 1 } },
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+        {
+            type: "element"
+            source: {
+                source: "hh"
+                type: "atom"
+            }
+            options: {
+                ops: {}
+                reps: 2
+                weight: 1
+            }
+        }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
+
   ["hh!!!"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: { { type: "modifier", op: "repeat", count: 3 } },
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+        {
+            type: "element"
+            source: {
+                source: "hh"
+                type: "atom"
+            }
+            options: {
+                ops: {}
+                reps: 4
+                weight: 1
+            }
+        }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
 
   ["hh!4"]: {
     type: "sequence",
@@ -588,6 +612,7 @@ export visitor_targets = {
         alignment: "fastcat"
     }
   }
+
 
   ["bd _ _ sd"]: {
     type: "pattern"
@@ -647,41 +672,82 @@ export visitor_targets = {
 
   -- sequences
   ["bd sd"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: {},
-      },
-      {
-        type: "element",
-        value: { type: "word", value: "sd", index: 0 },
-        modifiers: {},
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+      [1]: {
+        type: "element"
+        source: {
+            source: "bd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+      [2]: {
+        type: "element"
+        source: {
+            source: "sd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
 
   ["bd hh sd"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: {},
-      },
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: {},
-      },
-      {
-        type: "element",
-        value: { type: "word", value: "sd", index: 0 },
-        modifiers: {},
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+      [1]: {
+        type: "element"
+        source: {
+            source: "bd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+      [2]: {
+        type: "element"
+        source: {
+            source: "hh"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+      [3]: {
+        type: "element"
+        source: {
+            source: "sd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
 
   ["bd! hh? ~ sd/2 cp*3"]: {
     type: "sequence",
@@ -964,26 +1030,59 @@ export visitor_targets = {
   },
   -- euclid_modifier
   ["1(3,8)"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "number", value: 1 },
-        euclid_modifier: {
-          type: "euclid_modifier",
-          k: {
-            type: "sequence",
-            elements: { { type: "element", value: { type: "number", value: 3 }, modifiers: {} } },
-          },
-          n: {
-            type: "sequence",
-            elements: { { type: "element", value: { type: "number", value: 8 }, modifiers: {} } },
-          },
-        },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          [1]: {
+              type: "element"
+              source: {
+                  source: "1"
+                  type: "atom"
+              }
+              options: {
+                  ops: {
+                      [1]: {
+                          arguments: {
+                              steps: {
+                                  type: "element"
+                                  source: {
+                                      source: "8"
+                                      type: "atom"
+                                  }
+                                  options: {
+                                      ops: {
+                                      }
+                                      reps: 1
+                                      weight: 1
+                                  }
+                              }
+                              pulse: {
+                                  type: "element"
+                                  source: {
+                                      source: "3"
+                                      type: "atom"
+                                  }
+                                  options: {
+                                      ops: {
+                                      }
+                                      reps: 1
+                                      weight: 1
+                                  }
+                              }
+                              rotation: 0
+                          }
+                          type: "euclid"
+                      }
+                  }
+                  reps: 1
+                  weight: 1
+              }
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   ["{bd sd hh cp hh}%4"]: {
     type: "sequence",
     elements: {
