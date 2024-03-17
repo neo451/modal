@@ -32,10 +32,10 @@ describe "Mini Parser for", ->
       same "hh@2"
       same "bd _ _ sd"
 
-  -- describe "degrade", ->
-  --   it "should pass", ->
-  --     same "hh?"
-  --     same "hh???"
+  describe "degrade", ->
+    it "should pass", ->
+      same "hh?"
+      same "hh???"
   --     same "hh?4"
   --     same "hh?4??"
   --     same "hh??0.87"
@@ -195,6 +195,7 @@ export visitor_targets = {
   ["45"]: {
       type: "pattern"
       source: {
+        [1]: {
           type: "element"
           source: {
               source: "45"
@@ -205,6 +206,7 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+        }
       }
       arguments: {
           alignment: "fastcat"
@@ -214,6 +216,7 @@ export visitor_targets = {
   ["-2."]: {
       type: "pattern"
       source: {
+        [1]: {
           type: "element"
           source: {
               source: "-2."
@@ -224,6 +227,7 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+        }
       }
       arguments: {
           alignment: "fastcat"
@@ -233,6 +237,7 @@ export visitor_targets = {
   ["4.64"]: {
       type: "pattern"
       source: {
+        [1]: {
           type: "element"
           source: {
               source: "4.64"
@@ -243,6 +248,7 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+        }
       }
       arguments: {
           alignment: "fastcat"
@@ -252,16 +258,18 @@ export visitor_targets = {
   ["-3"]: {
       type: "pattern"
       source: {
-          type: "element"
-          source: {
-              source: "-3"
-              type: "atom"
-          }
-          options: {
-              ops: {}
-              reps: 1
-              weight: 1
-          }
+            [1]: {
+            type: "element"
+            source: {
+                source: "-3"
+                type: "atom"
+            }
+            options: {
+                ops: {}
+                reps: 1
+                weight: 1
+            }
+        }
       }
       arguments: {
           alignment: "fastcat"
@@ -272,15 +280,17 @@ export visitor_targets = {
   ["foo"]: {
     type: "pattern"
     source: {
-        type: "element"
-        source: {
-            source: "foo"
-            type: "atom"
-        }
-        options: {
-            ops: {}
-            reps: 1
-            weight: 1
+        [1]: {
+            type: "element"
+            source: {
+                source: "foo"
+                type: "atom"
+            }
+            options: {
+                ops: {}
+                reps: 1
+                weight: 1
+            }
         }
     }
     arguments: {
@@ -291,6 +301,7 @@ export visitor_targets = {
   ["Bar:2"]: {
       type: "pattern"
       source: {
+        [1]: {
           type: "element"
           source: {
               source: "Bar"
@@ -311,6 +322,7 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+          }
       }
       arguments: {
           alignment: "fastcat"
@@ -327,6 +339,7 @@ export visitor_targets = {
   ["bd*2"]: {
       type: "pattern"
       source: {
+        [1]: {
           type: "element"
           source: {
               source: "bd"
@@ -348,6 +361,7 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+        }
       }
       arguments: {
           alignment: "fastcat"
@@ -356,6 +370,7 @@ export visitor_targets = {
   ["bd/3"]: {
       type: "pattern"
       source: {
+          [1]: {
           type: "element"
           source: {
               source: "bd"
@@ -377,52 +392,79 @@ export visitor_targets = {
               reps: 1
               weight: 1
           }
+        }
       }
       arguments: {
           alignment: "fastcat"
       }
   }
-
   ["hh?"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: {
-          {
-            type: "modifier",
-            op: "degrade",
-            value: {
-              type: "degrade_arg",
-              op: "count",
-              value: 1,
-            },
-          },
-        },
-      },
-    },
-  },
+        type: "pattern"
+        source: {
+            [1]: {
+                type: "element"
+                source: {
+                    source: "hh"
+                    type: "atom"
+                }
+                options: {
+                    ops: {
+                        [1]: {
+                            arguments: {
+                                seed: 0
+                            }
+                            type: "degradeBy"
+                        }
+                    }
+                    reps: 1
+                    weight: 1
+                }
+            }
+        }
+        arguments: {
+            alignment: "fastcat"
+        }
+    }
+
   ["hh???"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: {
-          {
-            type: "modifier",
-            op: "degrade",
-            value: {
-              type: "degrade_arg",
-              op: "count",
-              value: 3,
-            },
-          },
-        },
-      },
-    },
-  },
+        type: "pattern"
+        source: {
+            [1]: {
+                type: "element"
+                source: {
+                    source: "hh"
+                    type: "atom"
+                }
+                options: {
+                    ops: {
+                        [1]: {
+                            arguments: {
+                                seed: 0
+                            }
+                            type: "degradeBy"
+                        }
+                        [2]: {
+                            arguments: {
+                                seed: 1
+                            }
+                            type: "degradeBy"
+                        }
+                        [3]: {
+                            arguments: {
+                                seed: 2
+                            }
+                            type: "degradeBy"
+                        }
+                    }
+                    reps: 1
+                    weight: 1
+                }
+            }
+        }
+        arguments: {
+            alignment: "fastcat"
+        }
+    }
   ["hh?4"]: {
     type: "sequence",
     elements: {
@@ -529,15 +571,17 @@ export visitor_targets = {
   ["hh@2"]: {
     type: "pattern"
     source: {
-        type: "element"
-        source: {
-            source: "hh"
-            type: "atom"
-        }
-        options: {
-            ops: {}
-            reps: 1
-            weight: 2
+        {
+            type: "element"
+            source: {
+                source: "hh"
+                type: "atom"
+            }
+            options: {
+                ops: {}
+                reps: 1
+                weight: 2
+            }
         }
     }
     arguments: {

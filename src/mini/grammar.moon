@@ -33,7 +33,8 @@ tail = V "tail"
 range = V "range"
 
 parseNumber = (num) -> tonumber num
-parseStep = (chars) -> if chars != "." and chars != "_" then return AtomStub chars
+parseStep = (chars) ->
+  if chars != "." and chars != "_" then return AtomStub chars
 
 AtomStub = (source) ->
   {
@@ -62,7 +63,7 @@ ElementStub = (source, options) ->
   )
 
 
-seed = 0 -- neccesary???
+seed = -1 -- neccesary???
 
 --- non-recersive rules
 -- numbers
@@ -88,7 +89,7 @@ quote = P"'" + P'"'
 
 -- chars
 step_char = R("AZ", "az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
-step = ws * (step_char ^ 1) / parseStep * ws
+step = ws * (step_char ^ 1 / parseStep) * ws 
 rest = P"~"
 
 parseFast = (a) ->
@@ -104,7 +105,11 @@ parseRange = (s) ->
   (x) -> tinsert x.options.ops, { type: "range", arguments: { element: s } }
 
 parseDegrade = (a) ->
-  (x) -> tinsert x.options.ops, { type: "degradeBy", arguments: { amount: a, seed: seed + 1 } }
+  if type(a) == "number" then a = tonumber(a)
+  else a = nil
+  (x) ->
+    seed += 1
+    tinsert x.options.ops, { type: "degradeBy", arguments: { amount: a, seed: seed } }
 
 parseEuclid = (p, s, r = 0) ->
   (x) -> tinsert x.options.ops, { type: "euclid", arguments: { pulse: p, steps: s, rotation: r } }
@@ -191,6 +196,6 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
-p parse("bd _ _ sd")
+p parse("hh???")
 
 return { :parse }

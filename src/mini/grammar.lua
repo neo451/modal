@@ -64,7 +64,7 @@ ElementStub = function(source, options)
     end
   })
 end
-seed = 0
+seed = -1
 minus = P("-")
 plus = P("+")
 zero = P("0")
@@ -83,7 +83,7 @@ pipe = ws * P("|") * ws
 dot = ws * P(".") * ws
 quote = P("'") + P('"')
 step_char = R("AZ", "az", "09") + P("-") + P("#") + P(".") + P("^") + P("_")
-step = ws * step_char ^ 1 / parseStep * ws
+step = ws * (step_char ^ 1 / parseStep) * ws
 rest = P("~")
 parseFast = function(a)
   return function(x)
@@ -128,12 +128,18 @@ parseRange = function(s)
   end
 end
 parseDegrade = function(a)
+  if type(a) == "number" then
+    a = tonumber(a)
+  else
+    a = nil
+  end
   return function(x)
+    seed = seed + 1
     return tinsert(x.options.ops, {
       type = "degradeBy",
       arguments = {
         amount = a,
-        seed = seed + 1
+        seed = seed
       }
     })
   end
@@ -263,7 +269,7 @@ grammar = Ct(C(grammar))
 parse = function(string)
   return grammar:match(string)[2]
 end
-p(parse("bd sd"))
+p(parse("hh???"))
 return {
   parse = parse
 }
