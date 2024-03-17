@@ -4,111 +4,266 @@ do
   P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct, _obj_0.Cc
 end
 require("moon.all")
-local token
-token = function(id)
-  return Ct(Cc(id) * C(V(id)))
+local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack_tail, stack_or_choose, polymeter_stack, dot_tail, choose_tail, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, parseNumber, parseStep, AtomStub, PatternStub, ElementStub, seed, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, ws, comma, pipe, dot, quote, step_char, rest, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStackTail, parseChooseTail, parseStackOrChoose, parsePolymeterStack, parseSequence, grammar, parse
+tinsert = table.insert
+sequence = V("sequence")
+group = V("group")
+slice = V("slice")
+sub_cycle = V("sub_cycle")
+polymeter = V("polymeter")
+slow_sequence = V("slow_sequence")
+polymeter_steps = V("polymeter_steps")
+stack_tail = V("stack_tail")
+stack_or_choose = V("stack_or_choose")
+polymeter_stack = V("polymeter_stack")
+dot_tail = V("dot_tail")
+choose_tail = V("dot_tail")
+step = V("step")
+slice_with_ops = V("slice_with_ops")
+op = V("op")
+fast = V("fast")
+slow = V("slow")
+replicate = V("replicate")
+degrade = V("degrade")
+weight = V("weight")
+euclid = V("euclid")
+tail = V("tail")
+range = V("range")
+parseNumber = function(num)
+  return tonumber(num)
 end
-local token_var
-token_var = function(id, patt)
-  return Ct(Cc(id) * C(patt))
+parseStep = function(chars)
+  if chars ~= "." and chars ~= "_" then
+    return AtomStub(chars)
+  end
 end
-local sequence = token("sequence")
-local group = token("group")
-local slice = token("slice")
-local sub_cycle = token("sub_cycle")
-local polymeter = token("polymeter")
-local slow_sequence = token("slow_sequence")
-local polymeter_steps = token("polymeter_steps")
-local subseq_body = token("subseq_body")
-local step = token("step")
-local slice_with_ops = token("slice_with_ops")
-local ops = token("ops")
-local op = token("op")
-local fast = token("fast")
-local slow = token("slow")
-local r1 = token("r1")
-local rn = token("rn")
-local replicate = token("replicate")
-local degrade = token("degrade")
-local degrade1 = token("degrade1")
-local degrader = token("degrader")
-local degraden = token("degraden")
-local weight = token("weight")
-local euclid = token("euclid")
-local euclid_rotation = token("euclid_rotation")
-local tail = token("tail")
-local range = token("range")
-local word = token("word")
-local number = token("number")
-local real = token("real")
-local pos_real = token("pos_real")
-local integer = token("integer")
-local pos_integer = token("pos_integer")
-local rest = token("rest")
-local elongate = token("elongate")
-local other_groups = token_var("other", V("other_groups"))
-local other_seqs = token_var("other", V("other_seqs"))
-local other_subseqs = token_var("other", V("other_subseqs"))
-local other_elements = token_var("other", V("other_elements"))
-local chordmod = V("chordmod")
-local chordname = V("chordname")
-local minus = V("minus")
-local ws = V("ws")
-local grammar = {
-  "root",
-  root = token_var("root", ws ^ -1 * sequence * ws ^ -1),
-  sequence = group * other_groups * other_seqs,
-  other_groups = (ws * -P("|") * P(".") * ws * group) ^ 0,
-  other_seqs = (ws ^ -1 * P("|") * ws ^ -1 * sequence) ^ 0,
-  group = slice_with_ops * other_elements,
-  other_elements = (ws * -P(".") * slice_with_ops) ^ 0,
-  slice_with_ops = slice * op ^ 0,
+AtomStub = function(source)
+  return {
+    type = "atom",
+    source = source
+  }
+end
+PatternStub = function(source, alignment, seed)
+  return {
+    type = "pattern",
+    arguments = {
+      alignment = alignment,
+      seed = seed
+    },
+    source = source
+  }
+end
+ElementStub = function(source, options)
+  return setmetatable({
+    type = "element",
+    source = source,
+    options = options
+  }, {
+    __tostring = function(self)
+      return "ElementStub" .. tostring(self)
+    end
+  })
+end
+seed = 0
+minus = P("-")
+plus = P("+")
+zero = P("0")
+digit = R("09")
+decimal_point = P(".")
+digit1_9 = R("19")
+e = S("eE")
+int = zero + (digit1_9 * digit ^ 0)
+intneg = minus ^ -1 * int
+exp = e * (minus + plus) ^ -1 * digit ^ 1
+frac = decimal_point * digit ^ 1
+number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
+ws = S(" \n\r\t\u00A0") ^ 0
+comma = ws * P(",") * ws
+pipe = ws * P("|") * ws
+dot = ws * P(".") * ws
+quote = P("'") + P('"')
+step_char = R("AZ", "az", "09") + P("-") + P("#") + P(".") + P("^") + P("_")
+step = ws * step_char ^ 1 / parseStep * ws
+rest = P("~")
+parseFast = function(a)
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "stretch",
+      arguments = {
+        amount = a,
+        type = "fast"
+      }
+    })
+  end
+end
+parseSlow = function(a)
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "stretch",
+      arguments = {
+        amount = a,
+        type = "slow"
+      }
+    })
+  end
+end
+parseTail = function(s)
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "tail",
+      arguments = {
+        element = s
+      }
+    })
+  end
+end
+parseRange = function(s)
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "range",
+      arguments = {
+        element = s
+      }
+    })
+  end
+end
+parseDegrade = function(a)
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "degradeBy",
+      arguments = {
+        amount = a,
+        seed = seed + 1
+      }
+    })
+  end
+end
+parseEuclid = function(p, s, r)
+  if r == nil then
+    r = 0
+  end
+  return function(x)
+    return tinsert(x.options.ops, {
+      type = "euclid",
+      arguments = {
+        pulse = p,
+        steps = s,
+        rotation = r
+      }
+    })
+  end
+end
+parseWeight = function(a)
+  return function(x)
+    x.options.weight = (x.options.weight or 1) + (tonumber(a) or 2) - 1
+  end
+end
+parseReplicate = function(a)
+  return function(x)
+    x.options.reps = (x.options.reps or 1) + (tonumber(a) or 2) - 1
+  end
+end
+parseSlices = function(slice, ...)
+  local ops = {
+    ...
+  }
+  local result = ElementStub(slice, {
+    ops = { },
+    weight = 1,
+    reps = 1
+  })
+  for _index_0 = 1, #ops do
+    local op = ops[_index_0]
+    op(result)
+  end
+  return result
+end
+parsePolymeter = function(s, steps)
+  s.arguments.stepsPerCycle = steps
+  return s
+end
+parseSlowSeq = function(s, steps)
+  s.arguments.alignment = "polymeter_slowcat"
+  return s
+end
+parseDotTail = function(...)
+  return {
+    alignment = "feet",
+    list = {
+      ...
+    },
+    seed = seed + 1
+  }
+end
+parseStackTail = function(...)
+  return {
+    alignment = "stack",
+    list = {
+      ...
+    }
+  }
+end
+parseChooseTail = function(...)
+  return {
+    alignment = "rand",
+    list = {
+      ...
+    },
+    seed = seed + 1
+  }
+end
+parseStackOrChoose = function(head, tail)
+  if tail and #tail.list > 0 then
+    return PatternStub({
+      head,
+      unpack(tail.list)
+    }, tail.alignment, tail.seed)
+  else
+    return head
+  end
+end
+parsePolymeterStack = function(head, tail)
+  return PatternStub(tail and {
+    head,
+    unpack(tail.list)
+  } or {
+    head
+  }, "alignment")
+end
+parseSequence = function(...)
+  return PatternStub({
+    ...
+  }, "fastcat")
+end
+grammar = {
+  "stack_or_choose",
+  stack_or_choose = (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / parseStackOrChoose,
+  polymeter_stack = (sequence * stack_tail ^ -1) / parsePolymeterStack,
+  sequence = (slice_with_ops ^ 1) / parseSequence,
+  stack_tail = (comma * sequence) ^ 1 / parseStackTail,
+  dot_tail = (dot * sequence) ^ 1,
+  choose_tail = (pipe * sequence) ^ 1 / parseChooseTail,
+  slice_with_ops = (slice * op ^ 0) / parseSlices,
   slice = step + sub_cycle + polymeter + slow_sequence,
-  sub_cycle = P("[") * ws ^ -1 * subseq_body * ws ^ -1 * P("]"),
-  polymeter = P("{") * ws ^ -1 * subseq_body * ws ^ -1 * P("}") * polymeter_steps ^ -1,
-  slow_sequence = P("<") * ws ^ -1 * subseq_body * ws ^ -1 * P(">"),
+  sub_cycle = P("[") * ws * stack_or_choose * ws * P("]"),
+  polymeter = P("{") * ws * polymeter_stack * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
+  slow_sequence = P("<") * ws * polymeter_stack * ws * P(">") * ws / parseSlowSeq,
   polymeter_steps = P("%") * slice,
-  subseq_body = sequence * other_subseqs,
-  other_subseqs = (ws ^ -1 * P(",") * ws ^ -1 * sequence) ^ 0,
-  step = word + rest + number,
-  op = fast + slow + replicate + degrade + weight + euclid + tail + range,
-  fast = P("*") * slice,
-  slow = P("/") * slice,
-  replicate = (r1 + rn) ^ 1,
-  rn = P("!") * -P("!") * pos_integer,
-  r1 = P("!") * -pos_integer,
-  degrade = degrade1 + degraden + degrader,
-  degrader = P("?") * -P("?") * pos_real,
-  degraden = P("?") * -pos_real * -P("?") * pos_integer,
-  degrade1 = P("?") * -pos_integer * -pos_real,
-  elongate = (ws ^ -1 * P("_")) ^ 0,
-  weight = P("@") * number,
-  euclid = P("(") * ws ^ -1 * sequence * ws ^ -1 * P(",") * ws ^ -1 * sequence * euclid_rotation ^ -1 * ws ^ -1 * P(")"),
-  euclid_rotation = ws ^ -1 * P(",") * ws ^ -1 * sequence,
-  tail = P(":") * number,
-  range = P(":") * number,
-  word = R("az", "AZ") ^ 1 * R("09") ^ -1 * P("'") ^ -1 * chordname ^ -1 * chordmod ^ 0,
-  chordname = R("az", "09") ^ 1,
-  chordmod = P("'") * ((S("id") + R("09")) + P("o") + R("09")),
-  number = real + integer,
-  real = integer * P(".") * pos_integer ^ -1,
-  pos_real = pos_integer * P(".") * pos_integer ^ -1,
-  integer = minus ^ -1 * pos_integer,
-  pos_integer = -minus * R("09") ^ 1,
-  rest = P("~"),
-  minus = P("-"),
-  ws = S(" \n\r\t\u00A0") ^ -1,
-  comma = ws * P(",") * ws,
-  pipe = ws * P("|") * ws,
-  dot = ws * P(".") * ws,
-  quote = P("'") + P('"')
+  op = fast + slow + tail + range + replicate + degrade + weight + euclid,
+  fast = P("*") * slice / parseFast,
+  slow = P("/") * slice / parseSlow,
+  tail = P(":") * slice / parseTail,
+  range = P("..") * ws * slice / parseRange,
+  degrade = P("?") * (number ^ -1) / parseDegrade,
+  replicate = ws * P("!") * (number ^ -1) / parseReplicate,
+  weight = ws * (P("@") + P("_")) * (number ^ -1) / parseWeight,
+  euclid = P("(") * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(")") / parseEuclid
 }
 grammar = Ct(C(grammar))
-local parse
 parse = function(string)
   return grammar:match(string)[2]
 end
-p(parse("45"))
+p(parse("bd sd"))
 return {
   parse = parse
 }

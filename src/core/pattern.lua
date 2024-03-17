@@ -24,26 +24,25 @@ do
   local _obj_0 = require("xi.types")
   Event, Span, State = _obj_0.Event, _obj_0.Span, _obj_0.State
 end
-local visit
-visit = require("xi.mini.visitor").visit
+local parse
+parse = require("xi.mini.grammar").parse
 local op
 op = require("fun").op
 local string_lambda
 string_lambda = require("pl.utils").string_lambda
 local fun = require("fun")
-local sin, min, max, pi, floor, tinsert, p, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+local mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+mini = function(string)
+  local ast = parse(string)
+  return ast
+end
+p(mini("45"))
 sin = math.sin
 min = math.min
 max = math.max
 pi = math.pi
 floor = math.floor
 tinsert = table.insert
-p = function(evs)
-  for _index_0 = 1, #evs do
-    local ev = evs[_index_0]
-    print(ev)
-  end
-end
 C = { }
 create = function(name)
   local withVal
@@ -87,263 +86,6 @@ C.note = function(args)
     }, notemt)
   end
   return reify(args):fmap(chordToStack):outerJoin():fmap(withVal)
-end
-do
-  local _class_0
-  local _base_0 = {
-    eval = function(self, node)
-      local tag = node.type
-      local method = self[tag]
-      return method(self, node)
-    end,
-    sequence = function(self, node)
-      return self:_sequence_elements(node.elements)
-    end,
-    _sequence_elements = function(self, elements)
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        for _index_0 = 1, #elements do
-          local e = elements[_index_0]
-          _accum_0[_len_0] = self:eval(e)
-          _len_0 = _len_0 + 1
-        end
-        elements = _accum_0
-      end
-      local tc_args = { }
-      for _index_0 = 1, #elements do
-        local es = elements[_index_0]
-        local weight = es[1][1] or 1
-        local deg_ratio = es[1][3] or 0
-        local pats
-        do
-          local _accum_0 = { }
-          local _len_0 = 1
-          for _index_1 = 1, #es do
-            local e = es[_index_1]
-            _accum_0[_len_0] = e[2]
-            _len_0 = _len_0 + 1
-          end
-          pats = _accum_0
-        end
-        tinsert(tc_args, {
-          #es * weight,
-          degradeBy(deg_ratio, fastcat(pats))
-        })
-      end
-      return timecat(tc_args)
-    end,
-    random_sequence = function(self, node)
-      local seqs
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        local _list_0 = node.elements
-        for _index_0 = 1, #_list_0 do
-          local e = _list_0[_index_0]
-          _accum_0[_len_0] = self:eval(e)
-          _len_0 = _len_0 + 1
-        end
-        seqs = _accum_0
-      end
-      return randcat(seqs)
-    end,
-    polyrhythm = function(self, node)
-      local seqs
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        local _list_0 = node.seqs
-        for _index_0 = 1, #_list_0 do
-          local seq = _list_0[_index_0]
-          _accum_0[_len_0] = self:eval(seq)
-          _len_0 = _len_0 + 1
-        end
-        seqs = _accum_0
-      end
-      return polyrhythm(seqs)
-    end,
-    polymeter = function(self, node)
-      local fast_params
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        local _list_0 = node.seqs
-        for _index_0 = 1, #_list_0 do
-          local seq = _list_0[_index_0]
-          _accum_0[_len_0] = Fraction(node.steps, #seq.elements)
-          _len_0 = _len_0 + 1
-        end
-        fast_params = _accum_0
-      end
-      return stack((function()
-        local _accum_0 = { }
-        local _len_0 = 1
-        for _, seq, fp in fun.zip(node.seqs, fast_params) do
-          _accum_0[_len_0] = _fast(fp, self:eval(seq))
-          _len_0 = _len_0 + 1
-        end
-        return _accum_0
-      end)())
-    end,
-    element = function(self, node)
-      local modifiers
-      do
-        local _accum_0 = { }
-        local _len_0 = 1
-        local _list_0 = node.modifiers
-        for _index_0 = 1, #_list_0 do
-          local mod = _list_0[_index_0]
-          _accum_0[_len_0] = self:eval(mod)
-          _len_0 = _len_0 + 1
-        end
-        modifiers = _accum_0
-      end
-      local pat = self:eval(node.value)
-      if node.euclid_modifier ~= nil then
-        local k, n, rotation = self:eval(node.euclid_modifier)
-        pat = euclid(k, n, rotation, pat)
-      end
-      local values = {
-        {
-          1,
-          pat,
-          0
-        }
-      }
-      for _index_0 = 1, #modifiers do
-        local modifier = modifiers[_index_0]
-        local n_values
-        for _index_1 = 1, #values do
-          local v = values[_index_1]
-          n_values = modifier(v)
-        end
-        values = n_values
-      end
-      return values
-    end,
-    euclid_modifier = function(self, node)
-      local k = self:eval(node.k)
-      local n = self:eval(node.n)
-      local rotation = nil
-      if node.rotation ~= nil then
-        rotation = self:eval(node.rotation)
-      else
-        rotation = pure(0)
-      end
-      return k, n, rotation
-    end,
-    modifier = function(self, node)
-      local _exp_0 = node.op
-      if "fast" == _exp_0 then
-        local param = self:_sequence_elements({
-          node.value
-        })
-        return function(w_p)
-          return {
-            {
-              w_p[1],
-              fast(param, w_p[2]),
-              w_p[3]
-            }
-          }
-        end
-      elseif "slow" == _exp_0 then
-        local param = self:_sequence_elements({
-          node.value
-        })
-        return function(w_p)
-          return {
-            {
-              w_p[1],
-              slow(param, w_p[2]),
-              w_p[3]
-            }
-          }
-        end
-      elseif "repeat" == _exp_0 then
-        return function(w_p)
-          local _accum_0 = { }
-          local _len_0 = 1
-          for i = 1, node.count + 1 do
-            _accum_0[_len_0] = w_p
-            _len_0 = _len_0 + 1
-          end
-          return _accum_0
-        end
-      elseif "weight" == _exp_0 then
-        return function(w_p)
-          return {
-            {
-              node.value,
-              w_p[2],
-              w_p[3]
-            }
-          }
-        end
-      elseif "degrade" == _exp_0 then
-        local arg = node.value
-        local _exp_1 = arg.op
-        if "count" == _exp_1 then
-          return function(w_p)
-            return {
-              {
-                w_p[1],
-                w_p[2],
-                Fraction(arg.value, arg.value + 1)
-              }
-            }
-          end
-        elseif "value" == _exp_1 then
-          return function(w_p)
-            return {
-              {
-                w_p[1],
-                w_p[2],
-                arg.value
-              }
-            }
-          end
-        end
-      end
-      return function(w_p)
-        return {
-          {
-            w_p[1],
-            w_p[2],
-            w_p[3]
-          }
-        }
-      end
-    end,
-    number = function(self, node)
-      return pure(node.value)
-    end,
-    word = function(self, node)
-      if node.index ~= 0 then
-        return C.sound(node.value):combineLeft(C.n(node.index))
-      end
-      return pure(node.value)
-    end,
-    rest = function(self, node)
-      return silence()
-    end
-  }
-  _base_0.__index = _base_0
-  _class_0 = setmetatable({
-    __init = function() end,
-    __base = _base_0,
-    __name = "Interpreter"
-  }, {
-    __index = _base_0,
-    __call = function(cls, ...)
-      local _self_0 = setmetatable({}, _base_0)
-      cls.__init(_self_0, ...)
-      return _self_0
-    end
-  })
-  _base_0.__class = _class_0
-  Interpreter = _class_0
 end
 do
   local _class_0
@@ -720,10 +462,6 @@ pure = function(value)
     return map(f, cycles)
   end
   return Pattern(query)
-end
-mini = function(string)
-  local ast = visit(string)
-  return Interpreter:eval(ast)
 end
 reify = function(thing)
   local _exp_0 = type(thing)

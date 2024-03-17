@@ -50,12 +50,17 @@ PatternStub = (source, alignment, seed) ->
   }
 
 ElementStub = (source, options) ->
-  {
+  return setmetatable({
     type: "element"
     source: source
     options: options
     -- location: location! -- ?
+  },
+  {
+    __tostring: () => "ElementStub" .. tostring(@)
   }
+  )
+
 
 seed = 0 -- neccesary???
 
@@ -82,8 +87,8 @@ dot = ws * P"." * ws
 quote = P"'" + P'"'
 
 -- chars
-step_char = R("az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
-step = ws * step_char ^ 1 * ws / parseStep
+step_char = R("AZ", "az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
+step = ws * (step_char ^ 1) / parseStep * ws
 rest = P"~"
 
 parseFast = (a) ->
@@ -132,7 +137,7 @@ parseStackTail = (...) -> { alignment: "stack", list: { ... } }
 parseChooseTail = (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
 
 parseStackOrChoose = (head, tail) ->
-  p tail
+  -- p tail
   if tail and #tail.list > 0
     return PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
   else
@@ -140,6 +145,9 @@ parseStackOrChoose = (head, tail) ->
 
 parsePolymeterStack = (head, tail) ->
     PatternStub(tail and { head, unpack(tail.list) } or { head }, "alignment")
+
+parseSequence = (...) -> 
+  PatternStub({ ... }, "fastcat")
 
 --- table of PEG grammar rules
 -- @table grammar
@@ -150,7 +158,7 @@ grammar = {
   polymeter_stack: (sequence * stack_tail ^ -1) / parsePolymeterStack
 
   -- sequence and tail
-  sequence: (slice_with_ops ^ 1) / (s) -> PatternStub(s, "fastcat")
+  sequence: (slice_with_ops ^ 1) / parseSequence
   stack_tail: (comma * sequence) ^ 1 / parseStackTail
   dot_tail: (dot * sequence) ^ 1 
   -- / parseDotTail
@@ -159,7 +167,7 @@ grammar = {
   -- slices
   slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
-  sub_cycle: P"[" * ws * stack_or_choose * ws * P"]"
+  sub_cycle: P"[" * ws * stack_or_choose * ws * P"]" -- TODO:
   polymeter: P"{" * ws * polymeter_stack * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
   slow_sequence: P"<" * ws * polymeter_stack * ws * P">" * ws / parseSlowSeq
   polymeter_steps: P"%" * slice
@@ -183,6 +191,6 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
-p parse "1 . 2 . 3"
+p parse("bd _ _ sd")
 
 return { :parse }

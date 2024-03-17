@@ -7,11 +7,44 @@ import getScale from require "xi.scales"
 import Fraction, tofrac, tofloat from require "xi.fraction"
 import genericParams, aliasParams from require "xi.control"
 import Event, Span, State from require "xi.types"
-import visit from require "xi.mini.visitor"
+import parse from require "xi.mini.grammar"
 import op from require "fun"
 import string_lambda from require("pl.utils")
 fun = require "fun"
 local *
+
+-- p = (evs) ->
+--   for ev in *evs 
+--     print ev
+
+-- applyOpts = (parent, enter) ->
+--   (pat, i) ->
+--     ast = parent.source[i]
+--     options = ast.options
+--     ops = options.ops -- ?
+--
+--     if ops
+--       for op in *ops
+--         switch op.type
+--           when "stretch"
+--             { type, amount } op.arguments
+--             if type = "fast"
+--               pat = fast enter(amount), reify pat -- recursive??
+--             elseif type = "slow"
+--               pat = slow enter(amount), pat
+--             else
+--               print("mini: stretch: type must be one of ${legalTypes.join('|')} but got ${type}")
+
+
+--- Turns mini-notation(string) into a pattern
+-- @param string
+-- @return Pattern
+mini = (string) ->
+  ast = parse string
+  return ast
+  -- Interpreter\eval ast
+
+p mini "45"
 
 sin = math.sin
 min = math.min
@@ -19,10 +52,6 @@ max = math.max
 pi = math.pi
 floor = math.floor
 tinsert = table.insert
-
-p = (evs) ->
-  for ev in *evs 
-    print ev
 
 C = {}
 
@@ -48,90 +77,6 @@ C.note = (args) ->
   withVal = (v) -> setmetatable { note: v }, notemt
   return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
 
-class Interpreter
-  eval:(node) =>
-    tag = node.type
-    method = @[tag]
-    return method(@, node)
-
-  sequence:(node) =>
-    @_sequence_elements(node.elements)
-
-  _sequence_elements:(elements) =>
-    elements = [@eval(e) for e in *elements]
-    tc_args = {}
-    for es in *elements
-      weight = es[1][1] or 1
-      deg_ratio = es[1][3] or 0
-      pats = [e[2] for e in *es]
-      tinsert tc_args, { #es * weight, degradeBy(deg_ratio, fastcat(pats)) }
-    return timecat tc_args
-
-  random_sequence:(node) =>
-    seqs = [@eval(e) for e in *node.elements]
-    return randcat seqs
-
-  polyrhythm:(node) =>
-    seqs = [@eval(seq) for seq in *node.seqs]
-    return polyrhythm seqs
-
-  polymeter:(node) =>
-    fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
-    return stack([_fast fp, @eval(seq) for _, seq, fp in fun.zip(node.seqs, fast_params)])
-
-  element:(node) =>
-    modifiers = [ @eval(mod) for mod in *node.modifiers ]
-    pat = @eval(node.value)
-
-    if node.euclid_modifier != nil
-      k, n, rotation = @eval node.euclid_modifier
-      pat = euclid k, n, rotation, pat
-
-    values = { { 1, pat, 0 } }
-    for modifier in *modifiers
-      local n_values
-      for v in *values
-        n_values =  modifier(v)
-      values = n_values
-    return values
-
-  euclid_modifier:(node) =>
-    k = @eval node.k
-    n = @eval node.n
-    rotation = nil
-    if node.rotation != nil then rotation = @eval node.rotation
-    else rotation = pure(0)
-    return k, n, rotation
-
-  modifier:(node) =>
-    switch node.op
-      when "fast"
-        param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], fast(param, w_p[2]), w_p[3] } }
-      when "slow"
-        param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], slow(param, w_p[2]), w_p[3] } }
-      when "repeat"
-        return (w_p) -> [ w_p for i = 1, node.count + 1 ]
-      when "weight"
-        return (w_p) -> { { node.value, w_p[2], w_p[3] } }
-      when "degrade"
-        arg = node.value
-        switch arg.op
-          when "count"
-            return (w_p) -> { { w_p[1], w_p[2], Fraction(arg.value, arg.value + 1) } }
-          when "value"
-            return (w_p) -> { { w_p[1], w_p[2], arg.value } }
-    return (w_p) -> { { w_p[1], w_p[2], w_p[3] } }
-
-  number:(node) => pure node.value
-  -- TODO: not right
-  word:(node) =>
-    if node.index != 0
-      return C.sound(node.value)\combineLeft(C.n(node.index))
-    return pure node.value
-
-  rest:(node) => silence!
 
 class Pattern
   new:(query = -> {}) => @query = query
@@ -345,12 +290,6 @@ pure = (value) ->
     map f, cycles
   Pattern query
 
---- Turns mini-notation(string) into a pattern
--- @param string
--- @return Pattern
-mini = (string) ->
-  ast = visit string
-  Interpreter\eval ast
 
 --- Turns something into a pattern, unless it's already a pattern
 -- @local

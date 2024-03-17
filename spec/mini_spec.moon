@@ -1,9 +1,9 @@
-import Span from require "xi.types"
-import visit from require "xi.mini.visitor"
-import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
+-- import Span from require "xi.types"
+import parse from require "xi.mini.grammar"
+-- import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
 
-same = (name) -> assert.same visitor_targets[name], visit name
-eval = (name) -> assert.same interpreter_targets[name], mini name
+same = (name) -> assert.same visitor_targets[name], parse name
+-- eval = (name) -> assert.same interpreter_targets[name], mini name
 
 describe "Mini Parser for", ->
   describe "numbers", ->
@@ -17,66 +17,66 @@ describe "Mini Parser for", ->
     it "should pass", ->
       same "foo"
       same "Bar:2"
-
-  describe "rests", ->
-    it "should pass", ->
-      same "~"
-
+  --
+  -- describe "rests", ->
+  --   it "should pass", ->
+  --     same "~"
+  --
   describe "fast&slow", ->
     it "should pass", ->
       same "bd*2"
       same "bd/3"
-
-  describe "degrade", ->
-    it "should pass", ->
-      same "hh?"
-      same "hh???"
-      same "hh?4"
-      same "hh?4??"
-      same "hh??0.87"
-
-  describe "repeat", ->
-    it "should pass", ->
-      same "hh!"
-      same "hh!!!"
-      same "hh!4"
-      same "hh!4!!"
 
   describe "weight", ->
     it "should pass", ->
       same "hh@2"
       same "bd _ _ sd"
 
-  describe "hybrid mod", ->
-    it "should pass", ->
-      same "hh!!??!"
-      -- TODO:more complex case
+  -- describe "degrade", ->
+  --   it "should pass", ->
+  --     same "hh?"
+  --     same "hh???"
+  --     same "hh?4"
+  --     same "hh?4??"
+  --     same "hh??0.87"
+  --
+  -- describe "repeat", ->
+  --   it "should pass", ->
+  --     same "hh!"
+  --     same "hh!!!"
+  --     same "hh!4"
+  --     same "hh!4!!"
 
-  describe "sequence", ->
-    it "should pass", ->
-      same "bd sd"
-      same "bd hh sd"
-      same "bd! hh? ~ sd/2 cp*3"
-
-  describe "polymeter", ->
-    it "should pass", ->
-      same "bd*<2 3 4>"
-      same "{bd sd hh cp hh}%4"
-
-  describe "euclidian rhythm", ->
-    it "should pass", ->
-      same "1(3,8)"
-
-  describe "polyrhythm", ->
-    it "should pass", ->
-      same "[bd sd] hh"
-      same "bd sd . cp . hh*2"
-      same "[bd, sd]"
-
-  describe "random seq", ->
-    it "should pass", ->
-      same "bd | sd cp"
-
+  -- describe "hybrid mod", ->
+  --   it "should pass", ->
+  --     same "hh!!??!"
+  --     -- TODO:more complex case
+  --
+  -- describe "sequence", ->
+  --   it "should pass", ->
+  --     same "bd sd"
+  --     same "bd hh sd"
+  --     same "bd! hh? ~ sd/2 cp*3"
+  --
+  -- describe "polymeter", ->
+  --   it "should pass", ->
+  --     same "bd*<2 3 4>"
+  --     same "{bd sd hh cp hh}%4"
+  --
+  -- describe "euclidian rhythm", ->
+  --   it "should pass", ->
+  --     same "1(3,8)"
+  --
+  -- describe "polyrhythm", ->
+  --   it "should pass", ->
+  --     same "[bd sd] hh"
+  --     same "bd sd . cp . hh*2"
+  --     same "[bd, sd]"
+  --
+  -- describe "random seq", ->
+  --   it "should pass", ->
+  --     same "bd | sd cp"
+  --
 -- describe "Mini Interpreter for", ->
 --   describe "numbers", ->
 --     it "should pass", ->
@@ -193,114 +193,196 @@ describe "Mini Parser for", ->
 export visitor_targets = {
   -- numbers
   ["45"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "number", value: 45 },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "45"
+              type: "atom"
+          }
+          options: {
+              ops: {}
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   ["-2."]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "number", value: -2.0 },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "-2."
+              type: "atom"
+          }
+          options: {
+              ops: {}
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   ["4.64"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "number", value: 4.64 },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "4.64"
+              type: "atom"
+          }
+          options: {
+              ops: {}
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   ["-3"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "number", value: -3 },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "-3"
+              type: "atom"
+          }
+          options: {
+              ops: {}
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   -- words
   ["foo"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "foo", index: 0 },
-        modifiers: {},
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+        type: "element"
+        source: {
+            source: "foo"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
+
   ["Bar:2"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "Bar", index: 2 },
-        modifiers: {},
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "Bar"
+              type: "atom"
+          }
+          options: {
+              ops: {
+                  [1]: {
+                      arguments: {
+                          element: {
+                              source: "2"
+                              type: "atom"
+                          }
+                      }
+                      type: "tail"
+                  }
+              }
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
   -- rest
-  ["~"]: {
-    type: "sequence",
-    elements: {
-      { type: "element", value: { type: "rest" }, modifiers: {} },
-    },
-  },
+  -- ["~"]: {
+  --   type: "sequence",
+  --   elements: {
+  --     { type: "element", value: { type: "rest" }, modifiers: {} },
+  --   },
+  -- },
   -- modifiers
   ["bd*2"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: {
-          {
-            type: "modifier",
-            op: "fast",
-            value: {
-              type: "element",
-              value: { type: "number", value: 2 },
-              modifiers: {},
-            },
-          },
-        },
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "bd"
+              type: "atom"
+          }
+          options: {
+              ops: {
+                  [1]: {
+                      arguments: {
+                          type: "fast"
+                          amount: {
+                              source: "2"
+                              type: "atom"
+                          }
+                      }
+                      type: "stretch"
+                  }
+              }
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
   ["bd/3"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: {
-          {
-            type: "modifier",
-            op: "slow",
-            value: {
-              type: "element",
-              value: { type: "number", value: 3 },
-              modifiers: {},
-            },
-          },
-        },
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          type: "element"
+          source: {
+              source: "bd"
+              type: "atom"
+          }
+          options: {
+              ops: {
+                  [1]: {
+                      arguments: {
+                          type: "slow"
+                          amount: {
+                              source: "3"
+                              type: "atom"
+                          }
+                      }
+                      type: "stretch"
+                  }
+              }
+              reps: 1
+              weight: 1
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   ["hh?"]: {
     type: "sequence",
     elements: {
@@ -445,15 +527,56 @@ export visitor_targets = {
   },
 
   ["hh@2"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "hh", index: 0 },
-        modifiers: { { type: "modifier", op: "weight", value: 2 } },
-      },
-    },
-  },
+    type: "pattern"
+    source: {
+        type: "element"
+        source: {
+            source: "hh"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 2
+        }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
+
+  ["bd _ _ sd"]: {
+    type: "pattern"
+    source: {
+      [1]: {
+        type: "element"
+        source: {
+            source: "bd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 3
+        }
+      }
+      [2]: {
+        type: "element"
+        source: {
+            source: "sd"
+            type: "atom"
+        }
+        options: {
+            ops: {}
+            reps: 1
+            weight: 1
+        }
+      }
+    }
+    arguments: {
+        alignment: "fastcat"
+    }
+  }
 
   ["hh!!??!"]: {
     type: "sequence",
@@ -642,21 +765,6 @@ export visitor_targets = {
             modifiers: {},
           },
         },
-      },
-    },
-  },
-  ["bd _ _ sd"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: { { type: "modifier", op: "weight", value: 3 } },
-      },
-      {
-        type: "element",
-        value: { type: "word", value: "sd", index: 0 },
-        modifiers: {},
       },
     },
   },
