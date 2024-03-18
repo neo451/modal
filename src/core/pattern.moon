@@ -40,7 +40,8 @@ patternifyAST = (ast) ->
     when "pattern"
       resolveReplications ast
       children = ast.source
-      return map enter, children
+      children = map enter, children
+      return fastcat children
     when "element"
       return enter(ast.source)
     when "atom"
@@ -51,21 +52,12 @@ patternifyAST = (ast) ->
 
       return pure value
 
-  -- return ast
-
-helper = (code) ->
-  ast = parse code
-  patternifyAST(ast)
-
-
-
 --- Turns mini-notation(string) into a pattern
 -- @param string
 -- @return Pattern
-mini = (string) ->
-  ast = parse string
-  return ast
-  -- Interpreter\eval ast
+mini = (code) ->
+  ast = parse code
+  patternifyAST(ast)
 
 sin = math.sin
 min = math.min
@@ -784,9 +776,6 @@ apply = (x, pat) -> pat .. x
 sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
-
-print (helper "45")[1]
--- print _ply 2, mini("1 2")
 return {
   :C
   :Pattern

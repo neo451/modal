@@ -1,9 +1,9 @@
 -- import Span from require "xi.types"
 import parse from require "xi.mini.grammar"
--- import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
+import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
 
 same = (name) -> assert.same visitor_targets[name], parse name
--- eval = (name) -> assert.same interpreter_targets[name], mini name
+eval = (name) -> assert.same interpreter_targets[name], mini name
 
 describe "Mini Parser for", ->
   describe "numbers", ->
@@ -17,11 +17,7 @@ describe "Mini Parser for", ->
     it "should pass", ->
       same "foo"
       same "Bar:2"
-  --
-  -- describe "rests", ->
-  --   it "should pass", ->
-  --     same "~"
-  --
+
   describe "fast&slow", ->
     it "should pass", ->
       same "bd*2"
@@ -78,27 +74,27 @@ describe "Mini Parser for", ->
   --   it "should pass", ->
   --     same "bd | sd cp"
   --
--- describe "Mini Interpreter for", ->
---   describe "numbers", ->
---     it "should pass", ->
---       eval "45"
---       eval "-2."
---       eval "4.64"
---       eval "-3"
---
---   describe "words", ->
---     it "should pass", ->
---       eval "foo"
+describe "Mini Interpreter for", ->
+  describe "numbers", ->
+    it "should pass", ->
+      eval "45"
+      eval "-2."
+      eval "4.64"
+      eval "-3"
+
+  describe "words", ->
+    it "should pass", ->
+      eval "foo"
 --       eval "Bar:2"
---
---   describe "rests", ->
---     it "should pass", ->
---       eval "~"
---
---   describe "sequences", ->
---     it "should pass", ->
---       eval "bd sd"
---       eval "bd hh sd"
+
+  -- describe "rests", ->
+  --   it "should pass", ->
+  --     eval "~"
+
+  describe "sequences", ->
+    it "should pass", ->
+      eval "bd sd"
+      eval "bd hh sd"
 --       eval "bd hh@2"
 --       -- eval "bd hh@3 sd@2"
 --       eval "bd! hh? ~ sd/2 cp*3"
@@ -148,15 +144,15 @@ describe "Mini Parser for", ->
 --       eval "bd*<2 3 4>"
 --       eval "{bd sd hh cp hh}%4"
 --
--- export interpreter_targets = {
---   -- numbers
---   "45": pure 45
---   "-2.": pure -2.0
---   "4.64": pure 4.64
---   "-3": pure -3
---   -- word
---   "foo": pure "foo"
---   "Bar:2": C.s"Bar" .. C.n"2"
+export interpreter_targets = {
+  -- numbers
+  "45": pure 45
+  "-2.": pure -2.0
+  "4.64": pure 4.64
+  "-3": pure -3
+  -- word
+  "foo": pure "foo"
+  -- "Bar:2": C.s"Bar" .. C.n"2"
 --   -- rest
 --   "~": silence!
 --   -- modifiers
@@ -165,9 +161,9 @@ describe "Mini Parser for", ->
 --   "hh?": degrade "hh"
 --   "hh???": degrade degrade degrade "hh"
 --   -- "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
---   -- sequences
---   "bd sd": fastcat "bd", "sd"
---   "bd hh sd": fastcat "bd", "hh", "sd"
+  -- sequences
+  "bd sd": fastcat "bd", "sd"
+  "bd hh sd": fastcat "bd", "hh", "sd"
 --   "hh@2": pure "hh"
 --   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
 --   -- TODO: timecat not right? mini is right
@@ -189,8 +185,8 @@ describe "Mini Parser for", ->
 --   "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
 --   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
 --   "bd*<2 3 4>": slowcat fast(2, mini"bd"), fast(3, mini"bd"), fast(4, mini"bd")
--- }
---
+}
+
 export visitor_targets = {
   -- numbers
   ["45"]: {

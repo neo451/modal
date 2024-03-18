@@ -1,38 +1,27 @@
-local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
+local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, resolveReplications, applyOptions, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
 do
   local _obj_0 = require("xi.utils")
   map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
 end
-local bjork
 bjork = require("xi.euclid").bjork
-local parseChord
 parseChord = require("xi.chords").parseChord
-local getScale
 getScale = require("xi.scales").getScale
-local Fraction, tofrac, tofloat
 do
   local _obj_0 = require("xi.fraction")
   Fraction, tofrac, tofloat = _obj_0.Fraction, _obj_0.tofrac, _obj_0.tofloat
 end
-local genericParams, aliasParams
 do
   local _obj_0 = require("xi.control")
   genericParams, aliasParams = _obj_0.genericParams, _obj_0.aliasParams
 end
-local Event, Span, State
 do
   local _obj_0 = require("xi.types")
   Event, Span, State = _obj_0.Event, _obj_0.Span, _obj_0.State
 end
-local parse
 parse = require("xi.mini.grammar").parse
-local op
 op = require("fun").op
-local string_lambda
 string_lambda = require("pl.utils").string_lambda
-local fun = require("fun")
-local resolveReplications, applyOptions, patternifyAST, helper, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
-print(pure(1))
+fun = require("fun")
 resolveReplications = id
 applyOptions = id
 patternifyAST = function(ast)
@@ -44,8 +33,8 @@ patternifyAST = function(ast)
   if "pattern" == _exp_0 then
     resolveReplications(ast)
     local children = ast.source
-    map(enter, children)
-    return p(children)
+    children = map(enter, children)
+    return fastcat(children)
   elseif "element" == _exp_0 then
     return enter(ast.source)
   elseif "atom" == _exp_0 then
@@ -59,13 +48,9 @@ patternifyAST = function(ast)
     return pure(value)
   end
 end
-helper = function(code)
+mini = function(code)
   local ast = parse(code)
   return patternifyAST(ast)
-end
-mini = function(string)
-  local ast = parse(string)
-  return ast
 end
 sin = math.sin
 min = math.min
@@ -87,8 +72,9 @@ create = function(name)
   end
   C[name] = func
 end
-for _index_0 = 1, #genericParams do
-  local name = genericParams[_index_0]
+local _list_0 = genericParams
+for _index_0 = 1, #_list_0 do
+  local name = _list_0[_index_0]
   local param = name[2]
   create(param)
   if aliasParams[param] ~= nil then
