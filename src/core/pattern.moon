@@ -13,26 +13,29 @@ import op from require "fun"
 import string_lambda from require("pl.utils")
 fun = require "fun"
 
--- applyOpts = (parent, enter) ->
---   (pat, i) ->
---     ast = parent.source[i]
---     options = ast.options
---     ops = options.ops -- ?
---
---     if ops
---       for op in *ops
---         switch op.type
---           when "stretch"
---             { type, amount } op.arguments
---             if type = "fast"
---               pat = fast enter(amount), reify pat -- recursive??
---             elseif type = "slow"
---               pat = slow enter(amount), pat
---             else
---               print("mini: stretch: type must be one of ${legalTypes.join('|')} but got ${type}")
+applyOptions = (parent, enter) ->
+  return (pat, i) ->
+    ast = parent.source[i]
+    options = ast.options
+    ops = options.ops -- ?
+
+    if ops
+      for op in *ops
+        switch op.type
+          when "stretch"
+            type_, amount = op.arguments.type, op.arguments.amount
+            switch type_
+              when "fast"
+                pat = fast enter(amount), pat -- recursive??
+              when "slow"
+                pat = slow enter(amount), pat
+              else
+                print("mini: stretch: type must be one of fast of slow")
+            return pat
+    return pat
 
 resolveReplications = id
-applyOptions = id
+-- applyOptions = id
 
 patternifyAST = (ast) ->
   enter = (node) -> patternifyAST(node)
@@ -41,6 +44,7 @@ patternifyAST = (ast) ->
       resolveReplications ast
       children = ast.source
       children = map enter, children
+      children = [ applyOptions(ast, enter)(child, index) for index, child in pairs children ]
       return fastcat children
     when "element"
       return enter(ast.source)
@@ -308,7 +312,7 @@ pure = (value) ->
 -- @local
 -- @return pattern
 reify = (thing) ->
-  switch type thing
+  switch type(thing)
     when "string" then
       if string_lambda thing
         return string_lambda thing
@@ -774,6 +778,8 @@ scale = _patternify _scale
 -- helpers
 apply = (x, pat) -> pat .. x
 sl = string_lambda
+
+-- print mini "bd/3"
 
 -- TODO: wchoose, tests for the new functions
 return {

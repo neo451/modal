@@ -1,6 +1,8 @@
+import describe, it from require "busted"
 -- import Span from require "xi.types"
 import parse from require "xi.mini.grammar"
 import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
+local *
 
 same = (name) -> assert.same visitor_targets[name], parse name
 eval = (name) -> assert.same interpreter_targets[name], mini name
@@ -57,10 +59,10 @@ describe "Mini Parser for", ->
       same "bd sd"
       same "bd hh sd"
   --     same "bd! hh? ~ sd/2 cp*3"
-  --
-  -- describe "polymeter", ->
-  --   it "should pass", ->
-  --     same "bd*<2 3 4>"
+
+  describe "polymeter", ->
+    it "should pass", ->
+      same "bd*<2 3 4>"
   --     same "{bd sd hh cp hh}%4"
   --
   --
@@ -111,10 +113,10 @@ describe "Mini Interpreter for", ->
 --     it "should pass", ->
 --       eval "hh@2"
 --
---   describe "fast&slow", ->
---     it "should pass", ->
---       eval "bd*2"
---       eval "bd/3"
+  describe "fast&slow", ->
+    it "should pass", ->
+      eval "bd*2"
+      eval "bd/3"
 --
 --   describe "degrade", ->
 --     it "should pass", ->
@@ -144,7 +146,7 @@ describe "Mini Interpreter for", ->
 --       eval "bd*<2 3 4>"
 --       eval "{bd sd hh cp hh}%4"
 --
-export interpreter_targets = {
+interpreter_targets = {
   -- numbers
   "45": pure 45
   "-2.": pure -2.0
@@ -156,8 +158,8 @@ export interpreter_targets = {
 --   -- rest
 --   "~": silence!
 --   -- modifiers
---   "bd*2": fast 2, mini"bd"
---   "bd/3": slow 3, mini"bd"
+  "bd*2": fast 2, pure"bd"
+  "bd/3": slow 3, pure"bd"
 --   "hh?": degrade "hh"
 --   "hh???": degrade degrade degrade "hh"
 --   -- "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
@@ -166,7 +168,6 @@ export interpreter_targets = {
   "bd hh sd": fastcat "bd", "hh", "sd"
 --   "hh@2": pure "hh"
 --   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
---   -- TODO: timecat not right? mini is right
 --   -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
 --   "hh!": fastcat "hh", "hh"
 --   "hh!!!": fastcat "hh", "hh", "hh", "hh"
@@ -187,7 +188,7 @@ export interpreter_targets = {
 --   "bd*<2 3 4>": slowcat fast(2, mini"bd"), fast(3, mini"bd"), fast(4, mini"bd")
 }
 
-export visitor_targets = {
+visitor_targets = {
   -- numbers
   ["45"]: {
       type: "pattern"
@@ -969,61 +970,91 @@ export visitor_targets = {
       },
     },
     type: "sequence",
-  },
+  }
+
   ["bd*<2 3 4>"]: {
-    type: "sequence",
-    elements: {
-      {
-        type: "element",
-        value: { type: "word", value: "bd", index: 0 },
-        modifiers: {
-          {
-            type: "modifier",
-            op: "fast",
-            value: {
-              type: "element",
-              value: {
-                type: "polymeter",
-                seqs: {
-                  {
-                    type: "sequence",
-                    elements: {
-                      {
-                        type: "element",
-                        value: {
-                          type: "number",
-                          value: 2,
-                        },
-                        modifiers: {},
-                      },
-                      {
-                        type: "element",
-                        value: {
-                          type: "number",
-                          value: 3,
-                        },
-                        modifiers: {},
-                      },
-                      {
-                        type: "element",
-                        value: {
-                          type: "number",
-                          value: 4,
-                        },
-                        modifiers: {},
-                      },
-                    },
-                  },
-                },
-                steps: 1,
-              },
-              modifiers: {},
-            },
-          },
-        },
-      },
-    },
-  },
+      type: "pattern"
+      source: {
+          [1]: {
+              type: "element"
+              source: {
+                  source: "bd"
+                  type: "atom"
+              }
+              options: {
+                  ops: {
+                      [1]: {
+                          arguments: {
+                              type: "fast"
+                              amount: {
+                                  type: "pattern"
+                                  source: {
+                                      [1]: {
+                                          type: "pattern"
+                                          source: {
+                                              [1]: {
+                                                  type: "element"
+                                                  source: {
+                                                      source: "2"
+                                                      type: "atom"
+                                                  }
+                                                  options: {
+                                                      ops: {
+                                                      }
+                                                      reps: 1
+                                                      weight: 1
+                                                  }
+                                              }
+                                              [2]: {
+                                                  type: "element"
+                                                  source: {
+                                                      source: "3"
+                                                      type: "atom"
+                                                  }
+                                                  options: {
+                                                      ops: {
+                                                      }
+                                                      reps: 1
+                                                      weight: 1
+                                                  }
+                                              }
+                                              [3]: {
+                                                  type: "element"
+                                                  source: {
+                                                      source: "4"
+                                                      type: "atom"
+                                                  }
+                                                  options: {
+                                                      ops: {
+                                                      }
+                                                      reps: 1
+                                                      weight: 1
+                                                  }
+                                              }
+                                          }
+                                          arguments: {
+                                              alignment: "fastcat"
+                                          }
+                                      }
+                                  }
+                                  arguments: {
+                                      alignment: "polymeter_slowcat"
+                                  }
+                              }
+                          }
+                          type: "stretch"
+                      }
+                  }
+                  reps: 1
+                  weight: 1
+              }
+          }
+      }
+      arguments: {
+          alignment: "fastcat"
+      }
+  }
+
   -- euclid_modifier
   ["1(3,8)"]: {
       type: "pattern"

@@ -1,4 +1,4 @@
-local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, resolveReplications, applyOptions, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, applyOptions, resolveReplications, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
 do
   local _obj_0 = require("xi.utils")
   map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
@@ -22,8 +22,33 @@ parse = require("xi.mini.grammar").parse
 op = require("fun").op
 string_lambda = require("pl.utils").string_lambda
 fun = require("fun")
+applyOptions = function(parent, enter)
+  return function(pat, i)
+    local ast = parent.source[i]
+    local options = ast.options
+    local ops = options.ops
+    if ops then
+      for _index_0 = 1, #ops do
+        local op = ops[_index_0]
+        local _exp_0 = op.type
+        if "stretch" == _exp_0 then
+          local type_, amount = op.arguments.type, op.arguments.amount
+          local _exp_1 = type_
+          if "fast" == _exp_1 then
+            pat = fast(enter(amount), pat)
+          elseif "slow" == _exp_1 then
+            pat = slow(enter(amount), pat)
+          else
+            print("mini: stretch: type must be one of fast of slow")
+          end
+          return pat
+        end
+      end
+    end
+    return pat
+  end
+end
 resolveReplications = id
-applyOptions = id
 patternifyAST = function(ast)
   local enter
   enter = function(node)
@@ -34,6 +59,15 @@ patternifyAST = function(ast)
     resolveReplications(ast)
     local children = ast.source
     children = map(enter, children)
+    do
+      local _accum_0 = { }
+      local _len_0 = 1
+      for index, child in pairs(children) do
+        _accum_0[_len_0] = applyOptions(ast, enter)(child, index)
+        _len_0 = _len_0 + 1
+      end
+      children = _accum_0
+    end
     return fastcat(children)
   elseif "element" == _exp_0 then
     return enter(ast.source)
@@ -1168,6 +1202,7 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
+print(mini("bd/3"))
 return {
   C = C,
   Pattern = Pattern,
