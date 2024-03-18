@@ -1,7 +1,7 @@
 import describe, it from require "busted"
 -- import Span from require "xi.types"
 import parse from require "xi.mini.grammar"
-import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
+import mini, pure, silence, euclid, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
 local *
 
 same = (name) -> assert.same visitor_targets[name], parse name
@@ -100,6 +100,10 @@ describe "Mini Interpreter for", ->
 --       eval "bd hh@2"
 --       -- eval "bd hh@3 sd@2"
 --       eval "bd! hh? ~ sd/2 cp*3"
+
+  describe "euclidian rhythm", ->
+    it "should pass", ->
+      eval "bd(3,8,1)"
 --
 --   describe "repeat", ->
 --     it "should pass", ->
@@ -112,7 +116,7 @@ describe "Mini Interpreter for", ->
 --   describe "weight", ->
 --     it "should pass", ->
 --       eval "hh@2"
---
+
   describe "fast&slow", ->
     it "should pass", ->
       eval "bd*2"
@@ -166,6 +170,7 @@ interpreter_targets = {
   -- sequences
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
+  "bd(3,8,1)": euclid 3, 8, 1, pure"bd"
 --   "hh@2": pure "hh"
 --   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
 --   -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }

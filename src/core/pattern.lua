@@ -41,7 +41,9 @@ applyOptions = function(parent, enter)
           else
             print("mini: stretch: type must be one of fast of slow")
           end
-          return pat
+        elseif "euclid" == _exp_0 then
+          local steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
+          pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
         end
       end
     end
@@ -898,7 +900,7 @@ sometimes = function(func, pat)
   return sometimesBy(0.5, func, pat)
 end
 struct = function(boolpat, pat)
-  return boolpat:fmap(function(b)
+  return (fastcat(boolpat)):fmap(function(b)
     return function(val)
       if b then
         return val
@@ -1202,7 +1204,7 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(mini("bd/3"))
+print(mini("bd(3,8,1)"))
 return {
   C = C,
   Pattern = Pattern,

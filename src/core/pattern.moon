@@ -31,7 +31,9 @@ applyOptions = (parent, enter) ->
                 pat = slow enter(amount), pat
               else
                 print("mini: stretch: type must be one of fast of slow")
-            return pat
+          when "euclid"
+            steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
+            pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
     return pat
 
 resolveReplications = id
@@ -624,7 +626,7 @@ sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
 
 -- @section manipulating structure
 struct = (boolpat, pat) ->
-  boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
+  (fastcat boolpat)\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 euclid = _patternify_p_p_p _euclid
@@ -779,7 +781,7 @@ scale = _patternify _scale
 apply = (x, pat) -> pat .. x
 sl = string_lambda
 
--- print mini "bd/3"
+print mini "bd(3,8,1)"
 
 -- TODO: wchoose, tests for the new functions
 return {
