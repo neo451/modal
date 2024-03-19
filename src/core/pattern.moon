@@ -36,14 +36,26 @@ applyOptions = (parent, enter) ->
             pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
     return pat
 
-resolveReplications = id
--- applyOptions = id
+resolveReplications = (ast) ->
+  repChild = (child) ->
+    reps = child.options.reps
+    child.options.reps = nil
+    return [ child for i = 1, reps ]
+
+  unflat = [repChild(child) for child in *ast.source ]
+  res = {}
+  -- flatten!
+  for element in *unflat do
+    for elem in *element do
+      tinsert res, elem
+  ast.source = res
+  return ast
 
 patternifyAST = (ast) ->
   enter = (node) -> patternifyAST(node)
   switch ast.type
     when "pattern"
-      resolveReplications ast
+      ast = resolveReplications ast
       children = ast.source
       children = map enter, children
       children = [ applyOptions(ast, enter)(child, index) for index, child in pairs children ]
@@ -781,7 +793,7 @@ scale = _patternify _scale
 apply = (x, pat) -> pat .. x
 sl = string_lambda
 
-print mini "bd(3,8,1)"
+print mini "<bd sd>"
 
 -- TODO: wchoose, tests for the new functions
 return {
