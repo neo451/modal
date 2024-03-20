@@ -89,8 +89,8 @@ quote = P"'" + P'"'
 
 -- chars
 step_char = R("AZ", "az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
-step = ws * (step_char ^ 1 / parseStep) * ws 
-rest = P"~"
+-- step_char = R("AZ", "az", "09") + P"-" + P"#" + P"^" + P"_" -- upgrade to unicode
+step = ws * (step_char ^ 1) / parseStep * ws
 
 parseFast = (a) ->
   (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "fast" } }
@@ -141,10 +141,10 @@ parseStackTail = (...) -> { alignment: "stack", list: { ... } }
 
 parseChooseTail = (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
 
-parseStackOrChoose = (head, tail) ->
-  -- p tail
-  if tail and #tail.list > 0
-    return PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
+parseStackOrChoose = (head, ...) ->
+  tail = { ... }
+  if tail and #tail > 0
+    return PatternStub({ head, unpack(tail) }, tail.alignment, tail.seed)
   else
     return head
 
@@ -159,7 +159,7 @@ parseSequence = (...) ->
 grammar = {
   "stack_or_choose", -- initial rule
 
-  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / parseStackOrChoose
+  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ 0) / parseStackOrChoose
   polymeter_stack: (sequence * stack_tail ^ -1) / parsePolymeterStack
 
   -- sequence and tail
@@ -196,6 +196,7 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
--- p parse("")
+-- p parse("bd sd . hh hh hh . cp bd")
+-- p parse(".")
 
 return { :parse }

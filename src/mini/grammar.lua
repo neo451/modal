@@ -4,7 +4,7 @@ do
   P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct, _obj_0.Cc
 end
 require("moon.all")
-local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack_tail, stack_or_choose, polymeter_stack, dot_tail, choose_tail, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, parseNumber, parseStep, AtomStub, PatternStub, ElementStub, seed, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, ws, comma, pipe, dot, quote, step_char, rest, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStackTail, parseChooseTail, parseStackOrChoose, parsePolymeterStack, parseSequence, grammar, parse
+local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack_tail, stack_or_choose, polymeter_stack, dot_tail, choose_tail, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, parseNumber, parseStep, AtomStub, PatternStub, ElementStub, seed, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, ws, comma, pipe, dot, quote, step_char, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStackTail, parseChooseTail, parseStackOrChoose, parsePolymeterStack, parseSequence, grammar, parse
 tinsert = table.insert
 sequence = V("sequence")
 group = V("group")
@@ -83,8 +83,7 @@ pipe = ws * P("|") * ws
 dot = ws * P(".") * ws
 quote = P("'") + P('"')
 step_char = R("AZ", "az", "09") + P("-") + P("#") + P(".") + P("^") + P("_")
-step = ws * (step_char ^ 1 / parseStep) * ws
-rest = P("~")
+step = ws * (step_char ^ 1) / parseStep * ws
 parseFast = function(a)
   return function(x)
     return tinsert(x.options.ops, {
@@ -218,11 +217,14 @@ parseChooseTail = function(...)
     seed = seed + 1
   }
 end
-parseStackOrChoose = function(head, tail)
-  if tail and #tail.list > 0 then
+parseStackOrChoose = function(head, ...)
+  tail = {
+    ...
+  }
+  if tail and #tail > 0 then
     return PatternStub({
       head,
-      unpack(tail.list)
+      unpack(tail)
     }, tail.alignment, tail.seed)
   else
     return head
@@ -243,7 +245,7 @@ parseSequence = function(...)
 end
 grammar = {
   "stack_or_choose",
-  stack_or_choose = (sequence * (stack_tail + choose_tail + dot_tail) ^ -1) / parseStackOrChoose,
+  stack_or_choose = (sequence * (stack_tail + choose_tail + dot_tail) ^ 0) / parseStackOrChoose,
   polymeter_stack = (sequence * stack_tail ^ -1) / parsePolymeterStack,
   sequence = (slice_with_ops ^ 1) / parseSequence,
   stack_tail = (comma * sequence) ^ 1 / parseStackTail,

@@ -97,7 +97,7 @@ describe "Mini Interpreter for", ->
     it "should pass", ->
       eval "bd sd"
       eval "bd hh sd"
---       eval "bd hh@2"
+      eval "bd hh@2"
 --       -- eval "bd hh@3 sd@2"
 --       eval "bd! hh? ~ sd/2 cp*3"
 
@@ -113,9 +113,9 @@ describe "Mini Interpreter for", ->
 --       -- same "hh!4"
 --       -- same "hh!4!!"
 --
---   describe "weight", ->
---     it "should pass", ->
---       eval "hh@2"
+  describe "weight", ->
+    it "should pass", ->
+      eval "hh@2"
 
   describe "fast&slow", ->
     it "should pass", ->
@@ -139,11 +139,11 @@ describe "Mini Interpreter for", ->
 --     it "should pass", ->
 --       eval "bd | sd cp"
 --
---   describe "polyrhythm", ->
---     it "should pass", ->
---       eval "[bd sd] hh"
---       eval "bd sd . cp . hh*2"
---       eval "[bd, sd]"
+  describe "polyrhythm", ->
+    it "should pass", ->
+      -- eval "[bd sd] hh"
+      -- eval "bd sd . cp . hh*2"
+      -- eval "[bd, sd]"
 --
 --   describe "polymeter", ->
 --     it "should pass", ->
@@ -171,8 +171,8 @@ interpreter_targets = {
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
   "bd(3,8,1)": euclid 3, 8, 1, pure"bd"
---   "hh@2": pure "hh"
---   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
+  "hh@2": pure "hh"
+  "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
 --   -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
 --   "hh!": fastcat "hh", "hh"
 --   "hh!!!": fastcat "hh", "hh", "hh", "hh"
@@ -186,7 +186,7 @@ interpreter_targets = {
 --     { 1, fast(3, pure"cp") }
 --   }
 --   "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
---   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
+  "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
 --   "[bd, sd]": stack "bd", "sd"
 --   "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
 --   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")

@@ -25,8 +25,10 @@ fun = require("fun")
 applyOptions = function(parent, enter)
   return function(pat, i)
     local ast = parent.source[i]
-    local options = ast.options
-    local ops = options.ops
+    local ops = nil
+    if ast.options then
+      ops = ast.options.ops
+    end
     if ops then
       for _index_0 = 1, #ops do
         local op = ops[_index_0]
@@ -50,7 +52,47 @@ applyOptions = function(parent, enter)
     return pat
   end
 end
-resolveReplications = id
+resolveReplications = function(ast)
+  local repChild
+  repChild = function(child)
+    if child.options == nil then
+      return {
+        child
+      }
+    end
+    local reps = child.options.reps
+    child.options.reps = nil
+    local _accum_0 = { }
+    local _len_0 = 1
+    for i = 1, reps do
+      _accum_0[_len_0] = child
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end
+  local unflat
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    local _list_0 = ast.source
+    for _index_0 = 1, #_list_0 do
+      local child = _list_0[_index_0]
+      _accum_0[_len_0] = repChild(child)
+      _len_0 = _len_0 + 1
+    end
+    unflat = _accum_0
+  end
+  local res = { }
+  for _index_0 = 1, #unflat do
+    local element = unflat[_index_0]
+    for _index_1 = 1, #element do
+      local elem = element[_index_1]
+      tinsert(res, elem)
+    end
+  end
+  ast.source = res
+  return ast
+end
 patternifyAST = function(ast)
   local enter
   enter = function(node)
@@ -58,7 +100,7 @@ patternifyAST = function(ast)
   end
   local _exp_0 = ast.type
   if "pattern" == _exp_0 then
-    resolveReplications(ast)
+    ast = resolveReplications(ast)
     local children = ast.source
     children = map(enter, children)
     do
@@ -69,6 +111,11 @@ patternifyAST = function(ast)
         _len_0 = _len_0 + 1
       end
       children = _accum_0
+    end
+    local alignment = ast.arguments.alignment
+    local _exp_1 = alignment
+    if "stack" == _exp_1 then
+      return stack(children)
     end
     return fastcat(children)
   elseif "element" == _exp_0 then
@@ -1204,7 +1251,6 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(mini("bd(3,8,1)"))
 return {
   C = C,
   Pattern = Pattern,

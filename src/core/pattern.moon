@@ -16,8 +16,9 @@ fun = require "fun"
 applyOptions = (parent, enter) ->
   return (pat, i) ->
     ast = parent.source[i]
-    options = ast.options
-    ops = options.ops -- ?
+    ops = nil
+    if ast.options then
+      ops = ast.options.ops -- ?
 
     if ops
       for op in *ops
@@ -38,6 +39,7 @@ applyOptions = (parent, enter) ->
 
 resolveReplications = (ast) ->
   repChild = (child) ->
+    if child.options == nil then return { child }
     reps = child.options.reps
     child.options.reps = nil
     return [ child for i = 1, reps ]
@@ -59,6 +61,20 @@ patternifyAST = (ast) ->
       children = ast.source
       children = map enter, children
       children = [ applyOptions(ast, enter)(child, index) for index, child in pairs children ]
+      alignment = ast.arguments.alignment
+      switch alignment
+        when "stack" then
+          return stack children
+        -- when "polymeter_slowcat" then
+      --   aligned = map ((child) -> slow child.options.weight, child), children
+      --   return stack(aligned)
+      addWeight = (a, b) -> a + b.options.weight
+      weightSum = reduce addWeight, 0, ast.source
+      if weightSum > #children then
+        atoms = ast.source
+        pat = timecat [{v.options.weight or 1, children[i]} for i, v in pairs atoms]
+        return pat
+
       return fastcat children
     when "element"
       return enter(ast.source)
@@ -793,7 +809,7 @@ scale = _patternify _scale
 apply = (x, pat) -> pat .. x
 sl = string_lambda
 
-print mini "<bd sd>"
+print mini "hh hh@2"
 
 -- TODO: wchoose, tests for the new functions
 return {
