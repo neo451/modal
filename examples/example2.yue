@@ -1,3 +1,7 @@
-loopAt 2, chop "8 16", s"breaks125"
+loopAt 1, slice "8", "0 3 2 1 3*2 8", s"breaks125"
   |> jux rev, _
   |> d1
+
+s"arpy" 
+  |> apply note(scale"yu","0 7")
+  |> d2

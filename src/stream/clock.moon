@@ -48,6 +48,7 @@ class Clock
 
       while @running
         ticks += 1
+        print(ticks)
 
         logicalNow = math.floor start + (ticks * frame)
 

@@ -1424,7 +1424,6 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(pure(1))
 return {
   C = C,
   Pattern = Pattern,

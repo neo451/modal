@@ -1,6 +1,4 @@
 s"[bd|~] east"
-  |> apply room"0.8", _
-  |> apply delay"0.3"
   |> d1
 
 note scale "kumai", "0 1 2 3 4 5 7"

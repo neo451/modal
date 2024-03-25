@@ -9,11 +9,13 @@ local clock = DefaultClock
 
 clock:start()
 local host = "*"
-local port = 8080
+local port = arg[1] or 8080
 local sk = socket.bind(host, port)
 local c = sk:accept()
 
 c:settimeout(0)
+
+print(port)
 
 print("Connected to Xi")
 

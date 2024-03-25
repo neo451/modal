@@ -29,8 +29,6 @@ setmetatable(xi, {
         if override then
           _G[k] = v
           print('WARNING: ' .. msg .. ' Overwritten.')
-        else
-          print('NOTICE: ' .. msg .. ' Skipped.')
         end
       else
         _G[k] = v

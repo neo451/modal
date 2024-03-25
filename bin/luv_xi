@@ -1,0 +1,67 @@
+#!/usr/bin/luajit
+
+local socket = require("socket")
+local yue = require("yue")
+
+require("xi")()
+local uv = require("luv")
+
+local clock = DefaultClock
+
+clock:start()
+local host = "127.0.0.1"
+local port = arg[1] or 8080
+
+local getstring = function(a)
+	if a then
+		local lua_code = yue.to_lua(a)
+		local func, err = loadstring(lua_code)
+		if func then
+			local ok, res = pcall(func)
+			if ok then
+				return print(res)
+			else
+				return print("Execution error:", ok)
+			end
+		else
+			return print("Compilation error:", err)
+		end
+	end
+end
+
+local listen_tcp = function()
+	local server = uv.new_tcp()
+	server:bind("127.0.0.1", 8080)
+	server:listen(128, function(err)
+		assert(not err, err)
+		local client = uv.new_tcp()
+		server:accept(client)
+		client:read_start(function(err, chunk)
+			assert(not err, err)
+			if chunk then
+				-- client:write(chunk)
+				print(chunk)
+				getstring(chunk)
+			else
+				client:shutdown()
+				client:close()
+			end
+		end)
+	end)
+end
+
+-- c:settimeout(0)
+
+print(port)
+
+print("Connected to Xi")
+
+-- TODO: move to repl/
+
+while coroutine.resume(clock.notifyCoroutine) do
+	listen_tcp()
+	uv.run("once")
+	uv.walk(uv.close)
+end
+--
+-- -- vi: ft=lua ts=3 sw=3

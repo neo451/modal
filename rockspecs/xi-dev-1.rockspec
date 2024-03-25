@@ -54,6 +54,7 @@ build = {
 	install = {
 		bin = {
 			"bin/xi",
+			"bin/luv_xi",
 			"bin/xii",
 		},
 	},

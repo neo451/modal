@@ -836,8 +836,6 @@ sl = string_lambda
 
 -- TODO: wchoose, tests for the new functions
 
-print pure 1
-
 return {
   :C
   :Pattern
