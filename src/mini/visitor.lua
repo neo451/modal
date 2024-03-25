@@ -2,7 +2,7 @@ local parse
 parse = require("xi.mini.grammar").parse
 local reduce, op
 do
-  local _obj_0 = require("fun")
+  local _obj_0 = require("xi.fun")
   reduce, op = _obj_0.reduce, _obj_0.op
 end
 local Visitor

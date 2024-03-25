@@ -1,4 +1,4 @@
-import reduce from require 'fun'
+import reduce from require 'xi.fun'
 import type from require "xi.utils"
 local *
 

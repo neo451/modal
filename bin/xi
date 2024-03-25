@@ -9,10 +9,11 @@ local clock = DefaultClock
 clock:start()
 
 -- TODO: move to repl/
+-- TODO: history
+-- TODO: completion
 local eval = function(a)
 	if a then
 		local lua_code = yue.to_lua(a)
-		print(lua_code)
 		local func, err = loadstring(lua_code)
 		if func then
 			local ok, res = pcall(func)

@@ -1,6 +1,6 @@
 local is_object
 is_object = require("moon.all").is_object
-local fun = require("fun")
+local fun = require("xi.fun")
 local bit = require("xi.bitop")
 local utils = { }
 local floor = math.floor

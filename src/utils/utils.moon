@@ -1,5 +1,5 @@
 import is_object from require "moon.all"
-fun = require "fun"
+fun = require "xi.fun"
 bit = require "xi.bitop" --compatability for 5.3 5.4??
 
 utils = {}

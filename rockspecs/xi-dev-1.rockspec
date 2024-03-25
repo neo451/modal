@@ -15,12 +15,11 @@ This project follows the footsteps of [vortex](https://github.com/tidalcycles/vo
 dependencies = {
 	"lua >= 5.1",
 	"losc >= 1.0.1-1",
+	-- TODO: dump this after clock with uv
 	"luasocket >= 3.1.0-1",
 	"abletonlink >= 1.0.0-1",
 	"lpeg >= 1.1.0-1",
-	"moonscript >= 0.5.0-1",
 	-- "yuescript >= 0.21.3-1",
-	"fun >= 0.1.3-1",
 }
 
 build = {
@@ -33,6 +32,7 @@ build = {
 		["xi.bitop"] = "src/utils/bitop.lua",
 		["xi.drawline"] = "src/utils/drawline.lua",
 		["xi.inspect"] = "src/utils/inspect.lua",
+		["xi.fun"] = "src/utils/fun.lua",
 
 		["xi.types"] = "src/core/types.lua",
 		["xi.pattern"] = "src/core/pattern.lua",

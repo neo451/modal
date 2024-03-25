@@ -8,9 +8,9 @@ import Fraction, tofrac, tofloat from require "xi.fraction"
 import genericParams, aliasParams from require "xi.control"
 import Event, Span, State from require "xi.types"
 import visit from require "xi.mini.visitor"
-import op from require "fun"
+import op from require "xi.fun"
 import string_lambda from require("pl.utils")
-fun = require "fun"
+fun = require "xi.fun"
 local *
 
 sin = math.sin

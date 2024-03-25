@@ -1,5 +1,5 @@
 import parse from require "xi.mini.grammar"
-import reduce, op from require "fun"
+import reduce, op from require "xi.fun"
 
 class Visitor
   visit: (node) =>

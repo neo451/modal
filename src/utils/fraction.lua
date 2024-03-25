@@ -1,5 +1,5 @@
 local reduce
-reduce = require('fun').reduce
+reduce = require('xi.fun').reduce
 local type
 type = require("xi.utils").type
 local abs, floor, decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac, tofloat
