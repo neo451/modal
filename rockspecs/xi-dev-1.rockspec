@@ -32,6 +32,7 @@ build = {
 		["xi.fraction"] = "src/utils/fraction.lua",
 		["xi.bitop"] = "src/utils/bitop.lua",
 		["xi.drawline"] = "src/utils/drawline.lua",
+		["xi.inspect"] = "src/utils/inspect.lua",
 
 		["xi.types"] = "src/core/types.lua",
 		["xi.pattern"] = "src/core/pattern.lua",
@@ -54,8 +55,6 @@ build = {
 	install = {
 		bin = {
 			"bin/xi",
-			"bin/luv_xi",
-			"bin/xii",
 		},
 	},
 }

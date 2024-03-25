@@ -45,7 +45,6 @@ do
         local frame = self.sampleRate * mill
         while self.running do
           ticks = ticks + 1
-          print(ticks)
           local logicalNow = math.floor(start + (ticks * frame))
           local logicalNext = math.floor(start + ((ticks + 1) * frame))
           local now = self.link:clock_micros()
