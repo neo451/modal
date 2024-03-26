@@ -873,7 +873,56 @@ local aliasParams = {
   vcoegint = "vco",
   voice = "voi"
 }
-return {
-  genericParams = genericParams,
-  aliasParams = aliasParams
+local reify, stack
+do
+  local _obj_0 = require("xi.pattern")
+  reify, stack = _obj_0.reify, _obj_0.stack
+end
+local parseChord
+parseChord = require("xi.chords").parseChord
+local C = { }
+local create
+create = function(name)
+  local withVal
+  withVal = function(v)
+    return {
+      [name] = v
+    }
+  end
+  local func
+  func = function(args)
+    return reify(args):fmap(withVal)
+  end
+  C[name] = func
+end
+for _index_0 = 1, #genericParams do
+  local name = genericParams[_index_0]
+  local param = name[2]
+  create(param)
+  if aliasParams[param] ~= nil then
+    local alias = aliasParams[param]
+    C[alias] = C[param]
+  end
+end
+local notemt = {
+  __add = function(self, other)
+    return {
+      note = self.note + other.note
+    }
+  end
 }
+C.note = function(args)
+  args = reify(args)
+  local chordToStack
+  chordToStack = function(thing)
+    return stack(parseChord(thing))
+  end
+  local withVal
+  withVal = function(v)
+    return setmetatable({
+      note = v
+    }, notemt)
+  end
+  return reify(args):fmap(chordToStack):outerJoin():fmap(withVal)
+end
+return C

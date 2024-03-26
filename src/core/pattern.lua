@@ -1,23 +1,16 @@
-local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
+local map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
 do
   local _obj_0 = require("xi.utils")
-  map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
+  map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.string_lambda, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
 end
 local bjork
 bjork = require("xi.euclid").bjork
-local parseChord
-parseChord = require("xi.chords").parseChord
 local getScale
 getScale = require("xi.scales").getScale
 local Fraction, tofrac, tofloat
 do
   local _obj_0 = require("xi.fraction")
   Fraction, tofrac, tofloat = _obj_0.Fraction, _obj_0.tofrac, _obj_0.tofloat
-end
-local genericParams, aliasParams
-do
-  local _obj_0 = require("xi.control")
-  genericParams, aliasParams = _obj_0.genericParams, _obj_0.aliasParams
 end
 local Event, Span, State
 do
@@ -26,68 +19,14 @@ do
 end
 local visit
 visit = require("xi.mini.visitor").visit
-local op
-op = require("xi.fun").op
-local string_lambda
-string_lambda = require("pl.utils").string_lambda
 local fun = require("xi.fun")
-local sin, min, max, pi, floor, tinsert, p, C, create, notemt, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+local sin, min, max, pi, floor, tinsert, Interpreter, Pattern, silence, pure, mini, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
 sin = math.sin
 min = math.min
 max = math.max
 pi = math.pi
 floor = math.floor
 tinsert = table.insert
-p = function(evs)
-  for _index_0 = 1, #evs do
-    local ev = evs[_index_0]
-    print(ev)
-  end
-end
-C = { }
-create = function(name)
-  local withVal
-  withVal = function(v)
-    return {
-      [name] = v
-    }
-  end
-  local func
-  func = function(args)
-    return reify(args):fmap(withVal)
-  end
-  C[name] = func
-end
-for _index_0 = 1, #genericParams do
-  local name = genericParams[_index_0]
-  local param = name[2]
-  create(param)
-  if aliasParams[param] ~= nil then
-    local alias = aliasParams[param]
-    C[alias] = C[param]
-  end
-end
-notemt = {
-  __add = function(self, other)
-    return {
-      note = self.note + other.note
-    }
-  end
-}
-C.note = function(args)
-  args = reify(args)
-  local chordToStack
-  chordToStack = function(thing)
-    return stack(parseChord(thing))
-  end
-  local withVal
-  withVal = function(v)
-    return setmetatable({
-      note = v
-    }, notemt)
-  end
-  return reify(args):fmap(chordToStack):outerJoin():fmap(withVal)
-end
 do
   local _class_0
   local _base_0 = {
@@ -728,11 +667,7 @@ end
 reify = function(thing)
   local _exp_0 = type(thing)
   if "string" == _exp_0 then
-    if string_lambda(thing) then
-      return string_lambda(thing)
-    else
-      return mini(thing)
-    end
+    return mini(thing)
   elseif "pattern" == _exp_0 then
     return thing
   else
@@ -842,7 +777,7 @@ timecat = function(tuples)
   local times = map((function(x)
     return x[1]
   end), tuples)
-  local total = reduce(op.add, Fraction(0), times)
+  local total = reduce(fun.op.add, Fraction(0), times)
   local accum = Fraction(0)
   for _index_0 = 1, #tuples do
     local tup = tuples[_index_0]
@@ -1192,7 +1127,7 @@ _range = function(min, max, pat)
 end
 range = _patternify_p_p(_range)
 superimpose = function(f, pat)
-  return stack(pat, f(pat))
+  return stack(pat, sl(f)(pat))
 end
 layer = function(table, pat)
   return stack((function()
@@ -1200,7 +1135,7 @@ layer = function(table, pat)
     local _len_0 = 1
     for _index_0 = 1, #table do
       local f = table[_index_0]
-      _accum_0[_len_0] = f(reify(pat))
+      _accum_0[_len_0] = sl(f)(reify(pat))
       _len_0 = _len_0 + 1
     end
     return _accum_0
@@ -1425,7 +1360,6 @@ apply = function(x, pat)
 end
 sl = string_lambda
 return {
-  C = C,
   Pattern = Pattern,
   id = id,
   pure = pure,

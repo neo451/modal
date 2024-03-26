@@ -1,15 +1,11 @@
 --- Core pattern representation
 -- @module xi.pattern
-import map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
+import map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
-import parseChord from require "xi.chords"
 import getScale from require "xi.scales"
 import Fraction, tofrac, tofloat from require "xi.fraction"
-import genericParams, aliasParams from require "xi.control"
 import Event, Span, State from require "xi.types"
 import visit from require "xi.mini.visitor"
-import op from require "xi.fun"
-import string_lambda from require("pl.utils")
 fun = require "xi.fun"
 local *
 
@@ -19,34 +15,6 @@ max = math.max
 pi = math.pi
 floor = math.floor
 tinsert = table.insert
-
-p = (evs) ->
-  for ev in *evs 
-    print ev
-
-C = {}
-
-create = (name) ->
-  withVal = (v) -> { [name]: v }
-  func = (args) -> reify(args)\fmap(withVal)
-  C[name] = func
-
-for name in *genericParams
-  param = name[2]
-  create param
-  if aliasParams[param] != nil
-    alias = aliasParams[param]
-    C[alias] = C[param]
-
-notemt =
-  __add: (other) =>
-    { note: @note + other.note }
-
-C.note = (args) ->
-  args = reify(args)
-  chordToStack = (thing) -> stack(parseChord thing)
-  withVal = (v) -> setmetatable { note: v }, notemt
-  return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
 
 class Interpreter
   eval:(node) =>
@@ -357,11 +325,7 @@ mini = (string) ->
 -- @return pattern
 reify = (thing) ->
   switch type thing
-    when "string" then
-      if string_lambda thing
-        return string_lambda thing
-      else
-        return mini thing
+    when "string" then mini thing
     when "pattern" then thing
     else pure thing
 
@@ -448,7 +412,7 @@ fastcat = (...) ->
 timecat = (tuples) ->
   pats = {}
   times = map ((x) -> x[1]), tuples
-  total = reduce op.add, Fraction(0), times
+  total = reduce fun.op.add, Fraction(0), times
   accum = Fraction(0)
   for tup in *tuples
     { time, pat } = tup
@@ -710,9 +674,12 @@ _range = (min, max, pat) -> pat\fmap((x) -> x * (max - min) + min)
 range = _patternify_p_p _range
 
 -- @section higher order functions
-superimpose = (f, pat) -> stack(pat, f(pat))
+-- HACK: limited because mini does not turn stirng to number yet
+-- p superimpose "|x| x+7", "0 7"
+superimpose = (f, pat) -> 
+  stack(pat, sl(f)(pat))
 
-layer = (table, pat) -> stack [f reify pat for f in *table]
+layer = (table, pat) -> stack [sl(f) reify pat for f in *table]
 
 _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 off = _patternify_p_p _off
@@ -837,7 +804,6 @@ sl = string_lambda
 -- TODO: wchoose, tests for the new functions
 
 return {
-  :C
   :Pattern
   :id, :pure, :silence
   :mini, :reify

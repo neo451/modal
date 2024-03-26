@@ -1,6 +1,6 @@
 pattern = require "xi.pattern"
 pattern_factory = require "xi.pattern_factory"
-import C from require "xi.pattern"
+C = require "xi.control"
 import drawline from require "xi.drawline"
 
 xi = {
@@ -12,7 +12,7 @@ xi = {
 xi.drawline = drawline
 
 for name, func in pairs pattern
-  if name != "C" and name != "Pattern"
+  if name != "Pattern"
     xi[name] = func
 
 for name, func in pairs pattern_factory

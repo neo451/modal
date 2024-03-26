@@ -125,4 +125,43 @@ utils.union = (a, b) ->
     new_map[i] = v
   return new_map
 
+
+-- taken from penlight lib
+_string_lambda = (f) ->
+  if type(f) == 'function' then return f
+  if (f\find'^|') or (f\find'_') then
+    args, body = f\match '|([^|]*)|(.+)'
+    if f\find '_' then
+        args = '_'
+        body = f
+    else
+        if not args then return error'bad string lambda'
+
+    fstr = 'return function('..args..') return '..body..' end'
+    fn,err = loadstring(fstr)
+    if not fn then return error(err)
+    fn = fn()
+    return fn
+  else
+    return error'not a string lambda'
+
+utils.memoize = (func) ->
+  cache = {}
+  return (k) ->
+    res = cache[k]
+    if res == nil then
+      res = func(k)
+      cache[k] = res
+    return res
+
+--- an anonymous function as a string. This string is either of the form
+-- '|args| expression' or is a function of one argument, '_'
+-- @param lf function as a string
+-- @return a function
+-- @function utils.string_lambda
+-- @usage
+-- string_lambda '|x|x+1' (2) == 3
+-- string_lambda '_+1' (2) == 3
+utils.string_lambda = utils.memoize(_string_lambda)
+
 return utils
