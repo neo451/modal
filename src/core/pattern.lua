@@ -7,10 +7,10 @@ local bjork
 bjork = require("xi.euclid").bjork
 local getScale
 getScale = require("xi.scales").getScale
-local Fraction, tofrac, tofloat
+local Fraction, tofrac
 do
   local _obj_0 = require("xi.fraction")
-  Fraction, tofrac, tofloat = _obj_0.Fraction, _obj_0.tofrac, _obj_0.tofloat
+  Fraction, tofrac = _obj_0.Fraction, _obj_0.tofrac
 end
 local Event, Span, State
 do

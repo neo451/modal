@@ -3,7 +3,7 @@
 import map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import getScale from require "xi.scales"
-import Fraction, tofrac, tofloat from require "xi.fraction"
+import Fraction, tofrac from require "xi.fraction"
 import Event, Span, State from require "xi.types"
 import visit from require "xi.mini.visitor"
 fun = require "xi.fun"

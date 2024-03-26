@@ -1,6 +1,7 @@
-import C, cpm from require "xi.pattern"
+import cpm from require "xi.pattern"
 import Stream from require "xi.stream"
 import Clock from require "xi.clock"
+C = require"xi.control"
 
 Streams = {}
 DefaultClock = Clock!

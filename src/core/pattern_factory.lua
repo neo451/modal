@@ -1,12 +1,10 @@
-local C, cpm
-do
-  local _obj_0 = require("xi.pattern")
-  C, cpm = _obj_0.C, _obj_0.cpm
-end
+local cpm
+cpm = require("xi.pattern").cpm
 local Stream
 Stream = require("xi.stream").Stream
 local Clock
 Clock = require("xi.clock").Clock
+local C = require("xi.control")
 local Streams = { }
 local DefaultClock = Clock()
 local p

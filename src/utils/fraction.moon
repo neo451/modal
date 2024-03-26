@@ -5,10 +5,33 @@ local *
 abs = math.abs
 floor = math.floor
 
+-- decimaltofraction1 = (x, N) ->
+--     N = N or 1000000
+--     a, b = 0, 1
+--     c, d = 1, 1
+--     while b <= N and d <= N
+--         mediant = (a+c)/(b+d)
+--         if x == mediant
+--             if b + d <= N
+--                 return a + c, b + d
+--             elseif d > b
+--                 return c, d
+--             else
+--                 return a, b
+--         elseif x > mediant
+--             a, b = a + c, b + d
+--         else
+--             c, d = a + c, b + d
+--
+--     if b > N
+--         return c, d
+--     else
+--         return a, b
+
 decimaltofraction = (x0, err) ->
   err = err or 0.0000000001
   local num, den
-  g = abs x0 -- or x0:abs()
+  g = abs x0
   sign = x0 / g
   a, b, c, d = 0, 1, 1, 0
   local s
@@ -25,7 +48,7 @@ decimaltofraction = (x0, err) ->
       return sign * num, den
 
   error "Fraction: failed to find a fraction for " .. x0
-  0, 1
+  return 0, 1
 
 gcd = (a, b) -> (b == 0) and a or gcd(b, a % b)
 
@@ -202,12 +225,6 @@ gcd_reduce = (table) ->
 tofrac = (x) ->
   if type(x) == "number"
     return Fraction(x)
-  else
-    return x
-
-tofloat = (x) ->
-  if type(x) == "fraction"
-    return x\asFloat!
   else
     return x
 
