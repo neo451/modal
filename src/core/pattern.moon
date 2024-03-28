@@ -32,9 +32,28 @@ applyOptions = (parent, enter) ->
                 pat = slow enter(amount), pat
               else
                 print("mini: stretch: type must be one of fast of slow")
+          when "degradeBy"
+            -- TODO: _degradeByWith WHY ERALY??
+            amount = op.arguments.amount or 0.5
+            pat = degradeBy amount, pat
           when "euclid"
             steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
             pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
+          when "tail"
+            friend = enter(op.arguments.element)
+            pat = pat\fmap((a) -> (b) ->
+              if type(a) == "table" then
+                tinsert(a, b)
+                return a
+              else
+                return { a, b })\appLeft(friend)
+          when "range"
+            -- TODO: error if not number?
+            friend = enter(op.arguments.element)
+            makeRange = (start, stop) -> [ i for i = start, stop ]
+            range = (apat, bpat) ->
+              apat\squeezeBind((a) -> bpat\bind((b) -> fastcat(makeRange(a, b), friend)))
+            pat = range(pat, friend)
     return pat
 
 resolveReplications = (ast) ->
@@ -56,6 +75,14 @@ resolveReplications = (ast) ->
 patternifyAST = (ast) ->
   enter = (node) -> patternifyAST(node)
   switch ast.type
+    when "element"
+      return enter(ast.source)
+    when "atom"
+      if ast.source == "~" then return silence!
+      value = ast.source
+      if (tonumber value)
+        value = tonumber value
+      return pure value
     when "pattern"
       ast = resolveReplications ast
       children = ast.source
@@ -65,10 +92,22 @@ patternifyAST = (ast) ->
       switch alignment
         when "stack" then
           return stack children
-        -- when "polymeter_slowcat" then
-      --   aligned = map ((child) -> slow child.options.weight, child), children
-      --   return stack(aligned)
-      addWeight = (a, b) -> a + b.options.weight or 1
+        when "polymeter_slowcat" then
+          aligned = map ((child) -> slow #child\firstCycle!, child), children
+          return stack aligned
+        when "polymeter" then
+          -- TODO : test when patterning stepsPerCycle
+          stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
+          aligned = map ((child) -> fast stepsPerCycle\fmap((x) -> x / #child\firstCycle!), child), children
+          return stack aligned
+
+        when "rand" then
+          print "rand"
+
+      addWeight = (a, b) ->
+        b = b.options and b.options.weight or 1
+        a + b
+
       weightSum = reduce addWeight, 0, ast.source
       if weightSum > #children then
         atoms = ast.source
@@ -76,15 +115,6 @@ patternifyAST = (ast) ->
         return pat
 
       return fastcat children
-    when "element"
-      return enter(ast.source)
-    when "atom"
-      if ast.source == "~" then return silence!
-      value = ast.source
-      if (tonumber value)
-        value = tonumber value
-
-      return pure value
 
 --- Turns mini-notation(string) into a pattern
 -- @param string
@@ -157,6 +187,12 @@ class Pattern
       events = @query(state)
       return flatten (map ((a) -> match a), events)
     return Pattern query
+
+  bind:(func) =>
+    whole_func = (a, b) ->
+      if (a == nil or b == nil) then return nil
+      return a\sect(b) -- Error??
+    return @bindWhole whole_func, func
 
   outerBind:(func) => @bindWhole ((a) -> a), func
 
@@ -808,8 +844,12 @@ scale = _patternify _scale
 -- helpers
 apply = (x, pat) -> pat .. x
 sl = string_lambda
-
-print mini"hh hh@2"
+pp = (x) ->
+  if type(x) == "table" then
+    for k, v in pairs x
+      print(k, v)
+  else
+    print(x)
 
 -- TODO: wchoose, tests for the new functions
 return {

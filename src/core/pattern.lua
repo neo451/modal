@@ -1,4 +1,4 @@
-local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, applyOptions, resolveReplications, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl
+local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, applyOptions, resolveReplications, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl, pp
 do
   local _obj_0 = require("xi.utils")
   map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
@@ -43,9 +43,47 @@ applyOptions = function(parent, enter)
           else
             print("mini: stretch: type must be one of fast of slow")
           end
+        elseif "degradeBy" == _exp_0 then
+          local amount = op.arguments.amount or 0.5
+          pat = degradeBy(amount, pat)
         elseif "euclid" == _exp_0 then
           local steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
           pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
+        elseif "tail" == _exp_0 then
+          local friend = enter(op.arguments.element)
+          pat = pat:fmap(function(a)
+            return function(b)
+              if type(a) == "table" then
+                tinsert(a, b)
+                return a
+              else
+                return {
+                  a,
+                  b
+                }
+              end
+            end
+          end):appLeft(friend)
+        elseif "range" == _exp_0 then
+          local friend = enter(op.arguments.element)
+          local makeRange
+          makeRange = function(start, stop)
+            local _accum_0 = { }
+            local _len_0 = 1
+            for i = start, stop do
+              _accum_0[_len_0] = i
+              _len_0 = _len_0 + 1
+            end
+            return _accum_0
+          end
+          range = function(apat, bpat)
+            return apat:squeezeBind(function(a)
+              return bpat:bind(function(b)
+                return fastcat(makeRange(a, b), friend)
+              end)
+            end)
+          end
+          pat = range(pat, friend)
         end
       end
     end
@@ -99,7 +137,18 @@ patternifyAST = function(ast)
     return patternifyAST(node)
   end
   local _exp_0 = ast.type
-  if "pattern" == _exp_0 then
+  if "element" == _exp_0 then
+    return enter(ast.source)
+  elseif "atom" == _exp_0 then
+    if ast.source == "~" then
+      return silence()
+    end
+    local value = ast.source
+    if (tonumber(value)) then
+      value = tonumber(value)
+    end
+    return pure(value)
+  elseif "pattern" == _exp_0 then
     ast = resolveReplications(ast)
     local children = ast.source
     children = map(enter, children)
@@ -116,10 +165,26 @@ patternifyAST = function(ast)
     local _exp_1 = alignment
     if "stack" == _exp_1 then
       return stack(children)
+    elseif "polymeter_slowcat" == _exp_1 then
+      local aligned = map((function(child)
+        return slow(#child:firstCycle(), child)
+      end), children)
+      return stack(aligned)
+    elseif "polymeter" == _exp_1 then
+      local stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
+      local aligned = map((function(child)
+        return fast(stepsPerCycle:fmap(function(x)
+          return x / #child:firstCycle()
+        end), child)
+      end), children)
+      return stack(aligned)
+    elseif "rand" == _exp_1 then
+      print("rand")
     end
     local addWeight
     addWeight = function(a, b)
-      return a + b.options.weight or 1
+      b = b.options and b.options.weight or 1
+      return a + b
     end
     local weightSum = reduce(addWeight, 0, ast.source)
     if weightSum > #children then
@@ -139,17 +204,6 @@ patternifyAST = function(ast)
       return pat
     end
     return fastcat(children)
-  elseif "element" == _exp_0 then
-    return enter(ast.source)
-  elseif "atom" == _exp_0 then
-    if ast.source == "~" then
-      return silence()
-    end
-    local value = ast.source
-    if (tonumber(value)) then
-      value = tonumber(value)
-    end
-    return pure(value)
   end
 end
 mini = function(code)
@@ -257,6 +311,16 @@ do
         end), events)))
       end
       return Pattern(query)
+    end,
+    bind = function(self, func)
+      local whole_func
+      whole_func = function(a, b)
+        if (a == nil or b == nil) then
+          return nil
+        end
+        return a:sect(b)
+      end
+      return self:bindWhole(whole_func, func)
     end,
     outerBind = function(self, func)
       return self:bindWhole((function(a)
@@ -1272,7 +1336,15 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
-print(mini("hh hh@2"))
+pp = function(x)
+  if type(x) == "table" then
+    for k, v in pairs(x) do
+      print(k, v)
+    end
+  else
+    return print(x)
+  end
+end
 return {
   C = C,
   Pattern = Pattern,

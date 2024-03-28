@@ -88,7 +88,6 @@ describe "Mini Interpreter for", ->
   describe "words", ->
     it "should pass", ->
       eval "foo"
---       eval "Bar:2"
 
   -- describe "rests", ->
   --   it "should pass", ->
@@ -100,7 +99,7 @@ describe "Mini Interpreter for", ->
       eval "bd hh sd"
       eval "bd hh@2"
       eval "bd hh@3 sd@2"
---       eval "bd! hh? ~ sd/2 cp*3"
+      -- eval "bd! hh? ~ sd/2 cp*3"
 
   describe "euclidian rhythm", ->
     it "should pass", ->
@@ -122,18 +121,26 @@ describe "Mini Interpreter for", ->
     it "should pass", ->
       eval "bd*2"
       eval "bd/3"
---
---   describe "degrade", ->
---     it "should pass", ->
---       eval "hh?"
---       -- eval "hh???"
+
+  describe "range", ->
+    it "should pass", ->
+      eval "0 .. 9"
+
+  describe "tail", ->
+    it "should pass", ->
+      eval "bd:3:2"
+
+  describe "degrade", ->
+    it "should pass", ->
+      eval "hh?"
+      eval "hh???"
 --       -- eval "hh?4"
 --       -- eval "hh?4??"
 --       -- eval "hh??0.87"
 --
---   describe "hybrid mod", ->
---     it "should pass", ->
---       -- eval "hh!!??"
+  -- describe "hybrid mod", ->
+  --   it "should pass", ->
+  --     eval "hh!!??"
 --       -- eval "hh!/2?!"
 --
 --   describe "random seq", ->
@@ -145,12 +152,12 @@ describe "Mini Interpreter for", ->
       -- eval "[bd sd] hh"
       -- eval "bd sd . cp . hh*2"
       eval "[bd, sd]"
---
---   describe "polymeter", ->
---     it "should pass", ->
---       eval "bd*<2 3 4>"
---       eval "{bd sd hh cp hh}%4"
---
+
+  describe "polymeter", ->
+    it "should pass", ->
+      eval "bd*<2 3 4>"
+      eval "{bd sd hh cp hh}%4"
+
 interpreter_targets = {
   -- numbers
   "45": pure 45
@@ -159,15 +166,16 @@ interpreter_targets = {
   "-3": pure -3
   -- word
   "foo": pure "foo"
-  -- "Bar:2": C.s"Bar" .. C.n"2"
---   -- rest
+  -- rest
 --   "~": silence!
---   -- modifiers
+  -- modifiers
   "bd*2": fast 2, pure"bd"
   "bd/3": slow 3, pure"bd"
---   "hh?": degrade "hh"
---   "hh???": degrade degrade degrade "hh"
---   -- "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
+  "hh?": degrade "hh"
+  "hh???": degrade degrade degrade "hh"
+  "hh!!??": degrade degrade fastcat "hh", "hh", "hh" -- TODO: not right
+  "0 .. 9": fastcat [ i for i = 0, 9 ]
+  "bd:3:2": pure({"bd", 3, 2})
   -- sequences
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
@@ -179,20 +187,20 @@ interpreter_targets = {
   "hh!!!": fastcat "hh", "hh", "hh", "hh"
   "hh!4": fastcat "hh", "hh", "hh", "hh"
   "bd! cp": fastcat "bd", "bd", "cp"
---   "bd! hh? ~ sd/2 cp*3": timecat {
---     { 1, pure"bd" }
---     { 1, pure"bd" }
---     { 1, degrade(pure"hh") }
---     { 1, silence! }
---     { 1, slow(2, pure"sd") }
---     { 1, fast(3, pure"cp") }
---   }
+  -- "bd! hh? ~ sd/2 cp*3": timecat {
+  --   { 1, pure"bd" }
+  --   { 1, pure"bd" }
+  --   { 1, degrade(pure"hh") }
+  --   { 1, silence! }
+  --   { 1, slow(2, pure"sd") }
+  --   { 1, fast(3, pure"cp") }
+  -- }
 --   "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
   "[bd, sd]": stack "bd", "sd"
   -- "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
---   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
---   "bd*<2 3 4>": slowcat fast(2, mini"bd"), fast(3, mini"bd"), fast(4, mini"bd")
+  "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
+  "bd*<2 3 4>": slowcat fast(2, pure"bd"), fast(3, pure"bd"), fast(4, pure"bd")
 }
 
 visitor_targets = {

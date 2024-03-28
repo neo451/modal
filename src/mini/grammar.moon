@@ -1,9 +1,8 @@
 --- defines the PEG grammar for parsing mini-notation
 -- @module mini.grammar
 import P, S, V, R, C, Ct, Cc from require("lpeg")
-require "moon.all"
-
 local *
+require "moon.all"
 
 -- unpack = unpack or table.unpack
 tinsert = table.insert
@@ -32,19 +31,15 @@ euclid = V "euclid"
 tail = V "tail"
 range = V "range"
 
-parseNumber = (num) -> tonumber num
-parseStep = (chars) ->
-  if chars != "." and chars != "_" then return AtomStub chars
-
 AtomStub = (source) ->
-  {
+  return {
     type: "atom"
     source: source
     -- location: location() --?
   }
 
 PatternStub = (source, alignment, seed) ->
-  {
+  return {
     type: "pattern"
     arguments: { alignment: alignment, seed: seed } -- ? what condition?
     source: source
@@ -58,9 +53,26 @@ ElementStub = (source, options) ->
     -- location: location! -- ?
   }
 
-seed = -1 -- neccesary???
 
+id = (x) -> x
+
+seed = -1 -- neccesary???
 --- non-recersive rules
+-- delimiters
+ws = S" \n\r\t" ^ 0
+comma = ws * P"," * ws
+pipe = ws * P"|" * ws
+dot = ws * P"." * ws
+quote = P"'" + P'"'
+
+parseNumber = (num) -> tonumber num
+parseStep = (chars) ->
+  if chars != "." and chars != "_" then return AtomStub chars
+
+-- chars
+step_char = R("09", "AZ", "az") + P"-" + P"#" + P"." + P"^" + P"_" / id -- upgrade to unicode
+step = ws * (step_char ^ 1 / parseStep) * ws
+
 -- numbers
 minus = P("-")
 plus = P("+")
@@ -74,18 +86,6 @@ intneg = minus ^ -1 * int
 exp = e * (minus + plus) ^ -1 * digit ^ 1
 frac = decimal_point * digit ^ 1
 number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
-
--- delimiters
-ws = S" \n\r\t\u00A0" ^ 0
-comma = ws * P"," * ws
-pipe = ws * P"|" * ws
-dot = ws * P"." * ws
-quote = P"'" + P'"'
-
--- chars
-step_char = R("AZ", "az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
--- step_char = R("AZ", "az", "09") + P"-" + P"#" + P"^" + P"_" -- upgrade to unicode
-step = ws * (step_char ^ 1 / parseStep) * ws
 
 parseFast = (a) ->
   (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "fast" } }
@@ -116,6 +116,7 @@ parseReplicate = (a) ->
   (x) -> x.options.reps = ( x.options.reps or 1 ) + ( tonumber(a) or 2 ) - 1
 
 parseSlices = (slice, ...) ->
+  -- p slice
   ops = { ... }
   result = ElementStub(slice, { ops: {}, weight: 1, reps: 1})
   for op in *ops
@@ -143,15 +144,18 @@ parseStackOrChoose = (head, tail) ->
     return head
 
 parsePolymeterStack = (head, tail) ->
-    PatternStub(tail and { head, unpack(tail.list) } or { head }, "alignment")
+    PatternStub(tail and { head, unpack(tail.list) } or { head }, "polymeter")
 
 parseSequence = (...) -> 
   PatternStub({ ... }, "fastcat")
 
+parseSubCycle = (s) -> s
+
 --- table of PEG grammar rules
 -- @table grammar
 grammar = {
-  "stack_or_choose", -- initial rule
+  "root", -- initial rule
+  root: stack_or_choose + polymeter_stack
 
   stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ 0) / parseStackOrChoose
   polymeter_stack: (sequence * stack_tail ^ -1) / parsePolymeterStack
@@ -159,14 +163,13 @@ grammar = {
   -- sequence and tail
   sequence: (slice_with_ops ^ 1) / parseSequence
   stack_tail: (comma * sequence) ^ 1 / parseStackTail
-  dot_tail: (dot * sequence) ^ 1 
-  -- / parseDotTail
+  dot_tail: (dot * sequence) ^ 1 / parseDotTail
   choose_tail: (pipe * sequence) ^ 1 / parseChooseTail
 
   -- slices
   slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
-  sub_cycle: P"[" * ws * stack_or_choose * ws * P"]" -- TODO:
+  sub_cycle: P"[" * ws * (stack_or_choose / parseSubCycle) * ws * P"]" -- TODO:
   polymeter: P"{" * ws * polymeter_stack * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
   slow_sequence: P"<" * ws * polymeter_stack * ws * P">" * ws / parseSlowSeq
   polymeter_steps: P"%" * slice
@@ -191,6 +194,6 @@ grammar = Ct C grammar
 parse = (string) -> grammar\match(string)[2]
 
 -- p parse("bd sd . hh hh hh . cp bd") --!!!
--- p parse("[bd, sd]")
--- p parse("bd hh@3 sd@2")
+-- p parse(" .")
+
 return { :parse }
