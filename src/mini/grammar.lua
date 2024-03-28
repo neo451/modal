@@ -54,15 +54,11 @@ PatternStub = function(source, alignment, seed)
   }
 end
 ElementStub = function(source, options)
-  return setmetatable({
+  return {
     type = "element",
     source = source,
     options = options
-  }, {
-    __tostring = function(self)
-      return "ElementStub" .. tostring(self)
-    end
-  })
+  }
 end
 seed = -1
 minus = P("-")
@@ -83,7 +79,7 @@ pipe = ws * P("|") * ws
 dot = ws * P(".") * ws
 quote = P("'") + P('"')
 step_char = R("AZ", "az", "09") + P("-") + P("#") + P(".") + P("^") + P("_")
-step = ws * (step_char ^ 1) / parseStep * ws
+step = ws * (step_char ^ 1 / parseStep) * ws
 parseFast = function(a)
   return function(x)
     return tinsert(x.options.ops, {
@@ -217,14 +213,11 @@ parseChooseTail = function(...)
     seed = seed + 1
   }
 end
-parseStackOrChoose = function(head, ...)
-  tail = {
-    ...
-  }
-  if tail and #tail > 0 then
+parseStackOrChoose = function(head, tail)
+  if tail and #tail.list > 0 then
     return PatternStub({
       head,
-      unpack(tail)
+      unpack(tail.list)
     }, tail.alignment, tail.seed)
   else
     return head

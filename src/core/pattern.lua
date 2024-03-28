@@ -117,6 +117,27 @@ patternifyAST = function(ast)
     if "stack" == _exp_1 then
       return stack(children)
     end
+    local addWeight
+    addWeight = function(a, b)
+      return a + b.options.weight or 1
+    end
+    local weightSum = reduce(addWeight, 0, ast.source)
+    if weightSum > #children then
+      local atoms = ast.source
+      local pat = timecat((function()
+        local _accum_0 = { }
+        local _len_0 = 1
+        for i, v in pairs(atoms) do
+          _accum_0[_len_0] = {
+            v.options.weight or 1,
+            children[i]
+          }
+          _len_0 = _len_0 + 1
+        end
+        return _accum_0
+      end)())
+      return pat
+    end
     return fastcat(children)
   elseif "element" == _exp_0 then
     return enter(ast.source)
@@ -1251,6 +1272,7 @@ apply = function(x, pat)
   return pat .. x
 end
 sl = string_lambda
+print(mini("hh hh@2"))
 return {
   C = C,
   Pattern = Pattern,

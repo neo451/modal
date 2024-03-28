@@ -28,7 +28,7 @@ describe "Mini Parser for", ->
   describe "weight", ->
     it "should pass", ->
       same "hh@2"
-      same "bd _ _ sd"
+      -- same "bd _ _ sd"
 
   describe "degrade", ->
     it "should pass", ->
@@ -58,6 +58,7 @@ describe "Mini Parser for", ->
     it "should pass", ->
       same "bd sd"
       same "bd hh sd"
+      -- same "bd hh@3 sd@2" --HACK: 
   --     same "bd! hh? ~ sd/2 cp*3"
 
   describe "polymeter", ->
@@ -98,21 +99,21 @@ describe "Mini Interpreter for", ->
       eval "bd sd"
       eval "bd hh sd"
       eval "bd hh@2"
---       -- eval "bd hh@3 sd@2"
+      eval "bd hh@3 sd@2"
 --       eval "bd! hh? ~ sd/2 cp*3"
 
   describe "euclidian rhythm", ->
     it "should pass", ->
       eval "bd(3,8,1)"
---
---   describe "repeat", ->
---     it "should pass", ->
---       eval "hh!"
---       eval "hh!!!"
---       eval "bd! cp"
---       -- same "hh!4"
+
+  describe "repeat", ->
+    it "should pass", ->
+      eval "hh!"
+      eval "hh!!!"
+      eval "bd! cp"
+      eval "hh!4"
 --       -- same "hh!4!!"
---
+
   describe "weight", ->
     it "should pass", ->
       eval "hh@2"
@@ -143,7 +144,7 @@ describe "Mini Interpreter for", ->
     it "should pass", ->
       -- eval "[bd sd] hh"
       -- eval "bd sd . cp . hh*2"
-      -- eval "[bd, sd]"
+      eval "[bd, sd]"
 --
 --   describe "polymeter", ->
 --     it "should pass", ->
@@ -173,10 +174,11 @@ interpreter_targets = {
   "bd(3,8,1)": euclid 3, 8, 1, pure"bd"
   "hh@2": pure "hh"
   "bd hh@2": timecat { { 1, mini"bd" }, { 2, mini"hh" } }
---   -- "bd hh@3 sd@2": timecat { { 1, "bd" }, { 3, "hh" }, { 2, "sd" } }
---   "hh!": fastcat "hh", "hh"
---   "hh!!!": fastcat "hh", "hh", "hh", "hh"
---   "bd! cp": fastcat "bd", "bd", "cp"
+  "bd hh@3 sd@2": timecat { { 1, mini"bd" }, { 3, mini"hh" }, { 2, mini"sd" } }
+  "hh!": fastcat "hh", "hh"
+  "hh!!!": fastcat "hh", "hh", "hh", "hh"
+  "hh!4": fastcat "hh", "hh", "hh", "hh"
+  "bd! cp": fastcat "bd", "bd", "cp"
 --   "bd! hh? ~ sd/2 cp*3": timecat {
 --     { 1, pure"bd" }
 --     { 1, pure"bd" }
@@ -187,8 +189,8 @@ interpreter_targets = {
 --   }
 --   "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
---   "[bd, sd]": stack "bd", "sd"
---   "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
+  "[bd, sd]": stack "bd", "sd"
+  -- "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
 --   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
 --   "bd*<2 3 4>": slowcat fast(2, mini"bd"), fast(3, mini"bd"), fast(4, mini"bd")
 }

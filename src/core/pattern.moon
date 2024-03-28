@@ -68,7 +68,7 @@ patternifyAST = (ast) ->
         -- when "polymeter_slowcat" then
       --   aligned = map ((child) -> slow child.options.weight, child), children
       --   return stack(aligned)
-      addWeight = (a, b) -> a + b.options.weight
+      addWeight = (a, b) -> a + b.options.weight or 1
       weightSum = reduce addWeight, 0, ast.source
       if weightSum > #children then
         atoms = ast.source
@@ -809,7 +809,7 @@ scale = _patternify _scale
 apply = (x, pat) -> pat .. x
 sl = string_lambda
 
-print mini "hh hh@2"
+print mini"hh hh@2"
 
 -- TODO: wchoose, tests for the new functions
 return {

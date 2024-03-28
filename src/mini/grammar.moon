@@ -51,17 +51,12 @@ PatternStub = (source, alignment, seed) ->
   }
 
 ElementStub = (source, options) ->
-  return setmetatable({
+  return {
     type: "element"
     source: source
     options: options
     -- location: location! -- ?
-  },
-  {
-    __tostring: () => "ElementStub" .. tostring(@)
   }
-  )
-
 
 seed = -1 -- neccesary???
 
@@ -90,7 +85,7 @@ quote = P"'" + P'"'
 -- chars
 step_char = R("AZ", "az", "09") + P"-" + P"#" + P"." + P"^" + P"_" -- upgrade to unicode
 -- step_char = R("AZ", "az", "09") + P"-" + P"#" + P"^" + P"_" -- upgrade to unicode
-step = ws * (step_char ^ 1) / parseStep * ws
+step = ws * (step_char ^ 1 / parseStep) * ws
 
 parseFast = (a) ->
   (x) -> tinsert x.options.ops, { type: "stretch", arguments: { amount: a, type: "fast" } }
@@ -141,10 +136,9 @@ parseStackTail = (...) -> { alignment: "stack", list: { ... } }
 
 parseChooseTail = (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
 
-parseStackOrChoose = (head, ...) ->
-  tail = { ... }
-  if tail and #tail > 0
-    return PatternStub({ head, unpack(tail) }, tail.alignment, tail.seed)
+parseStackOrChoose = (head, tail) ->
+  if tail and #tail.list > 0
+    return PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
   else
     return head
 
@@ -196,7 +190,7 @@ grammar = Ct C grammar
 -- @treturn table table of AST nodes
 parse = (string) -> grammar\match(string)[2]
 
--- p parse("bd sd . hh hh hh . cp bd")
--- p parse(".")
-
+-- p parse("bd sd . hh hh hh . cp bd") --!!!
+-- p parse("[bd, sd]")
+-- p parse("bd hh@3 sd@2")
 return { :parse }
