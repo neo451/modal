@@ -13,6 +13,14 @@ import op from require "fun"
 import string_lambda from require("pl.utils")
 fun = require "fun"
 
+sin = math.sin
+min = math.min
+max = math.max
+pi = math.pi
+floor = math.floor
+tinsert = table.insert
+
+
 applyOptions = (parent, enter) ->
   return (pat, i) ->
     ast = parent.source[i]
@@ -100,7 +108,6 @@ patternifyAST = (ast) ->
           stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
           aligned = map ((child) -> fast stepsPerCycle\fmap((x) -> x / #child\firstCycle!), child), children
           return stack aligned
-
         when "rand" then
           print "rand"
 
@@ -122,13 +129,6 @@ patternifyAST = (ast) ->
 mini = (code) ->
   ast = parse code
   patternifyAST(ast)
-
-sin = math.sin
-min = math.min
-max = math.max
-pi = math.pi
-floor = math.floor
-tinsert = table.insert
 
 C = {}
 

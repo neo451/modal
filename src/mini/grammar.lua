@@ -3,7 +3,7 @@ do
   local _obj_0 = require("lpeg")
   P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct, _obj_0.Cc
 end
-local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack_tail, stack_or_choose, polymeter_stack, dot_tail, choose_tail, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, AtomStub, PatternStub, ElementStub, id, seed, ws, comma, pipe, dot, quote, parseNumber, parseStep, step_char, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStackTail, parseChooseTail, parseStackOrChoose, parsePolymeterStack, parseSequence, parseSubCycle, grammar, parse
+local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack, stack_or_choose, polymeter_stack, dotStack, choose, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, AtomStub, PatternStub, ElementStub, id, seed, ws, comma, pipe, dot, quote, parseNumber, parseStep, step_char, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStack, parseDotStack, parseChoose, parseStackOrChoose, parseSequence, parseSubCycle, grammar, parse
 require("moon.all")
 tinsert = table.insert
 sequence = V("sequence")
@@ -13,11 +13,11 @@ sub_cycle = V("sub_cycle")
 polymeter = V("polymeter")
 slow_sequence = V("slow_sequence")
 polymeter_steps = V("polymeter_steps")
-stack_tail = V("stack_tail")
+stack = V("stack")
 stack_or_choose = V("stack_or_choose")
 polymeter_stack = V("polymeter_stack")
-dot_tail = V("dot_tail")
-choose_tail = V("dot_tail")
+dotStack = V("dotStack")
+choose = V("choose")
 step = V("step")
 slice_with_ops = V("slice_with_ops")
 op = V("op")
@@ -183,11 +183,16 @@ parseSlices = function(slice, ...)
   return result
 end
 parsePolymeter = function(s, steps)
+  s = PatternStub({
+    s
+  }, "polymeter")
   s.arguments.stepsPerCycle = steps
   return s
 end
 parseSlowSeq = function(s, steps)
-  s.arguments.alignment = "polymeter_slowcat"
+  s = PatternStub({
+    s
+  }, "polymeter_slowcat")
   return s
 end
 parseDotTail = function(...)
@@ -199,22 +204,23 @@ parseDotTail = function(...)
     seed = seed + 1
   }
 end
-parseStackTail = function(...)
-  return {
-    alignment = "stack",
-    list = {
-      ...
-    }
-  }
+parseStack = function(...)
+  return PatternStub({
+    ...
+  }, "stack")
 end
-parseChooseTail = function(...)
-  return {
-    alignment = "rand",
-    list = {
-      ...
-    },
-    seed = seed + 1
-  }
+parseDotStack = function(...)
+  p(...)
+  seed = seed + 1
+  return PatternStub({
+    ...
+  }, "feet", seed)
+end
+parseChoose = function(...)
+  seed = seed + 1
+  return PatternStub({
+    ...
+  }, "rand", seed)
 end
 parseStackOrChoose = function(head, tail)
   if tail and #tail.list > 0 then
@@ -226,14 +232,6 @@ parseStackOrChoose = function(head, tail)
     return head
   end
 end
-parsePolymeterStack = function(head, tail)
-  return PatternStub(tail and {
-    head,
-    unpack(tail.list)
-  } or {
-    head
-  }, "polymeter")
-end
 parseSequence = function(...)
   return PatternStub({
     ...
@@ -244,18 +242,16 @@ parseSubCycle = function(s)
 end
 grammar = {
   "root",
-  root = stack_or_choose + polymeter_stack,
-  stack_or_choose = (sequence * (stack_tail + choose_tail + dot_tail) ^ 0) / parseStackOrChoose,
-  polymeter_stack = (sequence * stack_tail ^ -1) / parsePolymeterStack,
+  root = choose + dotStack + sequence + stack,
   sequence = (slice_with_ops ^ 1) / parseSequence,
-  stack_tail = (comma * sequence) ^ 1 / parseStackTail,
-  dot_tail = (dot * sequence) ^ 1 / parseDotTail,
-  choose_tail = (pipe * sequence) ^ 1 / parseChooseTail,
+  stack = sequence * (comma * sequence) ^ 0 / parseStack,
+  choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
+  dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
   slice_with_ops = (slice * op ^ 0) / parseSlices,
   slice = step + sub_cycle + polymeter + slow_sequence,
-  sub_cycle = P("[") * ws * (stack_or_choose / parseSubCycle) * ws * P("]"),
-  polymeter = P("{") * ws * polymeter_stack * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
-  slow_sequence = P("<") * ws * polymeter_stack * ws * P(">") * ws / parseSlowSeq,
+  sub_cycle = P("[") * ws * stack * ws * P("]") / parseSubCycle,
+  polymeter = P("{") * ws * sequence * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
+  slow_sequence = P("<") * ws * sequence * ws * P(">") * ws / parseSlowSeq,
   polymeter_steps = P("%") * slice,
   op = fast + slow + tail + range + replicate + degrade + weight + euclid,
   fast = P("*") * slice / parseFast,

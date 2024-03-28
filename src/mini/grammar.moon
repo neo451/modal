@@ -14,11 +14,11 @@ sub_cycle = V "sub_cycle"
 polymeter = V "polymeter"
 slow_sequence = V "slow_sequence"
 polymeter_steps = V "polymeter_steps"
-stack_tail = V "stack_tail"
+stack = V "stack"
 stack_or_choose = V "stack_or_choose"
 polymeter_stack = V "polymeter_stack"
-dot_tail = V "dot_tail"
-choose_tail = V "dot_tail"
+dotStack = V "dotStack"
+choose = V "choose"
 step = V "step"
 slice_with_ops = V "slice_with_ops"
 op = V "op"
@@ -67,6 +67,7 @@ quote = P"'" + P'"'
 
 parseNumber = (num) -> tonumber num
 parseStep = (chars) ->
+  -- p chars
   if chars != "." and chars != "_" then return AtomStub chars
 
 -- chars
@@ -124,29 +125,37 @@ parseSlices = (slice, ...) ->
   return result
 
 parsePolymeter = (s, steps) ->
+  s = PatternStub({s}, "polymeter")
   s.arguments.stepsPerCycle = steps
   return s
 
 parseSlowSeq = (s, steps) ->
-  s.arguments.alignment = "polymeter_slowcat"
+  s = PatternStub({s}, "polymeter_slowcat")
+  -- s.arguments.alignment = "polymeter_slowcat"
   return s
 
 parseDotTail = (...) -> { alignment: "feet", list: { ... }, seed: seed + 1 }
 
-parseStackTail = (...) -> { alignment: "stack", list: { ... } }
+parseStack = (...) -> PatternStub({ ... }, "stack")
 
-parseChooseTail = (...) -> { alignment: "rand", list: { ... }, seed: seed + 1 }
+parseDotStack = (...) ->
+  p ...
+  seed += 1
+  PatternStub({ ... }, "feet", seed)
+
+parseChoose = (...) ->
+  seed += 1
+  PatternStub({ ... }, "rand", seed)
 
 parseStackOrChoose = (head, tail) ->
+  -- p tail
   if tail and #tail.list > 0
     return PatternStub({ head, unpack(tail.list) }, tail.alignment, tail.seed)
   else
     return head
 
-parsePolymeterStack = (head, tail) ->
-    PatternStub(tail and { head, unpack(tail.list) } or { head }, "polymeter")
 
-parseSequence = (...) -> 
+parseSequence = (...) ->
   PatternStub({ ... }, "fastcat")
 
 parseSubCycle = (s) -> s
@@ -154,24 +163,25 @@ parseSubCycle = (s) -> s
 --- table of PEG grammar rules
 -- @table grammar
 grammar = {
-  "root", -- initial rule
-  root: stack_or_choose + polymeter_stack
-
-  stack_or_choose: (sequence * (stack_tail + choose_tail + dot_tail) ^ 0) / parseStackOrChoose
-  polymeter_stack: (sequence * stack_tail ^ -1) / parsePolymeterStack
+  "root" -- initial rule
+  -- choose: sequence * (choose_tail) ^ -1
+  -- root: stack_or_choose + polymeter_stack
+  root: choose + dotStack + sequence + stack
 
   -- sequence and tail
   sequence: (slice_with_ops ^ 1) / parseSequence
-  stack_tail: (comma * sequence) ^ 1 / parseStackTail
-  dot_tail: (dot * sequence) ^ 1 / parseDotTail
-  choose_tail: (pipe * sequence) ^ 1 / parseChooseTail
+  stack: sequence * (comma * sequence) ^ 0 / parseStack
+  choose: sequence * (pipe * sequence) ^ 1 / parseChoose
+  -- stack_tail: sequence * (comma * sequence) ^ 1 / parseStackTail
+  dotStack: sequence * (dot * sequence) ^ 1 / parseDotStack
+  
 
   -- slices
   slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
-  sub_cycle: P"[" * ws * (stack_or_choose / parseSubCycle) * ws * P"]" -- TODO:
-  polymeter: P"{" * ws * polymeter_stack * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
-  slow_sequence: P"<" * ws * polymeter_stack * ws * P">" * ws / parseSlowSeq
+  sub_cycle: P"[" * ws * stack * ws * P"]" / parseSubCycle
+  polymeter: P"{" * ws * sequence * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
+  slow_sequence: P"<" * ws * sequence * ws * P">" * ws / parseSlowSeq
   polymeter_steps: P"%" * slice
 
   -- ops
@@ -194,6 +204,6 @@ grammar = Ct C grammar
 parse = (string) -> grammar\match(string)[2]
 
 -- p parse("bd sd . hh hh hh . cp bd") --!!!
--- p parse(" .")
-
+-- p parse "[bd, sd]"
+-- p parse"bd sd | hh cp"
 return { :parse }

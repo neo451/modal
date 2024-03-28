@@ -1,4 +1,4 @@
-local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, applyOptions, resolveReplications, patternifyAST, mini, sin, min, max, pi, floor, tinsert, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl, pp
+local map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type, bjork, parseChord, getScale, Fraction, tofrac, tofloat, genericParams, aliasParams, Event, Span, State, parse, op, string_lambda, fun, sin, min, max, pi, floor, tinsert, applyOptions, resolveReplications, patternifyAST, mini, C, create, notemt, Pattern, silence, pure, reify, _patternify, _patternify_p_p, _patternify_p_p_p, stack, slowcatPrime, slowcat, fastcat, timecat, _cpm, cpm, _fast, fast, _slow, slow, _early, early, _late, late, _inside, inside, _outside, outside, _ply, ply, _fastgap, fastgap, _compress, compress, _focus, focusSpan, focus, _zoom, zoom, run, scan, waveform, steady, toBipolar, fromBipolar, sine2, sine, cosine2, cosine, square, square2, isaw, isaw2, saw, saw2, tri, tri2, time, rand, _irand, irand, _chooseWith, chooseWith, choose, chooseCycles, randcat, polyrhythm, _degradeByWith, _degradeBy, degradeBy, undegradeBy, _undegradeBy, degrade, undegrade, sometimesBy, sometimes, struct, _euclid, euclid, rev, palindrome, _iter, iter, _reviter, reviter, _segment, segment, _range, range, superimpose, layer, _off, off, _echoWith, echoWith, _when, when_, _firstOf, firstOf, every, _lastOf, lastOf, _jux, jux, _juxBy, juxBy, _striate, striate, _chop, chop, slice, splice, _loopAt, loopAt, fit, _legato, legato, _scale, scale, apply, sl, pp
 do
   local _obj_0 = require("xi.utils")
   map, filter, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type = _obj_0.map, _obj_0.filter, _obj_0.reduce, _obj_0.id, _obj_0.flatten, _obj_0.totable, _obj_0.dump, _obj_0.concat, _obj_0.rotate, _obj_0.union, _obj_0.timeToRand, _obj_0.curry, _obj_0.type
@@ -22,6 +22,12 @@ parse = require("xi.mini.grammar").parse
 op = require("fun").op
 string_lambda = require("pl.utils").string_lambda
 fun = require("fun")
+sin = math.sin
+min = math.min
+max = math.max
+pi = math.pi
+floor = math.floor
+tinsert = table.insert
 applyOptions = function(parent, enter)
   return function(pat, i)
     local ast = parent.source[i]
@@ -210,12 +216,6 @@ mini = function(code)
   local ast = parse(code)
   return patternifyAST(ast)
 end
-sin = math.sin
-min = math.min
-max = math.max
-pi = math.pi
-floor = math.floor
-tinsert = table.insert
 C = { }
 create = function(name)
   local withVal

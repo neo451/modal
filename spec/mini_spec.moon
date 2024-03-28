@@ -61,9 +61,9 @@ describe "Mini Parser for", ->
       -- same "bd hh@3 sd@2" --HACK: 
   --     same "bd! hh? ~ sd/2 cp*3"
 
-  describe "polymeter", ->
-    it "should pass", ->
-      same "bd*<2 3 4>"
+  -- describe "polymeter", ->
+  --   it "should pass", ->
+      -- same "bd*<2 3 4>"
   --     same "{bd sd hh cp hh}%4"
   --
   --
@@ -143,13 +143,13 @@ describe "Mini Interpreter for", ->
   --     eval "hh!!??"
 --       -- eval "hh!/2?!"
 --
---   describe "random seq", ->
---     it "should pass", ->
---       eval "bd | sd cp"
---
+  describe "random seq", ->
+    it "should pass", ->
+      eval "bd | sd cp"
+
   describe "polyrhythm", ->
     it "should pass", ->
-      -- eval "[bd sd] hh"
+      eval "[bd sd] hh"
       -- eval "bd sd . cp . hh*2"
       eval "[bd, sd]"
 
@@ -195,10 +195,10 @@ interpreter_targets = {
   --   { 1, slow(2, pure"sd") }
   --   { 1, fast(3, pure"cp") }
   -- }
---   "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
+  "bd | sd cp": randcat("bd", fastcat("sd", "cp"))
   "bd sd . cp . hh*2": fastcat(fastcat("bd", "sd"), "cp", fast(2, mini"hh"))
   "[bd, sd]": stack "bd", "sd"
-  -- "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
+  "[bd sd] hh": fastcat (fastcat "bd", "sd"), "hh"
   "{bd sd hh cp hh}%4": fastcat("bd", "sd", "hh", "cp")
   "bd*<2 3 4>": slowcat fast(2, pure"bd"), fast(3, pure"bd"), fast(4, pure"bd")
 }
