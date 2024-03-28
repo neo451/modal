@@ -10,7 +10,7 @@ local DefaultClock = Clock()
 local p
 p = function(key, pattern)
   if not Streams[key] then
-    local stream = Stream()
+    local stream = Stream(Clock.sendf)
     DefaultClock:subscribe(stream)
     Streams[key] = stream
   end

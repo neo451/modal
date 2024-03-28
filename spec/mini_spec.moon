@@ -1,6 +1,6 @@
 import Span from require "xi.types"
 import visit from require "xi.mini.visitor"
-import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack, C from require "xi.pattern"
+import mini, pure, silence, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack from require "xi.pattern"
 
 same = (name) -> assert.same visitor_targets[name], visit name
 eval = (name) -> assert.same interpreter_targets[name], mini name

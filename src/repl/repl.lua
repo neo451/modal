@@ -6,7 +6,6 @@ local clock = DefaultClock
 
 clock:start()
 
--- TODO: move to repl/
 -- TODO: history
 -- TODO: completion
 local eval = function(a)
@@ -89,9 +88,9 @@ local function onread(err, line)
 	end
 end
 
-coroutine.wrap(function()
-	displayPrompt(">")
-	uv.read_start(stdin, onread)
-end)()
+-- coroutine.wrap(function()
+displayPrompt(">")
+uv.read_start(stdin, onread)
+-- end)()
 
 uv.run()

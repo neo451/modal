@@ -1,5 +1,6 @@
 import Span, State, Event from require "xi.types"
-import Pattern, C, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
+import Pattern, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
+C = require "xi.control"
 
 describe "Pattern", ->
   describe "new", ->

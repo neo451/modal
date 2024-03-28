@@ -33,14 +33,14 @@ build = {
 		["xi.drawline"] = "src/utils/drawline.lua",
 		["xi.inspect"] = "src/utils/inspect.lua",
 		["xi.fun"] = "src/utils/fun.lua",
+		["xi.stream"] = "src/core/stream.lua",
 
 		["xi.types"] = "src/core/types.lua",
 		["xi.pattern"] = "src/core/pattern.lua",
 		["xi.control"] = "src/core/control.lua",
 		["xi.pattern_factory"] = "src/core/pattern_factory.lua",
 
-		["xi.clock"] = "src/stream/clock.lua",
-		["xi.stream"] = "src/stream/stream.lua",
+		["xi.clock"] = "src/clock/clock.lua",
 
 		["xi.euclid"] = "src/theory/euclid.lua",
 		["xi.scales"] = "src/theory/scales.lua",

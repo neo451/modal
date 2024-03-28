@@ -8,7 +8,7 @@ DefaultClock = Clock!
 
 p = (key, pattern) ->
   if not Streams[key]
-    stream = Stream!
+    stream = Stream(Clock.sendf)
     DefaultClock\subscribe stream
     Streams[key] = stream
   Streams[key].pattern = pattern
