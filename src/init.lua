@@ -1,7 +1,6 @@
 local pattern = require("xi.pattern")
 local pattern_factory = require("xi.pattern_factory")
-local C
-C = require("xi.pattern").C
+local C = require("xi.control")
 local drawline
 drawline = require("xi.drawline").drawline
 local xi = {
@@ -11,7 +10,7 @@ local xi = {
 }
 xi.drawline = drawline
 for name, func in pairs(pattern) do
-  if name ~= "C" and name ~= "Pattern" then
+  if name ~= "Pattern" then
     xi[name] = func
   end
 end

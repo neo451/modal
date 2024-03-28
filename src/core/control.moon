@@ -1,3 +1,4 @@
+
 genericParams = {
   { "s", "sound"}
   { "s", "toArg", "for internal sound routing" },
@@ -226,4 +227,31 @@ aliasParams = {
   voice: "voi"
 }
 
-return { :genericParams, :aliasParams }
+import reify, stack from require "xi.pattern"
+import parseChord from require "xi.chords"
+
+C = {}
+
+create = (name) ->
+  withVal = (v) -> { [name]: v }
+  func = (args) -> reify(args)\fmap(withVal)
+  C[name] = func
+
+for name in *genericParams
+  param = name[2]
+  create param
+  if aliasParams[param] != nil
+    alias = aliasParams[param]
+    C[alias] = C[param]
+
+notemt =
+  __add: (other) =>
+    { note: @note + other.note }
+
+C.note = (args) ->
+  args = reify(args)
+  chordToStack = (thing) -> stack(parseChord thing)
+  withVal = (v) -> setmetatable { note: v }, notemt
+  return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
+
+return C

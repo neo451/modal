@@ -201,4 +201,42 @@ utils.union = function(a, b)
   end
   return new_map
 end
+local _string_lambda
+_string_lambda = function(f)
+  if type(f) == 'function' then
+    return f
+  end
+  if (f:find('^|')) or (f:find('_')) then
+    local args, body = f:match('|([^|]*)|(.+)')
+    if f:find('_') then
+      args = '_'
+      body = f
+    else
+      if not args then
+        return error('bad string lambda')
+      end
+    end
+    local fstr = 'return function(' .. args .. ') return ' .. body .. ' end'
+    local fn, err = loadstring(fstr)
+    if not fn then
+      return error(err)
+    end
+    fn = fn()
+    return fn
+  else
+    return error('not a string lambda')
+  end
+end
+utils.memoize = function(func)
+  local cache = { }
+  return function(k)
+    local res = cache[k]
+    if res == nil then
+      res = func(k)
+      cache[k] = res
+    end
+    return res
+  end
+end
+utils.string_lambda = utils.memoize(_string_lambda)
 return utils
