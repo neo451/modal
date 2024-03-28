@@ -49,8 +49,8 @@ build = {
 		["xi.mini.grammar"] = "src/mini/grammar.lua",
 		["xi.mini.visitor"] = "src/mini/visitor.lua",
 
-		["xi.luaish"] = "src/repl/luaish.lua",
-		["xi.repl"] = "src/repl/init.lua",
+		-- ["xi.luaish"] = "src/repl/luaish.lua",
+		["xi.repl"] = "src/repl/repl.lua",
 	},
 	install = {
 		bin = {
