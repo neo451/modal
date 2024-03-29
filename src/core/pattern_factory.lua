@@ -5,12 +5,17 @@ Stream = require("xi.stream").Stream
 local Clock
 Clock = require("xi.clock").Clock
 local C = require("xi.control")
+local moon = require("moon.all")
 local Streams = { }
 local DefaultClock = Clock()
 local p
 p = function(key, pattern)
   if not Streams[key] then
     local stream = Stream(Clock.sendf)
+    moon.p(stream.sendf)
+    stream.sendf({
+      pattern = pattern
+    })
     DefaultClock:subscribe(stream)
     Streams[key] = stream
   end

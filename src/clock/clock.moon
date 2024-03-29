@@ -1,8 +1,50 @@
 socket = require "socket"
 link = require "abletonlink"
+losc = require "losc"
+plugin = require "losc.plugins.udp-socket"
+bundle = require "losc.bundle"
+
 sleep = (sec) -> socket.sleep sec
 
+target = { name: "SuperDirt", address: "127.0.0.1", port: 57120, latency: 0.2, handshake: true }
+
+typeMap = {
+  table: "b",
+  number: "f",
+  string: "s",
+}
+
+typesString = (msg) ->
+  types = ""
+  for x in *msg do
+    if typeMap[type(x)] then
+      types = types .. typeMap[type(x)]
+    else
+      types = types .. "b"
+  return types
+
+osc = losc.new(
+  { plugin: plugin.new({ sendPort: 57110, sendAddr: "127.0.0.1" })}
+)
+
+sendOSC = (value) ->
+  msg = {}
+  for key, val in pairs value do
+    table.insert msg, key
+    table.insert msg, val
+
+  msg.types = typesString msg
+  msg.address = "/dirt/play"
+
+  b = osc.new_message msg
+
+  -- bundle = bundle.new(ts, b)
+
+  -- @osc\send bundle
+  osc\send b
+
 class Clock
+  @sendf = sendOSC
   new:(bpm = 120, sampleRate = 1/20, beatsPerCycle = 4) =>
     @bpm, @sampleRate, @beatsPerCycle = bpm, sampleRate, beatsPerCycle
     @link = link.create bpm
@@ -11,6 +53,7 @@ class Clock
     @running = false
     @notifyCoroutine = nil
     @latency = 0.2
+    @sendf = sendOSC
 
   type: -> "clock"
 

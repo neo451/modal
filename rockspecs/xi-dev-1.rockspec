@@ -27,12 +27,12 @@ build = {
 	modules = {
 		["xi.init"] = "src/init.lua",
 
-		["xi.utils"] = "src/utils/utils.lua",
-		["xi.fraction"] = "src/utils/fraction.lua",
-		["xi.bitop"] = "src/utils/bitop.lua",
-		["xi.drawline"] = "src/utils/drawline.lua",
-		["xi.inspect"] = "src/utils/inspect.lua",
-		["xi.fun"] = "src/utils/fun.lua",
+		["xi.utils"] = "src/core/utils.lua",
+		["xi.fraction"] = "src/core/fraction.lua",
+		["xi.bitop"] = "src/core/bitop.lua",
+		["xi.drawline"] = "src/core/drawline.lua",
+		["xi.inspect"] = "src/core/inspect.lua",
+		["xi.fun"] = "src/core/fun.lua",
 		["xi.stream"] = "src/core/stream.lua",
 
 		["xi.types"] = "src/core/types.lua",
@@ -42,11 +42,11 @@ build = {
 
 		["xi.clock"] = "src/clock/clock.lua",
 
-		["xi.euclid"] = "src/theory/euclid.lua",
-		["xi.scales"] = "src/theory/scales.lua",
-		["xi.chords"] = "src/theory/chords.lua",
+		["xi.euclid"] = "src/core/euclid.lua",
+		["xi.scales"] = "src/core/scales.lua",
+		["xi.chords"] = "src/core/chords.lua",
 
-		["xi.mini"] = "src/mini/mini.lua",
+		["xi.mini"] = "src/core/mini.lua",
 
 		-- ["xi.luaish"] = "src/repl/luaish.lua",
 		["xi.repl"] = "src/repl/repl.lua",

@@ -1,4 +1,5 @@
-import Fraction from require "xi.fraction"
+import Clock from require "xi.clock"
+require"moon.all"
 
 class Stream
   new:(sendf) =>
@@ -13,7 +14,7 @@ class Stream
     if not @pattern
       return
 
-    events = @pattern\onsetsOnly!\querySpan Fraction(cycleFrom), Fraction(cycleTo)
+    events = @pattern\onsetsOnly!\querySpan cycleFrom, cycleTo
 
     -- print "cycle from: ", cycleFrom, " ", "cycle to: ", cycleTo
 
@@ -33,5 +34,7 @@ class Stream
       value.delta = deltaSeconds
 
       @sendf value
+
+p Stream(Clock.sendf)
 
 return { :Stream }

@@ -2,13 +2,15 @@ import cpm from require "xi.pattern"
 import Stream from require "xi.stream"
 import Clock from require "xi.clock"
 C = require"xi.control"
-
+moon = require"moon.all"
 Streams = {}
 DefaultClock = Clock!
 
 p = (key, pattern) ->
   if not Streams[key]
     stream = Stream(Clock.sendf)
+    moon.p stream.sendf
+    stream.sendf({pattern: pattern})
     DefaultClock\subscribe stream
     Streams[key] = stream
   Streams[key].pattern = pattern

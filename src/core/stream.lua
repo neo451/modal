@@ -1,5 +1,6 @@
-local Fraction
-Fraction = require("xi.fraction").Fraction
+local Clock
+Clock = require("xi.clock").Clock
+require("moon.all")
 local Stream
 do
   local _class_0
@@ -11,7 +12,7 @@ do
       if not self.pattern then
         return 
       end
-      local events = self.pattern:onsetsOnly():querySpan(Fraction(cycleFrom), Fraction(cycleTo))
+      local events = self.pattern:onsetsOnly():querySpan(cycleFrom, cycleTo)
       for _index_0 = 1, #events do
         local event = events[_index_0]
         local cycleOn = event.whole._begin
@@ -49,6 +50,7 @@ do
   _base_0.__class = _class_0
   Stream = _class_0
 end
+p(Stream(Clock.sendf))
 return {
   Stream = Stream
 }
