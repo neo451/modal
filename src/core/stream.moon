@@ -35,6 +35,4 @@ class Stream
 
       @sendf value
 
-p Stream(Clock.sendf)
-
 return { :Stream }

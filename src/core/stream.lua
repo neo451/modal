@@ -50,7 +50,6 @@ do
   _base_0.__class = _class_0
   Stream = _class_0
 end
-p(Stream(Clock.sendf))
 return {
   Stream = Stream
 }

@@ -27,7 +27,7 @@ osc = losc.new(
   { plugin: plugin.new({ sendPort: 57110, sendAddr: "127.0.0.1" })}
 )
 
-sendOSC = (value) ->
+sendOSC = (_, value, ts) ->
   msg = {}
   for key, val in pairs value do
     table.insert msg, key
@@ -42,6 +42,8 @@ sendOSC = (value) ->
 
   -- @osc\send bundle
   osc\send b
+
+-- sendOSC { type: "clock", action: "start" }
 
 class Clock
   @sendf = sendOSC

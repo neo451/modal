@@ -12,10 +12,6 @@ local p
 p = function(key, pattern)
   if not Streams[key] then
     local stream = Stream(Clock.sendf)
-    moon.p(stream.sendf)
-    stream.sendf({
-      pattern = pattern
-    })
     DefaultClock:subscribe(stream)
     Streams[key] = stream
   end

@@ -39,7 +39,7 @@ local osc = losc.new({
   })
 })
 local sendOSC
-sendOSC = function(value)
+sendOSC = function(_, value, ts)
   local msg = { }
   for key, val in pairs(value) do
     table.insert(msg, key)

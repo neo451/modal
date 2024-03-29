@@ -45,7 +45,7 @@ do
       return self._begin == rhs._begin and self._end == rhs._end
     end,
     __tostring = function(self)
-      return string.format("%s → %s", self._begin:show(), self._end:show())
+      return tostring(self._begin:show()) .. " → " .. tostring(self._end:show())
     end,
     show = function(self)
       return self:__tostring()
@@ -163,7 +163,7 @@ do
         partFormat = "(%s) ⇜"
       end
       local partString = string.format(partFormat, self.part:show())
-      return string.format("[%s | %s]", partString, dump(self.value))
+      return "[" .. tostring(partString) .. " | " .. tostring(dump(self.value)) .. "]"
     end,
     spanEquals = function(self, other)
       return ((other.whole == nil) and (self.whole == nil)) or (other.whole == self.whole)
@@ -248,7 +248,7 @@ do
       return State(self.span, controls)
     end,
     __tostring = function(self)
-      return "span: " .. self.span:show() .. "  controls: " .. dump(self.controls)
+      return "span: " .. tostring(self.span:show()) .. " controls: " .. tostring(dump(self.controls))
     end,
     __eq = function(self, other)
       return self.span == other.span and compare(self.controls, other.controls)

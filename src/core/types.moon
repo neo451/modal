@@ -1,8 +1,6 @@
 import Fraction, tofrac from require "xi.fraction"
 import compare, dump from require "xi.utils"
 
--- types = require "types"
-
 class Span
   new:(b = 1, e = 1) =>
     @_begin, @_end = tofrac(b), tofrac(e)
@@ -33,7 +31,7 @@ class Span
 
   __eq:(rhs) => @_begin == rhs._begin and @_end == rhs._end
 
-  __tostring: => string.format "%s → %s", @_begin\show!, @_end\show!
+  __tostring: => "#{@_begin\show!} → #{@_end\show!}"
 
   show: => @__tostring!
 
@@ -67,7 +65,7 @@ class Span
   sect_e:(other) =>
     result = @sect(other)
     if not result
-      error("Span: Arcs do not intersect")
+      error("Span: spans do not intersect")
     result
 
 class Event
@@ -114,7 +112,7 @@ class Event
 
     partString = string.format partFormat, @part\show!
 
-    string.format "[%s | %s]", partString, dump @value
+    return "[#{partString} | #{dump @value}]"
 
   spanEquals: (other) =>
     ((other.whole == nil) and (@whole == nil)) or (other.whole == @whole)
@@ -154,7 +152,7 @@ class State
 
   setControls:(controls) => State @span, controls
 
-  __tostring: => "span: ".. @span\show! .. "  controls: " .. dump @controls
+  __tostring: => "span: #{@span\show!} controls: #{dump @controls}"
 
   __eq:(other) => @span == other.span and compare @controls, other.controls
 

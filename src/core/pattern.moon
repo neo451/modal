@@ -99,7 +99,6 @@ patternifyAST = (ast) ->
           aligned = map ((child) -> slow #child\firstCycle!, child), children
           return stack aligned
         when "polymeter" then
-          -- TODO : test when patterning stepsPerCycle
           stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
           aligned = map ((child) -> fast stepsPerCycle\fmap((x) -> x / #child\firstCycle!), child), children
           return stack aligned
@@ -819,7 +818,7 @@ scale = _patternify _scale
 --   return fastcat tablepat[index]
 
 -- helpers
-apply = (x, pat) -> pat .. x
+app = (x, pat) -> pat .. x
 sl = string_lambda
 pp = (x) ->
   if type(x) == "table" then
@@ -828,15 +827,12 @@ pp = (x) ->
   else
     print(x)
 
--- pp mini"bd | hh"(0, 10)
--- pp mini"bd sd . cp . hh*2"
--- pp mini"~"
--- TODO: wchoose, tests for the new functions
+-- TODO: wchoose
 return {
   :Pattern
   :id, :pure, :silence
   :mini, :reify
-  :sl, :apply
+  :sl, :app, :pp
   :run, :scan
   :fastcat, :slowcat, :timecat, :randcat
   :struct, :euclid
