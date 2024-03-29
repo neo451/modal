@@ -70,7 +70,7 @@ parseStep = function(chars)
   end
 end
 step_char = R("09", "AZ", "az") + P("-") + P("#") + P(".") + P("^") + P("_") / id
-step = ws * (step_char ^ 1 / parseStep) * ws
+step = ws * (step_char ^ 1 / parseStep) * ws - P(".")
 minus = P("-")
 plus = P("+")
 zero = P("0")
@@ -242,14 +242,14 @@ parseSubCycle = function(s)
 end
 grammar = {
   "root",
-  root = choose + dotStack + sequence + stack,
+  root = dotStack + choose + stack + sequence,
   sequence = (slice_with_ops ^ 1) / parseSequence,
-  stack = sequence * (comma * sequence) ^ 0 / parseStack,
+  stack = sequence * (comma * sequence) ^ 1 / parseStack,
   choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
   dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
   slice_with_ops = (slice * op ^ 0) / parseSlices,
   slice = step + sub_cycle + polymeter + slow_sequence,
-  sub_cycle = P("[") * ws * stack * ws * P("]") / parseSubCycle,
+  sub_cycle = P("[") * ws * (sequence + stack) * ws * P("]") / parseSubCycle,
   polymeter = P("{") * ws * sequence * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
   slow_sequence = P("<") * ws * sequence * ws * P(">") * ws / parseSlowSeq,
   polymeter_steps = P("%") * slice,

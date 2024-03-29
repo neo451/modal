@@ -72,7 +72,7 @@ parseStep = (chars) ->
 
 -- chars
 step_char = R("09", "AZ", "az") + P"-" + P"#" + P"." + P"^" + P"_" / id -- upgrade to unicode
-step = ws * (step_char ^ 1 / parseStep) * ws
+step = ws * (step_char ^ 1 / parseStep) * ws - P"."
 
 -- numbers
 minus = P("-")
@@ -166,20 +166,20 @@ grammar = {
   "root" -- initial rule
   -- choose: sequence * (choose_tail) ^ -1
   -- root: stack_or_choose + polymeter_stack
-  root: choose + dotStack + sequence + stack
+  root: dotStack + choose + stack + sequence
 
   -- sequence and tail
   sequence: (slice_with_ops ^ 1) / parseSequence
-  stack: sequence * (comma * sequence) ^ 0 / parseStack
+  stack: sequence * (comma * sequence) ^ 1 / parseStack
   choose: sequence * (pipe * sequence) ^ 1 / parseChoose
   -- stack_tail: sequence * (comma * sequence) ^ 1 / parseStackTail
   dotStack: sequence * (dot * sequence) ^ 1 / parseDotStack
-  
+  -- dotStack: (dot * sequence) ^ 1 / parseDotStack
 
   -- slices
   slice_with_ops: (slice * op ^ 0) / parseSlices
   slice: step + sub_cycle + polymeter + slow_sequence
-  sub_cycle: P"[" * ws * stack * ws * P"]" / parseSubCycle
+  sub_cycle: P"[" * ws * (sequence + stack) * ws * P"]" / parseSubCycle
   polymeter: P"{" * ws * sequence * ws * P"}" * polymeter_steps ^ -1 * ws / parsePolymeter
   slow_sequence: P"<" * ws * sequence * ws * P">" * ws / parseSlowSeq
   polymeter_steps: P"%" * slice
@@ -204,6 +204,9 @@ grammar = Ct C grammar
 parse = (string) -> grammar\match(string)[2]
 
 -- p parse("bd sd . hh hh hh . cp bd") --!!!
+-- p parse"bd . bd sd | hh cp"
 -- p parse "[bd, sd]"
 -- p parse"bd sd | hh cp"
+-- p parse"[bd sd] hh"
+-- p parse"[bd, sd]"
 return { :parse }

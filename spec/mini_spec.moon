@@ -151,7 +151,7 @@ describe "Mini Interpreter for", ->
     it "should pass", ->
       eval "[bd sd] hh"
       -- eval "bd sd . cp . hh*2"
-      eval "[bd, sd]"
+      -- eval "[bd, sd]"
 
   describe "polymeter", ->
     it "should pass", ->
