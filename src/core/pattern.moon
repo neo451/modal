@@ -59,9 +59,9 @@ applyOptions = (parent, enter) ->
             -- TODO: error if not number?
             friend = enter(op.arguments.element)
             makeRange = (start, stop) -> [ i for i = start, stop ]
-            range = (apat, bpat) ->
+            f = (apat, bpat) ->
               apat\squeezeBind((a) -> bpat\bind((b) -> fastcat(makeRange(a, b), friend)))
-            pat = range(pat, friend)
+            pat = f(pat, friend)
     return pat
 
 resolveReplications = (ast) ->
@@ -109,7 +109,7 @@ patternifyAST = (ast) ->
           aligned = map ((child) -> fast stepsPerCycle\fmap((x) -> x / #child\firstCycle!), child), children
           return stack aligned
         when "rand" then
-          print "rand"
+          return  randcat children
 
       addWeight = (a, b) ->
         b = b.options and b.options.weight or 1
@@ -657,13 +657,20 @@ _chooseWith = (pat, ...) ->
 chooseWith = (pat, ...) ->
   _chooseWith(pat, ...)\outerJoin!
 
-choose = (...) -> chooseWith rand, ...
+chooseInWith = (pat, ...) ->
+  _chooseWith(pat, ...)\innerJoin!
 
-chooseCycles = (...) -> segment 1, choose(...)
+choose = (...) ->
+  chooseInWith rand, ...
 
-randcat = (...) -> chooseCycles(...)
+chooseCycles = (...) ->
+  segment 1, choose(...)
 
-polyrhythm = (...) -> stack(...)
+randcat = (...) ->
+  chooseCycles(...)
+
+polyrhythm = (...) ->
+  stack(...)
 
 _degradeByWith = (prand, by, pat) ->
   pat = reify pat
@@ -851,6 +858,9 @@ pp = (x) ->
   else
     print(x)
 
+-- pp mini"bd | hh"(0, 10)
+-- pp mini"bd sd . cp . hh*2"
+-- pp mini"~"
 -- TODO: wchoose, tests for the new functions
 return {
   :C
