@@ -3,7 +3,6 @@ global record Fraction
   numerator: number
 end
 
-
 global record Span
   _begin: number | Fraction
   _end: number | Fraction
@@ -25,9 +24,8 @@ global type Event = record<X>
 end
 
 global type Pattern = record<X>
-  query: function(State): {Event<X>}
+  query: function(State): { Event<X> }
 end
-
 
 global silence: function(): Pattern<{nil}>
 
@@ -40,4 +38,35 @@ global reify: function(any): Pattern<string> -- | Pattern<Pattern> --?? not any?
 global timecat: function({{number, any}}): Pattern<any>
 
 global fastcat: function(...: any): Pattern<any>
+
+global sine2 = Pattern<number>
+
+global sine = Pattern<number>
+
+global cosine2 = Pattern<number>
+
+global cosine = Pattern<number>
+
+global square = Pattern<number>
+
+global square2 = Pattern<number>
+
+global isaw = Pattern<number>
+
+global isaw2 = Pattern<number> 
+
+global saw = Pattern<number>
+
+global saw2 = Pattern<number>
+
+global tri = Pattern<number> 
+
+global tri2 = Pattern<number> 
+
+global time = Pattern<number>
+
+-- @section randoms
+global rand = Pattern<number>
+
+global fast = function<T>(time: Pattern<Time>, pat: Pattern<T>): Pattern<T>
 

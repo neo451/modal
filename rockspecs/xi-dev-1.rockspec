@@ -46,8 +46,7 @@ build = {
 		["xi.scales"] = "src/theory/scales.lua",
 		["xi.chords"] = "src/theory/chords.lua",
 
-		["xi.mini.grammar"] = "src/mini/grammar.lua",
-		["xi.mini.visitor"] = "src/mini/visitor.lua",
+		["xi.mini"] = "src/mini/mini.lua",
 
 		-- ["xi.luaish"] = "src/repl/luaish.lua",
 		["xi.repl"] = "src/repl/repl.lua",

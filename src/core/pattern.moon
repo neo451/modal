@@ -3,9 +3,9 @@
 import map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
 import bjork from require "xi.euclid"
 import getScale from require "xi.scales"
-import Fraction, tofrac from require "xi.fraction"
+import Fraction, tofrac, tofloat from require "xi.fraction"
 import Event, Span, State from require "xi.types"
-import visit from require "xi.mini.visitor"
+import parse from require "xi.mini"
 fun = require "xi.fun"
 local *
 
@@ -16,90 +16,114 @@ pi = math.pi
 floor = math.floor
 tinsert = table.insert
 
-class Interpreter
-  eval:(node) =>
-    tag = node.type
-    method = @[tag]
-    return method(@, node)
+applyOptions = (parent, enter) ->
+  return (pat, i) ->
+    ast = parent.source[i]
+    ops = nil
+    if ast.options then
+      ops = ast.options.ops -- ?
 
-  sequence:(node) =>
-    @_sequence_elements(node.elements)
+    if ops
+      for op in *ops
+        switch op.type
+          when "stretch"
+            type_, amount = op.arguments.type, op.arguments.amount
+            switch type_
+              when "fast"
+                pat = fast enter(amount), pat -- recursive??
+              when "slow"
+                pat = slow enter(amount), pat
+              else
+                print("mini: stretch: type must be one of fast of slow")
+          when "degradeBy"
+            -- TODO: _degradeByWith WHY ERALY??
+            amount = op.arguments.amount or 0.5
+            pat = degradeBy amount, pat
+          when "euclid"
+            steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
+            pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
+          when "tail"
+            friend = enter(op.arguments.element)
+            pat = pat\fmap((a) -> (b) ->
+              if type(a) == "table" then
+                tinsert(a, b)
+                return a
+              else
+                return { a, b })\appLeft(friend)
+          when "range"
+            -- TODO: error if not number?
+            friend = enter(op.arguments.element)
+            makeRange = (start, stop) -> [ i for i = start, stop ]
+            f = (apat, bpat) ->
+              apat\squeezeBind((a) -> bpat\bind((b) -> fastcat(makeRange(a, b), friend)))
+            pat = f(pat, friend)
+    return pat
 
-  _sequence_elements:(elements) =>
-    elements = [@eval(e) for e in *elements]
-    tc_args = {}
-    for es in *elements
-      weight = es[1][1] or 1
-      deg_ratio = es[1][3] or 0
-      pats = [e[2] for e in *es]
-      tinsert tc_args, { #es * weight, degradeBy(deg_ratio, fastcat(pats)) }
-    return timecat tc_args
+resolveReplications = (ast) ->
+  repChild = (child) ->
+    if child.options == nil then return { child }
+    reps = child.options.reps
+    child.options.reps = nil
+    return [ child for i = 1, reps ]
 
-  random_sequence:(node) =>
-    seqs = [@eval(e) for e in *node.elements]
-    return randcat seqs
+  unflat = [repChild(child) for child in *ast.source ]
+  res = {}
+  -- flatten!
+  for element in *unflat do
+    for elem in *element do
+      tinsert res, elem
+  ast.source = res
+  return ast
 
-  polyrhythm:(node) =>
-    seqs = [@eval(seq) for seq in *node.seqs]
-    return polyrhythm seqs
+patternifyAST = (ast) ->
+  enter = (node) -> patternifyAST(node)
+  switch ast.type
+    when "element"
+      return enter(ast.source)
+    when "atom"
+      if ast.source == "~" then return silence!
+      value = ast.source
+      if (tonumber value)
+        value = tonumber value
+      return pure value
+    when "pattern"
+      ast = resolveReplications ast
+      children = ast.source
+      children = map enter, children
+      children = [ applyOptions(ast, enter)(child, index) for index, child in pairs children ]
+      alignment = ast.arguments.alignment
+      switch alignment
+        when "stack" then
+          return stack children
+        when "polymeter_slowcat" then
+          aligned = map ((child) -> slow #child\firstCycle!, child), children
+          return stack aligned
+        when "polymeter" then
+          -- TODO : test when patterning stepsPerCycle
+          stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
+          aligned = map ((child) -> fast stepsPerCycle\fmap((x) -> x / #child\firstCycle!), child), children
+          return stack aligned
+        when "rand" then
+          return  randcat children
 
-  polymeter:(node) =>
-    fast_params = [ Fraction(node.steps, #seq.elements) for seq in *node.seqs]
-    return stack([_fast fp, @eval(seq) for _, seq, fp in fun.zip(node.seqs, fast_params)])
+      addWeight = (a, b) ->
+        b = b.options and b.options.weight or 1
+        a + b
 
-  element:(node) =>
-    modifiers = [ @eval(mod) for mod in *node.modifiers ]
-    pat = @eval(node.value)
+      weightSum = reduce addWeight, 0, ast.source
+      if weightSum > #children then
+        atoms = ast.source
+        pat = timecat [{v.options.weight or 1, children[i]} for i, v in pairs atoms]
+        return pat
 
-    if node.euclid_modifier != nil
-      k, n, rotation = @eval node.euclid_modifier
-      pat = euclid k, n, rotation, pat
+      return fastcat children
 
-    values = { { 1, pat, 0 } }
-    for modifier in *modifiers
-      local n_values
-      for v in *values
-        n_values =  modifier(v)
-      values = n_values
-    return values
-
-  euclid_modifier:(node) =>
-    k = @eval node.k
-    n = @eval node.n
-    rotation = nil
-    if node.rotation != nil then rotation = @eval node.rotation
-    else rotation = pure(0)
-    return k, n, rotation
-
-  modifier:(node) =>
-    switch node.op
-      when "fast"
-        param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], fast(param, w_p[2]), w_p[3] } }
-      when "slow"
-        param = @_sequence_elements({ node.value })
-        return (w_p) -> { { w_p[1], slow(param, w_p[2]), w_p[3] } }
-      when "repeat"
-        return (w_p) -> [ w_p for i = 1, node.count + 1 ]
-      when "weight"
-        return (w_p) -> { { node.value, w_p[2], w_p[3] } }
-      when "degrade"
-        arg = node.value
-        switch arg.op
-          when "count"
-            return (w_p) -> { { w_p[1], w_p[2], Fraction(arg.value, arg.value + 1) } }
-          when "value"
-            return (w_p) -> { { w_p[1], w_p[2], arg.value } }
-    return (w_p) -> { { w_p[1], w_p[2], w_p[3] } }
-
-  number:(node) => pure node.value
-  -- TODO: not right
-  word:(node) =>
-    if node.index != 0
-      return C.sound(node.value)\combineLeft(C.n(node.index))
-    return pure node.value
-
-  rest:(node) => silence!
+--- Turns mini-notation(string) into a pattern
+-- @param string
+-- @return Pattern
+mini = (code) ->
+  ast = parse code
+  patternifyAST(ast)
 
 class Pattern
   new:(query = -> {}) => @query = query
@@ -133,6 +157,12 @@ class Pattern
       events = @query(state)
       return flatten (map ((a) -> match a), events)
     return Pattern query
+
+  bind:(func) =>
+    whole_func = (a, b) ->
+      if (a == nil or b == nil) then return nil
+      return a\sect(b) -- Error??
+    return @bindWhole whole_func, func
 
   outerBind:(func) => @bindWhole ((a) -> a), func
 
@@ -313,12 +343,6 @@ pure = (value) ->
     map f, cycles
   Pattern query
 
---- Turns mini-notation(string) into a pattern
--- @param string
--- @return Pattern
-mini = (string) ->
-  ast = visit string
-  Interpreter\eval ast
 
 --- Turns something into a pattern, unless it's already a pattern
 -- @local
@@ -433,7 +457,7 @@ _cpm = (cpm, pat) ->
 cpm = _patternify _cpm
 
 _fast = (factor, pat) ->
-  (reify pat)\withTime ((t) -> t * factor), ((t) -> t / factor)
+  pat\withTime ((t) -> t * factor), ((t) -> t / factor)
 --- Speed up a pattern by the given factor. Used by "*" in mini notation.
 -- @usage
 -- fast(2, s"bd") // s"bd*2"
@@ -445,7 +469,7 @@ _slow = (factor, pat) -> _fast (1 / factor), pat
 -- slow(2, s("<bd sd> hh")) // s"[<bd sd> hh]/2"
 slow = _patternify _slow
 
-_early = (offset, pat) -> (reify pat)\withTime ((t) -> t + offset), ((t) -> t - offset)
+_early = (offset, pat) -> pat\withTime ((t) -> t + offset), ((t) -> t - offset)
 --- Nudge a pattern to start earlier in time. Equivalent of Tidal's <~ operator
 -- @usage
 -- s(stack("bd ~", early(0.1, "hh ~")))
@@ -470,14 +494,12 @@ _outside = (factor, f, pat) -> _inside(1 / factor, f, pat)
 outside = _patternify_p_p _outside
 
 _ply = (factor, pat) ->
-  pat = reify pat
   pat = pure _fast factor, pat
   pat\squeezeJoin!
 
 ply = _patternify _ply
 
 _fastgap = (factor, pat) ->
-  pat = reify pat
   factor = tofrac(factor)
   if factor <= Fraction(0) then return silence!
   factor = factor\max(1)
@@ -505,7 +527,6 @@ _fastgap = (factor, pat) ->
 fastgap = _patternify _fastgap
 
 _compress = (b, e, pat) ->
-  pat = reify pat
   b, e = tofrac(b), tofrac(e)
   if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0)
     return silence!
@@ -518,12 +539,11 @@ _compress = (b, e, pat) ->
 compress = _patternify_p_p _compress
 
 _focus = (b, e, pat) ->
-  pat = reify pat
   b, e = tofrac(b), tofrac(e)
   fasted = _fast (Fraction(1) / (e - b)), pat
   _late Span\cyclePos(b), fasted
 
-focusSpan = (span, pat) -> _focus span._begin, span._end, pat
+focusSpan = (span, pat) -> _focus span._begin, span._end, reify pat
 
 -- Similar to compress, but doesn't leave gaps, and the 'focus' can be bigger than a cycle
 -- @usage
@@ -531,7 +551,6 @@ focusSpan = (span, pat) -> _focus span._begin, span._end, pat
 focus = _patternify_p_p _focus
 
 _zoom = (s, e, pat) ->
-  pat = reify pat
   s, e = tofrac(s), tofrac(e)
   dur = e - s
   qf = (span) -> span\withCycle (t) -> t * dur + s
@@ -604,13 +623,20 @@ _chooseWith = (pat, ...) ->
 chooseWith = (pat, ...) ->
   _chooseWith(pat, ...)\outerJoin!
 
-choose = (...) -> chooseWith rand, ...
+chooseInWith = (pat, ...) ->
+  _chooseWith(pat, ...)\innerJoin!
 
-chooseCycles = (...) -> segment 1, choose(...)
+choose = (...) ->
+  chooseInWith rand, ...
 
-randcat = (...) -> chooseCycles(...)
+chooseCycles = (...) ->
+  segment 1, choose(...)
 
-polyrhythm = (...) -> stack(...)
+randcat = (...) ->
+  chooseCycles(...)
+
+polyrhythm = (...) ->
+  stack(...)
 
 _degradeByWith = (prand, by, pat) ->
   pat = reify pat
@@ -637,14 +663,12 @@ sometimes = (func, pat) -> sometimesBy(0.5, func, pat)
 
 -- @section manipulating structure
 struct = (boolpat, pat) ->
-  pat, boolpat = reify(pat), reify(boolpat)
-  boolpat\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
+  (fastcat boolpat)\fmap((b) -> (val) -> if b return val else nil)\appLeft(pat)\removeNils!
 
 _euclid = (n, k, offset, pat) -> struct bjork(n, k, offset), reify(pat)
 euclid = _patternify_p_p_p _euclid
 
 rev = (pat) ->
-  pat = reify pat
   query = (_, state) ->
     span = state.span
     cycle = span._begin\sam!
@@ -661,10 +685,10 @@ rev = (pat) ->
 
 palindrome = (pat) -> slowcat pat, rev pat
 
-_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), reify pat for i in fun.range(n)]
+_iter = (n, pat) -> slowcat [_early Fraction(i - 1, n), pat for i in fun.range(n)]
 iter = _patternify _iter
 
-_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), reify pat for i in fun.range(n)]
+_reviter = (n, pat) -> slowcat [_late Fraction(i - 1, n), pat for i in fun.range(n)]
 reviter = _patternify _reviter
 
 _segment = (n, pat) -> fast(n, pure(id))\appLeft pat
@@ -685,7 +709,6 @@ _off = (time_pat, f, pat) -> stack(pat, f late(time_pat, pat))
 off = _patternify_p_p _off
 
 _echoWith = (times, time, func, pat) ->
-  pat = reify pat
   f = (index) -> func _late time * index, pat
   ts = [ i for i = 0, times - 1 ]
   stack map f, ts
@@ -747,7 +770,6 @@ _chop = (n, pat) ->
 chop = _patternify _chop
 -- TODO
 slice = (npat, ipat, opat) ->
-  npat, ipat, opat = reify(npat), reify(ipat), reify(opat)
   npat\innerBind (n) ->
     ipat\outerBind (i) ->
       opat\outerBind (o) ->
@@ -762,7 +784,7 @@ splice = (npat, ipat, opat) ->
   sliced\withEvent (event) ->
     event\withValue (value) ->
       new_attri = {
-        speed: (tofrac(1) / tofrac(value._slices) / event.whole\duration!) * (value.speed or 1),
+        speed: tofloat(tofrac(1) / tofrac(value._slices) / event.whole\duration!) * (value.speed or 1),
           unit: "c"
       }
       return union new_attri, value
@@ -787,7 +809,6 @@ legato = _patternify _legato
 
 -- @section music theory
 _scale = (name, pat) ->
-  pat = reify pat
   toScale = (v) -> getScale(name, v)
   pat\fmap(toScale)
 
@@ -800,9 +821,17 @@ scale = _patternify _scale
 -- helpers
 apply = (x, pat) -> pat .. x
 sl = string_lambda
+pp = (x) ->
+  if type(x) == "table" then
+    for k, v in pairs x
+      print(k, v)
+  else
+    print(x)
 
+-- pp mini"bd | hh"(0, 10)
+-- pp mini"bd sd . cp . hh*2"
+-- pp mini"~"
 -- TODO: wchoose, tests for the new functions
-
 return {
   :Pattern
   :id, :pure, :silence

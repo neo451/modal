@@ -2,7 +2,7 @@ local reduce
 reduce = require('xi.fun').reduce
 local type
 type = require("xi.utils").type
-local abs, floor, decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac
+local abs, floor, decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac, tofloat
 abs = math.abs
 floor = math.floor
 decimaltofraction = function(x0, err)
@@ -240,6 +240,13 @@ end
 tofrac = function(x)
   if type(x) == "number" then
     return Fraction(x)
+  else
+    return x
+  end
+end
+tofloat = function(x)
+  if type(x) == "fraction" then
+    return x:asFloat()
   else
     return x
   end
