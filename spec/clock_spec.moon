@@ -1,7 +1,7 @@
-import Clock from require "xi.clock"
-import Stream from require "xi.stream"
-import Event from require "xi.types"
-import pure from require "xi.pattern"
+import Clock from require "modal.clock"
+import Stream from require "modal.stream"
+import Event from require "modal.types"
+import pure from require "modal.pattern"
 
 
 describe "Clock", ->

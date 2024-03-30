@@ -1,5 +1,5 @@
-import Fraction from require "xi.fraction"
-import Span, Event from require "xi.types"
+import Fraction from require "modal.fraction"
+import Span, Event from require "modal.types"
 
 describe "Event", ->
   describe "constructors", ->

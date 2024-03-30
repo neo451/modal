@@ -1,10 +1,10 @@
 local cpm
-cpm = require("xi.pattern").cpm
+cpm = require("modal.pattern").cpm
 local Stream
-Stream = require("xi.stream").Stream
+Stream = require("modal.stream").Stream
 local Clock
-Clock = require("xi.clock").Clock
-local C = require("xi.control")
+Clock = require("modal.clock").Clock
+local C = require("modal.control")
 local moon = require("moon.all")
 local Streams = { }
 local DefaultClock = Clock()

@@ -1,5 +1,5 @@
-import Fraction, tofrac from require "xi.fraction"
-import compare, dump from require "xi.utils"
+import Fraction, tofrac from require "modal.fraction"
+import compare, dump from require "modal.utils"
 
 class Span
   new:(b = 1, e = 1) =>

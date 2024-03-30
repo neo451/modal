@@ -1,5 +1,5 @@
-import Span from require "xi.types"
-import Fraction from require "xi.fraction"
+import Span from require "modal.types"
+import Fraction from require "modal.fraction"
 
 describe "Span", ->
   describe "wholeCycle", ->

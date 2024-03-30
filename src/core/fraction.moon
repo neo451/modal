@@ -1,5 +1,5 @@
-import reduce from require 'xi.fun'
-import type from require "xi.utils"
+import reduce from require 'modal.fun'
+import type from require "modal.utils"
 local *
 
 abs = math.abs

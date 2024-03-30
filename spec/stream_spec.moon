@@ -1,6 +1,6 @@
-import Stream from require "xi.stream"
-import Pattern from require "xi.pattern"
-import sound from require "xi.control"
+import Stream from require "modal.stream"
+import Pattern from require "modal.pattern"
+import sound from require "modal.control"
 losc = require('losc')
 abletonlink = require("abletonlink")
 busted = require "busted"

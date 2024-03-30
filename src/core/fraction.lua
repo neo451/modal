@@ -1,7 +1,7 @@
 local reduce
-reduce = require('xi.fun').reduce
+reduce = require('modal.fun').reduce
 local type
-type = require("xi.utils").type
+type = require("modal.utils").type
 local abs, floor, decimaltofraction, gcd, lcm, Fraction, gcd_reduce, tofrac, tofloat
 abs = math.abs
 floor = math.floor

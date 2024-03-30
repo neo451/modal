@@ -1,12 +1,12 @@
 --- Core pattern representation
--- @module xi.pattern
-import map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "xi.utils"
-import bjork from require "xi.euclid"
-import getScale from require "xi.scales"
-import Fraction, tofrac, tofloat from require "xi.fraction"
-import Event, Span, State from require "xi.types"
-import parse from require "xi.mini"
-fun = require "xi.fun"
+-- @module modal.pattern
+import map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type from require "modal.utils"
+import bjork from require "modal.euclid"
+import getScale from require "modal.scales"
+import Fraction, tofrac, tofloat from require "modal.fraction"
+import Event, Span, State from require "modal.types"
+import parse from require "modal.mini"
+fun = require "modal.fun"
 local *
 
 sin = math.sin
@@ -41,7 +41,10 @@ applyOptions = (parent, enter) ->
             pat = degradeBy amount, pat
           when "euclid"
             steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
-            pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
+            if rotation == 0
+              pat = euclid(enter(pulse), enter(steps), 0, pat)
+            else
+              pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
           when "tail"
             friend = enter(op.arguments.element)
             pat = pat\fmap((a) -> (b) ->

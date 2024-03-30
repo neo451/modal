@@ -1,6 +1,6 @@
-import Span, State, Event from require "xi.types"
-import Pattern, mini, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "xi.pattern"
-C = require "xi.control"
+import Span, State, Event from require "modal.types"
+import Pattern, mini, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice from require "modal.pattern"
+C = require "modal.control"
 
 describe "Pattern", ->
   describe "new", ->

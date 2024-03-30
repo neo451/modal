@@ -5,7 +5,7 @@
 #
 # _REPODIR != cd "$(shell dirname $(firstword $(MAKEFILE_LIST)))/" && pwd
 
-xi:
+modal:
 
 test:
 	busted .
@@ -14,7 +14,7 @@ doc:
 	ldoc .
 
 remove:
-	luarocks remove xi
+	luarocks remove modal
 
 install:
 	moonc src/

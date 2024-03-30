@@ -1,7 +1,7 @@
-import cpm from require "xi.pattern"
-import Stream from require "xi.stream"
-import Clock from require "xi.clock"
-C = require"xi.control"
+import cpm from require "modal.pattern"
+import Stream from require "modal.stream"
+import Clock from require "modal.clock"
+C = require"modal.control"
 moon = require"moon.all"
 Streams = {}
 DefaultClock = Clock!

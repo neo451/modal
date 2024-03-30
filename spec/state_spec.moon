@@ -1,4 +1,4 @@
-import Span, State from require "xi.types"
+import Span, State from require "modal.types"
 
 describe "State", ->
   describe "new", ->

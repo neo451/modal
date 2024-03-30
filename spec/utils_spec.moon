@@ -1,5 +1,5 @@
-import compare, type from require("xi.utils")
-import Fraction from require "xi.fraction"
+import compare, type from require("modal.utils")
+import Fraction from require "modal.fraction"
 
 describe "compare", ->
   it "should deeply compare table values", ->

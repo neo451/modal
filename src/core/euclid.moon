@@ -1,4 +1,4 @@
-import flatten, zipWith, concat, splitAt, rotate from require "xi.utils"
+import flatten, zipWith, concat, splitAt, rotate from require "modal.utils"
 
 left = (n, m) ->
   { ons, offs } = n

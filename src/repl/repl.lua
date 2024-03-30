@@ -1,7 +1,7 @@
-require("xi")()
+require("modal")()
 local uv = require("luv")
 local yue = require("yue")
--- local inspect = require("xi.inspect")
+-- local inspect = require("modal.inspect")
 local clock = DefaultClock
 
 clock:start()

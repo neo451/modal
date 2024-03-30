@@ -1,11 +1,11 @@
 local Fraction, tofrac
 do
-  local _obj_0 = require("xi.fraction")
+  local _obj_0 = require("modal.fraction")
   Fraction, tofrac = _obj_0.Fraction, _obj_0.tofrac
 end
 local compare, dump
 do
-  local _obj_0 = require("xi.utils")
+  local _obj_0 = require("modal.utils")
   compare, dump = _obj_0.compare, _obj_0.dump
 end
 local Span
@@ -87,7 +87,7 @@ do
     sect_e = function(self, other)
       local result = self:sect(other)
       if not result then
-        error("Span: Arcs do not intersect")
+        error("Span: spans do not intersect")
       end
       return result
     end

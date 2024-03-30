@@ -1,5 +1,5 @@
 local Clock
-Clock = require("xi.clock").Clock
+Clock = require("modal.clock").Clock
 require("moon.all")
 local Stream
 do

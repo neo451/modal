@@ -1,4 +1,4 @@
-import Clock from require "xi.clock"
+import Clock from require "modal.clock"
 require"moon.all"
 
 class Stream

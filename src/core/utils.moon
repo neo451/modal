@@ -1,6 +1,6 @@
 import is_object from require "moon.all"
-fun = require "xi.fun"
-bit = require "xi.bitop" --compatability for 5.3 5.4??
+fun = require "modal.fun"
+bit = require "modal.bitop" --compatability for 5.3 5.4??
 
 utils = {}
 

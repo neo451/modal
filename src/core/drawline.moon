@@ -1,9 +1,9 @@
 --- drawline.moon
 -- @module drawline
 
-import filter, reduce, flatten, dump from require "xi.utils"
-import Fraction, gcd_reduce from require "xi.fraction"
-import Pattern, reify from require "xi.pattern"
+import filter, reduce, flatten, dump from require "modal.utils"
+import Fraction, gcd_reduce from require "modal.fraction"
+import Pattern, reify from require "modal.pattern"
 
 --- intended for debugging, drawline renders the pattern as a string, where each character represents the same time span.
 -- should only be used with single characters as values, otherwise the character slots will be messed up.

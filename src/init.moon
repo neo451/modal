@@ -1,27 +1,27 @@
-pattern = require "xi.pattern"
-pattern_factory = require "xi.pattern_factory"
-C = require "xi.control"
-import drawline from require "xi.drawline"
+pattern = require "modal.pattern"
+pattern_factory = require "modal.pattern_factory"
+C = require "modal.control"
+import drawline from require "modal.drawline"
 
-xi = {
-  _VERSION: "xi dev-1"
-	_URL: "https://github.com/noearc/xi"
+modal = {
+  _VERSION: "modal dev-1"
+	_URL: "https://github.com/noearc/modal"
 	_DESCRIPTION: "A language for algorithmic pattern. Tidalcycles for moonscript"
 }
 
-xi.drawline = drawline
+modal.drawline = drawline
 
 for name, func in pairs pattern
   if name != "Pattern"
-    xi[name] = func
+    modal[name] = func
 
 for name, func in pairs pattern_factory
-  xi[name] = func
+  modal[name] = func
 
 for name, func in pairs C
-  xi[name] = func
+  modal[name] = func
 
-setmetatable(xi, {
+setmetatable(modal, {
   __call: (t, override) ->
     for k, v in pairs(t)
       if _G[k] ~= nil
@@ -34,4 +34,4 @@ setmetatable(xi, {
       else
         _G[k] = v
 })
-return xi
+return modal
