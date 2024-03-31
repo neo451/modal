@@ -1,5 +1,4 @@
 import Clock from require "modal.clock"
-require"moon.all"
 
 class Stream
   new:(sendf) =>

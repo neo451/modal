@@ -2,7 +2,7 @@ require("modal")()
 local uv = require("luv")
 local yue = require("yue")
 -- local inspect = require("modal.inspect")
-local clock = DefaultClock
+clock = DefaultClock
 
 clock:start()
 
@@ -15,7 +15,7 @@ local eval = function(a)
 		if func then
 			local ok, res = pcall(func)
 			if ok then
-				print(res)
+				-- print(res)
 			else
 				print("Execution error: not a meaningful function to call")
 			end

@@ -24,7 +24,7 @@ typesString = (msg) ->
   return types
 
 osc = losc.new(
-  { plugin: plugin.new({ sendPort: 57110, sendAddr: "127.0.0.1" })}
+  { plugin: plugin.new({ sendPort: target.port, sendAddr: target.address })}
 )
 
 sendOSC = (_, value, ts) ->

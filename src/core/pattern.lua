@@ -1303,7 +1303,6 @@ pp = function(x)
     return print(x)
   end
 end
-print(mini("bd(2,8)"))
 return {
   Pattern = Pattern,
   id = id,

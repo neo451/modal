@@ -1,6 +1,5 @@
 local Clock
 Clock = require("modal.clock").Clock
-require("moon.all")
 local Stream
 do
   local _class_0

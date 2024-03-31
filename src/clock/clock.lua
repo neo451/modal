@@ -34,8 +34,8 @@ typesString = function(msg)
 end
 local osc = losc.new({
   plugin = plugin.new({
-    sendPort = 57110,
-    sendAddr = "127.0.0.1"
+    sendPort = target.port,
+    sendAddr = target.address
   })
 })
 local sendOSC
