@@ -1,6 +1,6 @@
 import Stream from require "modal.stream"
 import Pattern from require "modal.pattern"
-import sound from require "modal.control"
+import sound from require "modal.params"
 losc = require('losc')
 abletonlink = require("abletonlink")
 busted = require "busted"

@@ -764,6 +764,7 @@ pp = (x) ->
 return {
   :Pattern
   :id, :pure, :silence
+  :_patternify, :_patternify_p_p, :_patternify_p_p_p
   :mini, :reify
   :sl, :app, :pp
   :run, :scan
