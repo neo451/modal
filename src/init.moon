@@ -1,6 +1,6 @@
 pattern = require "modal.pattern"
 pattern_factory = require "modal.pattern_factory"
-C = require "modal.control"
+P = require "modal.params"
 import drawline from require "modal.drawline"
 
 modal = {
@@ -18,7 +18,7 @@ for name, func in pairs pattern
 for name, func in pairs pattern_factory
   modal[name] = func
 
-for name, func in pairs C
+for name, func in pairs P
   modal[name] = func
 
 setmetatable(modal, {

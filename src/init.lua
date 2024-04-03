@@ -1,6 +1,6 @@
 local pattern = require("modal.pattern")
 local pattern_factory = require("modal.pattern_factory")
-local C = require("modal.control")
+local P = require("modal.params")
 local drawline
 drawline = require("modal.drawline").drawline
 local modal = {
@@ -17,7 +17,7 @@ end
 for name, func in pairs(pattern_factory) do
   modal[name] = func
 end
-for name, func in pairs(C) do
+for name, func in pairs(P) do
   modal[name] = func
 end
 setmetatable(modal, {

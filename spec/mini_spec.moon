@@ -1,7 +1,7 @@
 import describe, it from require "busted"
 import parse from require "modal.mini"
 import mini, pure, silence, euclid, slowcat, fastcat, timecat, randcat, fast, slow, degrade, stack from require "modal.pattern"
-C = require "modal.control"
+C = require "modal.params"
 local *
 
 eval = (name) -> assert.same interpreter_targets[name], mini name

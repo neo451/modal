@@ -1,8 +1,8 @@
 import cpm from require "modal.pattern"
 import Stream from require "modal.stream"
 import Clock from require "modal.clock"
-C = require"modal.control"
-moon = require"moon.all"
+P = require"modal.params"
+
 Streams = {}
 DefaultClock = Clock!
 
@@ -19,14 +19,14 @@ hush = ->
     DefaultClock\unsubscribe stream
   Streams = {}
 
-d1 = (a) -> p 1, a .. C.orbit"1"
-d2 = (a) -> p 2, a .. C.orbit"2"
-d3 = (a) -> p 3, a .. C.orbit"3"
-d4 = (a) -> p 4, a .. C.orbit"4"
-d5 = (a) -> p 5, a .. C.orbit"5"
-d6 = (a) -> p 6, a .. C.orbit"6"
-d7 = (a) -> p 7, a .. C.orbit"7"
-d8 = (a) -> p 8, a .. C.orbit"8"
+d1 = (a) -> p 1, a .. P.orbit"1"
+d2 = (a) -> p 2, a .. P.orbit"2"
+d3 = (a) -> p 3, a .. P.orbit"3"
+d4 = (a) -> p 4, a .. P.orbit"4"
+d5 = (a) -> p 5, a .. P.orbit"5"
+d6 = (a) -> p 6, a .. P.orbit"6"
+d7 = (a) -> p 7, a .. P.orbit"7"
+d8 = (a) -> p 8, a .. P.orbit"8"
 
 -- TODO: not working, need to go deeper
 -- setcps = (cps) ->

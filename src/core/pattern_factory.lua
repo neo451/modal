@@ -4,8 +4,7 @@ local Stream
 Stream = require("modal.stream").Stream
 local Clock
 Clock = require("modal.clock").Clock
-local C = require("modal.control")
-local moon = require("moon.all")
+local P = require("modal.params")
 local Streams = { }
 local DefaultClock = Clock()
 local p
@@ -28,35 +27,35 @@ hush = function()
 end
 local d1
 d1 = function(a)
-  return p(1, a .. C.orbit("1"))
+  return p(1, a .. P.orbit("1"))
 end
 local d2
 d2 = function(a)
-  return p(2, a .. C.orbit("2"))
+  return p(2, a .. P.orbit("2"))
 end
 local d3
 d3 = function(a)
-  return p(3, a .. C.orbit("3"))
+  return p(3, a .. P.orbit("3"))
 end
 local d4
 d4 = function(a)
-  return p(4, a .. C.orbit("4"))
+  return p(4, a .. P.orbit("4"))
 end
 local d5
 d5 = function(a)
-  return p(5, a .. C.orbit("5"))
+  return p(5, a .. P.orbit("5"))
 end
 local d6
 d6 = function(a)
-  return p(6, a .. C.orbit("6"))
+  return p(6, a .. P.orbit("6"))
 end
 local d7
 d7 = function(a)
-  return p(7, a .. C.orbit("7"))
+  return p(7, a .. P.orbit("7"))
 end
 local d8
 d8 = function(a)
-  return p(8, a .. C.orbit("8"))
+  return p(8, a .. P.orbit("8"))
 end
 return {
   p = p,

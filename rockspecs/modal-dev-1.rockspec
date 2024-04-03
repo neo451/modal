@@ -37,8 +37,10 @@ build = {
 
 		["modal.types"] = "src/core/types.lua",
 		["modal.pattern"] = "src/core/pattern.lua",
-		["modal.control"] = "src/core/control.lua",
 		["modal.pattern_factory"] = "src/core/pattern_factory.lua",
+
+		["modal.params"] = "src/params/params.lua",
+		["modal.ui"] = "src/params/ui.lua",
 
 		["modal.clock"] = "src/clock/clock.lua",
 
