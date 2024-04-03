@@ -81,8 +81,7 @@ class Clock
       table.remove @subscribers, position
 
   createNotifyCoroutine: =>
-    -- @notifyCoroutine = coroutine.create ->
-    @notifyCoroutine = ->
+    @notifyCoroutine = coroutine.create ->
       @link\enable(true)
       @link\enable_start_stop_sync(true)
 
@@ -118,7 +117,7 @@ class Clock
 
         for sub in *@subscribers
           sub\notifyTick cycleFrom, cycleTo, @sessionState, cps, @beatsPerCycle, mill, now
-        -- coroutine.yield!
+        coroutine.yield!
 
       @linkEnabled = false
 

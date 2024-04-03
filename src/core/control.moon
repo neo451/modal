@@ -1,13 +1,13 @@
 
 genericParams = {
-  { "s", "sound"}
+  { "s", {"s", "n", "gain"}},
+  { "f", { 'bandf', 'bandq', 'bpenv' }, "a pattern of numbers from 0 to 1. Sets the center frequency of the band-pass filter." },
   { "s", "toArg", "for internal sound routing" },
   { "f", "from", "for internal sound routing" },
   { "f", "to", "for internal sound routing" },
   { "f", "accelerate", "a pattern of numbers that speed up (or slow down) samples while they play." },
   { "f", "amp", "like @gain@, but linear." },
   { "f", "attack", "a pattern of numbers to specify the attack time (in seconds) of an envelope applied to each sample." },
-  { "f", "bandf", "a pattern of numbers from 0 to 1. Sets the center frequency of the band-pass filter." },
   { "f", "bandq", "a pattern of anumbers from 0 to 1. Sets the q-factor of the band-pass filter." },
   { "f", "begin", "a pattern of numbers from 0 to 1. Skips the beginning of each sample, e.g. `0.25` to cut off the first quarter from each sample." },
   { "f", "legato", "controls the amount of overlap between two adjacent sounds" },
@@ -227,15 +227,25 @@ aliasParams = {
   voice: "voi"
 }
 
-import reify, stack from require "xi.pattern"
+import reify, stack, fastcat from require "xi.pattern"
 import parseChord from require "xi.chords"
 
 C = {}
 
 create = (name) ->
-  withVal = (v) -> { [name]: v }
-  func = (args) -> reify(args)\fmap(withVal)
-  C[name] = func
+  local withVal
+  if type(name) == "table"
+    withVal = (xs) ->
+      if type(xs) == "table"
+        return {name[i], x for i, x in ipairs xs}
+      else
+        return {[name]: xs}
+    func = (args) -> fastcat(args)\fmap(withVal)
+    C[name[1]] = func
+  else
+    withVal = (v) -> { [name]: v }
+    func = (args) -> reify(args)\fmap(withVal)
+    C[name] = func
 
 for name in *genericParams
   param = name[2]
@@ -253,5 +263,7 @@ C.note = (args) ->
   chordToStack = (thing) -> stack(parseChord thing)
   withVal = (v) -> setmetatable { note: v }, notemt
   return reify(args)\fmap(chordToStack)\outerJoin!\fmap(withVal)
+
+print C.s"bd:1:0.2"
 
 return C

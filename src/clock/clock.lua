@@ -82,7 +82,7 @@ do
       end
     end,
     createNotifyCoroutine = function(self)
-      self.notifyCoroutine = function()
+      self.notifyCoroutine = coroutine.create(function()
         self.link:enable(true)
         self.link:enable_start_stop_sync(true)
         local start = self.link:clock_micros()
@@ -110,9 +110,10 @@ do
             local sub = _list_0[_index_0]
             sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
           end
+          coroutine.yield()
         end
         self.linkEnabled = false
-      end
+      end)
     end
   }
   _base_0.__index = _base_0
