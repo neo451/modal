@@ -111,6 +111,8 @@ interpreter_targets = {
   "0 .. 9": fastcat [ i for i = 0, 9 ]
   "bd:3:2": pure({"bd", 3, 2})
   -- sequences
+  -- HACK:???
+  -- C.s("bd:3:2"): pure{s: "bd", n: "3", gain: "2"}
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
   "bd(3,8,1)": euclid 3, 8, 1, pure"bd"
