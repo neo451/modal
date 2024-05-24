@@ -30,6 +30,8 @@ euclid = V("euclid")
 tail = V("tail")
 range = V("range")
 
+local map = require("modal.utils").map
+
 AtomStub = function(source)
    return { type = "atom", source = source }
 end
@@ -138,6 +140,7 @@ parseWeight = function(a)
       x.options.weight = (x.options.weight or 1) + (tonumber(a) or 2) - 1
    end
 end
+
 parseReplicate = function(a)
    return function(x)
       x.options.reps = (x.options.reps or 1) + (tonumber(a) or 2) - 1
@@ -221,4 +224,209 @@ parse = function(str)
    return grammar:match(str)[2]
 end
 
-return { parse = parse }
+local function applyOptions(parent, enter)
+   return function(pat, i)
+      local ast = parent.source[i]
+      local ops = nil
+      if ast.options then
+         ops = ast.options.ops
+      end
+      if ops then
+         for _index_0 = 1, #ops do
+            local op = ops[_index_0]
+            local _exp_0 = op.type
+            if "stretch" == _exp_0 then
+               local type_, amount = op.arguments.type, op.arguments.amount
+               local _exp_1 = type_
+               if "fast" == _exp_1 then
+                  pat = fast(enter(amount), pat)
+               elseif "slow" == _exp_1 then
+                  pat = slow(enter(amount), pat)
+               else
+                  print("mini: stretch: type must be one of fast of slow")
+               end
+            elseif "degradeBy" == _exp_0 then
+               local amount = op.arguments.amount or 0.5
+               pat = degradeBy(amount, pat)
+            elseif "euclid" == _exp_0 then
+               local steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
+               if rotation == 0 then
+                  pat = euclid(enter(pulse), enter(steps), 0, pat)
+               else
+                  pat = euclid(enter(pulse), enter(steps), enter(rotation), pat)
+               end
+            elseif "tail" == _exp_0 then
+               local friend = enter(op.arguments.element)
+               pat = appLeft(
+                  fmap(pat, function(a)
+                     return function(b)
+                        if T(a) == "table" then
+                           tinsert(a, b)
+                           return a
+                        else
+                           return {
+                              a,
+                              b,
+                           }
+                        end
+                     end
+                  end),
+                  friend
+               )
+               --- TODO: broken!
+            elseif "range" == _exp_0 then
+               local friend = enter(op.arguments.element)
+               local makeRange
+               makeRange = function(start, stop)
+                  local _accum_0 = {}
+                  local _len_0 = 1
+                  for _ = start, stop do
+                     _accum_0[_len_0] = i
+                     _len_0 = _len_0 + 1
+                  end
+                  return _accum_0
+               end
+               local f
+               f = function(apat, bpat)
+                  return squeezeBind(apat, function(a)
+                     return bind(bpat, function(b)
+                        return fastcat(makeRange(a, b), friend)
+                     end)
+                  end)
+               end
+               pat = f(pat, friend)
+            end
+         end
+      end
+      return pat
+   end
+end
+
+local function resolveReplications(ast)
+   local repChild = function(child)
+      if child.options == nil then
+         return { child }
+      end
+      local reps = child.options.reps
+      child.options.reps = nil
+      local _accum_0 = {}
+      local _len_0 = 1
+      for i = 1, reps do
+         _accum_0[_len_0] = child
+         _len_0 = _len_0 + 1
+      end
+      return _accum_0
+   end
+   local unflat
+   do
+      local _accum_0 = {}
+      local _len_0 = 1
+      local _list_0 = ast.source
+      for _index_0 = 1, #_list_0 do
+         local child = _list_0[_index_0]
+         _accum_0[_len_0] = repChild(child)
+         _len_0 = _len_0 + 1
+      end
+      unflat = _accum_0
+   end
+   local res = {}
+   for _index_0 = 1, #unflat do
+      local element = unflat[_index_0]
+      for _index_1 = 1, #element do
+         local elem = element[_index_1]
+         tinsert(res, elem)
+      end
+   end
+   ast.source = res
+   return ast
+end
+
+local function patternifyAST(ast, M)
+   local enter = function(node)
+      return patternifyAST(node)
+   end
+   local _exp_0 = ast.type
+   if "element" == _exp_0 then
+      return enter(ast.source)
+   elseif "atom" == _exp_0 then
+      if ast.source == "~" then
+         return silence()
+      end
+      local value = ast.source
+      if tonumber(value) then
+         value = tonumber(value)
+      end
+      return pure(value)
+   elseif "pattern" == _exp_0 then
+      ast = resolveReplications(ast)
+      local children = ast.source
+      children = map(enter, children)
+      do
+         local _accum_0 = {}
+         local _len_0 = 1
+         for index, child in pairs(children) do
+            _accum_0[_len_0] = applyOptions(ast, enter)(child, index)
+            _len_0 = _len_0 + 1
+         end
+         children = _accum_0
+      end
+      local alignment = ast.arguments.alignment
+      local _exp_1 = alignment
+      if "stack" == _exp_1 then
+         return stack(children)
+      elseif "polymeter_slowcat" == _exp_1 then
+         local aligned = map(function(child)
+            return slow(#(firstCycle(child)), child)
+         end, children)
+         return stack(aligned)
+      elseif "polymeter" == _exp_1 then
+         local stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
+         print(stepsPerCycle)
+         local aligned = map(function(child)
+            return fast(
+               fmap(reify(stepsPerCycle), function(x)
+                  if x == 1 then
+                     return 1
+                  end -- HACK:
+                  return x / #(firstCycle(child))
+               end),
+               child
+            )
+         end, children)
+         return stack(aligned)
+      elseif "rand" == _exp_1 then
+         return randcat(children)
+      end
+      local addWeight
+      addWeight = function(a, b)
+         b = b.options and b.options.weight or 1
+         return a + b
+      end
+      local weightSum = reduce(addWeight, 0, ast.source)
+      if weightSum > #children then
+         local atoms = ast.source
+         local pat = timecat((function()
+            local _accum_0 = {}
+            local _len_0 = 1
+            for i, v in pairs(atoms) do
+               _accum_0[_len_0] = {
+                  v.options.weight or 1,
+                  children[i],
+               }
+               _len_0 = _len_0 + 1
+            end
+            return _accum_0
+         end)())
+         return pat
+      end
+      return fastcat(children)
+   end
+end
+
+return function(M)
+   return function(code)
+      local ast = parse(code)
+      setfenv(patternifyAST, M)
+      return patternifyAST(ast)
+   end
+end

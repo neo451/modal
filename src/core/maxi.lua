@@ -1,13 +1,12 @@
-local P, S, V, R, C, Ct
-do
-   local _obj_0 = require("lpeg")
-   P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct
-end
--- local tinsert, sequence, group, slice, sub_cycle, polymeter, slow_sequence, polymeter_steps, stack, stack_or_choose, polymeter_stack, dotStack, choose, step, slice_with_ops, op, fast, slow, replicate, degrade, weight, euclid, tail, range, AtomStub, PatternStub, ElementStub, id, seed, ws, comma, pipe, dot, quote, parseNumber, parseStep, step_char, minus, plus, zero, digit, decimal_point, digit1_9, e, int, intneg, exp, frac, number, parseFast, parseSlow, parseTail, parseRange, parseDegrade, parseEuclid, parseWeight, parseReplicate, parseSlices, parsePolymeter, parseSlowSeq, parseDotTail, parseStack, parseDotStack, parseChoose, parseStackOrChoose, parseSubCycle, grammar
+local lpeg = require("lpeg")
+P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
+local reduce = require("modal.utils").reduce
+local filter = require("modal.utils").filter
 
--- local pp = require("metalua.pprint").print
+local mlc = require("metalua.compiler").new()
+local mpp = require("metalua.pprint").print
 local moon = require("moon")
-local tinsert = table.insert
+
 local sequence = V("sequence")
 local slice = V("slice")
 local sub_cycle = V("sub_cycle")
@@ -15,9 +14,6 @@ local polymeter = V("polymeter")
 local slow_sequence = V("slow_sequence")
 local polymeter_steps = V("polymeter_steps")
 local stack = V("stack")
-local polymeter_stack = V("polymeter_stack")
-local dotStack = V("dotStack")
--- local step = V("step")
 local slice_with_ops = V("slice_with_ops")
 local op = V("op")
 local fast = V("fast")
@@ -29,7 +25,10 @@ local euclid = V("euclid")
 local tail = V("tail")
 local range = V("range")
 local list = V("list")
-local fn = V("fn")
+local dollar = V("dollar")
+local tailop = V("tailop")
+-- local topcall = V("topcall")
+-- local fn = V("fn")
 local set = V("set")
 
 Id = function(a)
@@ -79,8 +78,8 @@ local parseStep = function(chars)
    return { tag = "String", chars }
 end
 
--- local step_char = R("09", "AZ", "az") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
-local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
+-- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
+local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") / id
 local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
 local minus = P("-")
 local plus = P("+")
@@ -117,12 +116,12 @@ local parseDegrade = function(a)
 end
 
 local parseTail = function(s)
-   return function(x)
-      return tinsert(x.options.ops, {
-         type = "tail",
-         arguments = { element = s },
-      })
-   end
+   -- return function(x)
+   --    return tinsert(x.options.ops, {
+   --       type = "tail",
+   --       arguments = { element = s },
+   --    })
+   -- end
 end
 
 local parseRange = function(s)
@@ -191,7 +190,15 @@ local pstack = function(...)
    return args, true
 end
 
-local reduce = require("modal.utils").reduce
+-- TODO: expand to all tidal ops
+local ptailop = function(...)
+   local args = { ... }
+   args.tag = "Call"
+   args[1].tag = "Id"
+   return function(x)
+      return { tag = "Op", "concat", x, args }
+   end
+end
 
 local use_timecat = function(args)
    local addWeight = function(a, b)
@@ -262,9 +269,26 @@ local function is_op(a)
    return opsymb[a]
 end
 
+local resolvetails = function(args, fname)
+   local params = filter(function(a)
+      return type(a) ~= "function"
+   end, args)
+   local tails = filter(function(a)
+      return type(a) == "function"
+   end, args)
+   local main = { tag = "Call", fname, unpack(params) }
+   for i = 1, #tails do
+      main = tails[i](main)
+   end
+   return main
+end
+
+-- TODO: set into this
 local function plist(...)
    local args = { ... }
-   if #args == 3 then
+   if #args == 1 then
+      return args
+   elseif #args == 3 then
       if is_op(args[2][1]) then
          local opname = opsymb[args[2][1]]
          table.remove(args, 2)
@@ -278,7 +302,15 @@ local function plist(...)
    local fname = args[1]
    fname.tag = "Id"
    table.remove(args, 1)
-   return { tag = "Call", fname, unpack(args) }
+   return resolvetails(args, fname)
+end
+
+local function pdollar(...)
+   local args = { ... }
+   local fname = args[1]
+   fname.tag = "Id"
+   table.remove(args, 1)
+   return resolvetails(args, fname)
 end
 
 -- TODO: weight in polymeter
@@ -290,19 +322,19 @@ local grammar =
    {
       "root",
       -- root = fn + set + list + slice_with_ops,
-      root = set + list + slice_with_ops,
+      root = set + list + slice_with_ops + dollar,
       -- fn = P"fn" * ws * step * param * body,
-      list = P("(") * ws * (step + list + slice_with_ops) ^ 0 * ws * P(")") / plist,
-      -- + dotStack + choose + stack + sequence,
-      set = step * ws * P("=") * ws * (step + list + slice_with_ops) / pset,
+      list = P("(") * ws * (step + list + slice_with_ops + dollar + tailop) ^ 0 * ws * P(")") / plist,
+      dollar = P("$") * ws * (step + list + slice_with_ops + dollar + tailop) ^ 0 * ws / pdollar,
+      set = P("(") * ws * step * ws * P("=") * ws * (step + list + slice_with_ops) * ws * P(")") / pset,
       sequence = (slice_with_ops ^ 1) / pseq,
       stack = slice_with_ops * (comma * slice_with_ops) ^ 1 / pstack,
       -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
       -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
+      tailop = P("#") * ws * step * ws * slice_with_ops * ws / ptailop,
       slice_with_ops = (slice * op ^ 0) / parseSlices,
       slice = step + sub_cycle + polymeter + slow_sequence,
       sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / parseSubCycle,
-      -- sub_cycle = P("[") * ws * sequence * ws * P("]") / parseSubCycle,
       slow_sequence = P("<") * ws * sequence * ws * P(">") / parseSlowSeq,
       polymeter = P("{") * ws * sequence * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
       polymeter_steps = P("%") * slice,
@@ -325,36 +357,37 @@ local read = function(str)
    return grammar:match(str)[2]
 end
 
-local mlc = require("metalua.compiler").new()
-
-local mpp = require("metalua.pprint").print
-
 local function eval(src, env)
-   env = env and env or _G
-   local ast = read(src)
-   -- mpp(ast)
-   ast = { tag = "Return", ast }
-
-   local lua_src = mlc:ast_to_src(ast)
-   local f = loadstring(lua_src)
-   f = setfenv(f, _G)
-   return f()
-end
-
--- setfenv
-
-if _VERSION == "Lua 5.2" then
-   function setfenv(f, env)
-      return load(string.dump(f), nil, nil, env)
+   -- env = env and env or _G
+   local ok, res, ast, f
+   ok, ast = pcall(read, src)
+   if not ok then
+      return ast, false
    end
+   if ast.tag ~= "Set" then
+      ast = { tag = "Return", ast }
+   end
+   local lua_src = mlc:ast_to_src(ast)
+   ok, f = pcall(loadstring, lua_src)
+   if not ok then
+      return f, false
+   end
+   f = setfenv(f, env)
+   ok, res = pcall(f)
+   return res, ok
 end
+
+-- if _VERSION == "Lua 5.2" then
+--    function setfenv(f, env)
+--       return load(string.dump(f), nil, nil, env)
+--    end
+-- end
 
 local function to_lua(src)
    local ast = read(src)
    local lua_src = mlc:ast_to_src(ast)
    return lua_src
 end
+-- TODO: > fast 2 $ s [bd sd] # room 0.2
 
--- print(eval("[ 37 'a ]"))
-
-return { eval = eval, read = read, to_lua = to_lua }
+return { eval = eval, to_lua = to_lua }

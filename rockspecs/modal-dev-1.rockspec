@@ -49,7 +49,7 @@ build = {
       ["modal.chords"] = "src/core/chords.lua",
 
       ["modal.mini"] = "src/core/mini.lua",
-      ["modal.maxi"] = "src/maxi/maxi.lua",
+      ["modal.maxi"] = "src/core/maxi.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
    },

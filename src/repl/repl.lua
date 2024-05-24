@@ -1,8 +1,7 @@
-require("modal")()
+-- require("modal")()
+M = require("modal")
 local uv = require("luv")
-local yue = require("yue")
--- local inspect = require("modal.inspect")
-clock = DefaultClock
+local clock = M.DefaultClock
 
 clock:start()
 
@@ -10,17 +9,11 @@ clock:start()
 -- TODO: completion
 local eval = function(a)
    if a then
-      local lua_code = yue.to_lua(a)
-      local func, err = loadstring(lua_code)
-      if func then
-         local ok, res = pcall(func)
-         if ok then
-            -- print(res)
-         else
-            print("Execution error: not a meaningful function to call")
-         end
+      local res, ok = M.maxi("(" .. a .. ")", M)
+      if ok then
+         print(res)
       else
-         print("Compilation error: " .. err)
+         print("Compilation error: " .. res)
       end
    end
    return ">"

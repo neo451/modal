@@ -29,7 +29,7 @@ do
    Event, Span, State = types.Event, types.Span, types.State
 end
 
-local parse = require("modal.mini").parse
+-- local parse = require("modal.mini").parse
 local reify, pure, silence
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin
 local fmap, firstCycle, querySpan
@@ -50,210 +50,7 @@ local tinsert = table.insert
 local M = {}
 local U = {}
 
-local function applyOptions(parent, enter)
-   return function(pat, i)
-      local ast = parent.source[i]
-      local ops = nil
-      if ast.options then
-         ops = ast.options.ops
-      end
-      if ops then
-         for _index_0 = 1, #ops do
-            local op = ops[_index_0]
-            local _exp_0 = op.type
-            if "stretch" == _exp_0 then
-               local type_, amount = op.arguments.type, op.arguments.amount
-               local _exp_1 = type_
-               if "fast" == _exp_1 then
-                  pat = M.fast(enter(amount), pat)
-               elseif "slow" == _exp_1 then
-                  pat = M.slow(enter(amount), pat)
-               else
-                  print("mini: stretch: type must be one of fast of slow")
-               end
-            elseif "degradeBy" == _exp_0 then
-               local amount = op.arguments.amount or 0.5
-               pat = M.degradeBy(amount, pat)
-            elseif "euclid" == _exp_0 then
-               local steps, pulse, rotation = op.arguments.steps, op.arguments.pulse, op.arguments.rotation
-               if rotation == 0 then
-                  pat = M.euclid(enter(pulse), enter(steps), 0, pat)
-               else
-                  pat = M.euclid(enter(pulse), enter(steps), enter(rotation), pat)
-               end
-            elseif "tail" == _exp_0 then
-               local friend = enter(op.arguments.element)
-               pat = appLeft(
-                  fmap(pat, function(a)
-                     return function(b)
-                        if T(a) == "table" then
-                           tinsert(a, b)
-                           return a
-                        else
-                           return {
-                              a,
-                              b,
-                           }
-                        end
-                     end
-                  end),
-                  friend
-               )
-               --- TODO: broken!
-            elseif "range" == _exp_0 then
-               local friend = enter(op.arguments.element)
-               local makeRange
-               makeRange = function(start, stop)
-                  local _accum_0 = {}
-                  local _len_0 = 1
-                  for _ = start, stop do
-                     _accum_0[_len_0] = i
-                     _len_0 = _len_0 + 1
-                  end
-                  return _accum_0
-               end
-               local f
-               f = function(apat, bpat)
-                  return squeezeBind(apat, function(a)
-                     return bind(bpat, function(b)
-                        return M.fastcat(makeRange(a, b), friend)
-                     end)
-                  end)
-               end
-               pat = f(pat, friend)
-            end
-         end
-      end
-      return pat
-   end
-end
-
-local function resolveReplications(ast)
-   local repChild = function(child)
-      if child.options == nil then
-         return { child }
-      end
-      local reps = child.options.reps
-      child.options.reps = nil
-      local _accum_0 = {}
-      local _len_0 = 1
-      for i = 1, reps do
-         _accum_0[_len_0] = child
-         _len_0 = _len_0 + 1
-      end
-      return _accum_0
-   end
-   local unflat
-   do
-      local _accum_0 = {}
-      local _len_0 = 1
-      local _list_0 = ast.source
-      for _index_0 = 1, #_list_0 do
-         local child = _list_0[_index_0]
-         _accum_0[_len_0] = repChild(child)
-         _len_0 = _len_0 + 1
-      end
-      unflat = _accum_0
-   end
-   local res = {}
-   for _index_0 = 1, #unflat do
-      local element = unflat[_index_0]
-      for _index_1 = 1, #element do
-         local elem = element[_index_1]
-         tinsert(res, elem)
-      end
-   end
-   ast.source = res
-   return ast
-end
-
-local function patternifyAST(ast)
-   local enter = function(node)
-      return patternifyAST(node)
-   end
-   local _exp_0 = ast.type
-   if "element" == _exp_0 then
-      return enter(ast.source)
-   elseif "atom" == _exp_0 then
-      if ast.source == "~" then
-         return M.silence()
-      end
-      local value = ast.source
-      if tonumber(value) then
-         value = tonumber(value)
-      end
-      return pure(value)
-   elseif "pattern" == _exp_0 then
-      ast = resolveReplications(ast)
-      local children = ast.source
-      children = map(enter, children)
-      do
-         local _accum_0 = {}
-         local _len_0 = 1
-         for index, child in pairs(children) do
-            _accum_0[_len_0] = applyOptions(ast, enter)(child, index)
-            _len_0 = _len_0 + 1
-         end
-         children = _accum_0
-      end
-      local alignment = ast.arguments.alignment
-      local _exp_1 = alignment
-      if "stack" == _exp_1 then
-         return M.stack(children)
-      elseif "polymeter_slowcat" == _exp_1 then
-         local aligned = map(function(child)
-            return M.slow(#(firstCycle(child)), child)
-         end, children)
-         return M.stack(aligned)
-      elseif "polymeter" == _exp_1 then
-         local stepsPerCycle = ast.arguments.stepsPerCycle and enter(ast.arguments.stepsPerCycle) or 1
-         print(stepsPerCycle)
-         local aligned = map(function(child)
-            return M.fast(
-               fmap(reify(stepsPerCycle), function(x)
-                  if x == 1 then
-                     return 1
-                  end -- HACK:
-                  return x / #(firstCycle(child))
-               end),
-               child
-            )
-         end, children)
-         return M.stack(aligned)
-      elseif "rand" == _exp_1 then
-         return M.randcat(children)
-      end
-      local addWeight
-      addWeight = function(a, b)
-         b = b.options and b.options.weight or 1
-         return a + b
-      end
-      local weightSum = reduce(addWeight, 0, ast.source)
-      if weightSum > #children then
-         local atoms = ast.source
-         local pat = M.timecat((function()
-            local _accum_0 = {}
-            local _len_0 = 1
-            for i, v in pairs(atoms) do
-               _accum_0[_len_0] = {
-                  v.options.weight or 1,
-                  children[i],
-               }
-               _len_0 = _len_0 + 1
-            end
-            return _accum_0
-         end)())
-         return pat
-      end
-      return M.fastcat(children)
-   end
-end
-
-local function mini(code)
-   local ast = parse(code)
-   return patternifyAST(ast)
-end
-M.mini = mini
+M.mini = require("modal.mini")(M)
 
 function fmap(pat, func)
    return withValue(pat, func)
@@ -476,9 +273,9 @@ splitQueries = function(pat)
    end
    return Pattern(query)
 end
+
 withValue = function(pat, func)
-   local query
-   query = function(_, state)
+   local query = function(_, state)
       local events = pat:query(state)
       local f
       f = function(event)
@@ -488,6 +285,7 @@ withValue = function(pat, func)
    end
    return Pattern(query)
 end
+
 withQuerySpan = function(pat, func)
    local query
    query = function(_, state)
@@ -704,7 +502,8 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      return mini(thing)
+      -- return M.mini(thing, M)
+      return pure(thing)
    elseif "pattern" == t then
       return thing
    else
@@ -721,7 +520,7 @@ patternify[2] = function(func)
       if pat == nil then
          return curry(func, 2)(apat)
       end
-      apat = reify(apat)
+      apat, pat = reify(apat), reify(pat)
       local mapFn = function(a)
          return func(a, pat)
       end
@@ -1124,7 +923,6 @@ function M.struct(boolpat, pat)
 end
 
 register("euclid", function(n, k, offset, pat)
-   print(n, k, offset, pat)
    return M.struct(bjork(n, k, offset), reify(pat))
 end)
 
@@ -1238,8 +1036,8 @@ end
 
 M.sl = string_lambda
 
-pp = function(x)
-   if T(x) == "table" then
+M.print = function(x)
+   if type(x) == "table" then
       for k, v in pairs(x) do
          print(k, v)
       end
@@ -1247,10 +1045,10 @@ pp = function(x)
       return print(x)
    end
 end
-M.print = pp
-M.id = id
 
--- pp(M.mini("1 .. 9"))
--- pp(M.iota(1, 9))
+M.id = id
+M.maxi = require("modal.maxi").eval
+
+M.T = T
 
 return M
