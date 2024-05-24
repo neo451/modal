@@ -57,6 +57,7 @@ describe "Mini Interpreter for", ->
 
   describe "tail", ->
     it "should pass", ->
+      assert.are.same pure({s: "bd", n: "3", gain: "2"}), C.s("bd:3:2")
       eval "bd:3:2"
 
   describe "degrade", ->
@@ -112,7 +113,6 @@ interpreter_targets = {
   "bd:3:2": pure({"bd", 3, 2})
   -- sequences
   -- HACK:???
-  -- C.s("bd:3:2"): pure{s: "bd", n: "3", gain: "2"}
   "bd sd": fastcat "bd", "sd"
   "bd hh sd": fastcat "bd", "hh", "sd"
   "bd(3,8,1)": euclid 3, 8, 1, pure"bd"

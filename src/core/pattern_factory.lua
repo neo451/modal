@@ -1,72 +1,69 @@
-local cpm
-cpm = require("modal.pattern").cpm
-local Stream
-Stream = require("modal.stream").Stream
-local Clock
-Clock = require("modal.clock").Clock
+local cpm = require("modal.pattern").cpm
+local Stream = require("modal.stream").Stream
+local Clock = require("modal.clock").Clock
 local P = require("modal.params")
-local Streams = { }
+local Streams = {}
 local DefaultClock = Clock()
-local p
-p = function(key, pattern)
-  if not Streams[key] then
-    local stream = Stream(Clock.sendf)
-    DefaultClock:subscribe(stream)
-    Streams[key] = stream
-  end
-  Streams[key].pattern = pattern
-  return pattern
+local p = function(key, pattern)
+   if not Streams[key] then
+      local stream = Stream(Clock.sendf)
+      DefaultClock:subscribe(stream)
+      Streams[key] = stream
+   end
+   Streams[key].pattern = pattern
+   return pattern
 end
-local hush
-hush = function()
-  for _index_0 = 1, #Streams do
-    local stream = Streams[_index_0]
-    DefaultClock:unsubscribe(stream)
-  end
-  Streams = { }
+local hush = function()
+   for _index_0 = 1, #Streams do
+      local stream = Streams[_index_0]
+      DefaultClock:unsubscribe(stream)
+   end
+   Streams = {}
 end
+
 local d1
 d1 = function(a)
-  return p(1, a .. P.orbit("1"))
+   return p(1, a .. P.orbit("1"))
 end
 local d2
 d2 = function(a)
-  return p(2, a .. P.orbit("2"))
+   return p(2, a .. P.orbit("2"))
 end
 local d3
 d3 = function(a)
-  return p(3, a .. P.orbit("3"))
+   return p(3, a .. P.orbit("3"))
 end
 local d4
 d4 = function(a)
-  return p(4, a .. P.orbit("4"))
+   return p(4, a .. P.orbit("4"))
 end
 local d5
 d5 = function(a)
-  return p(5, a .. P.orbit("5"))
+   return p(5, a .. P.orbit("5"))
 end
 local d6
 d6 = function(a)
-  return p(6, a .. P.orbit("6"))
+   return p(6, a .. P.orbit("6"))
 end
 local d7
 d7 = function(a)
-  return p(7, a .. P.orbit("7"))
+   return p(7, a .. P.orbit("7"))
 end
 local d8
 d8 = function(a)
-  return p(8, a .. P.orbit("8"))
+   return p(8, a .. P.orbit("8"))
 end
+
 return {
-  p = p,
-  hush = hush,
-  DefaultClock = DefaultClock,
-  d1 = d1,
-  d2 = d2,
-  d3 = d3,
-  d4 = d4,
-  d5 = d5,
-  d6 = d6,
-  d7 = d7,
-  d8 = d8
+   p = p,
+   hush = hush,
+   DefaultClock = DefaultClock,
+   d1 = d1,
+   d2 = d2,
+   d3 = d3,
+   d4 = d4,
+   d5 = d5,
+   d6 = d6,
+   d7 = d7,
+   d8 = d8,
 }
