@@ -9,7 +9,7 @@ clock:start()
 -- TODO: completion
 local eval = function(a)
    if a then
-      local res, ok = M.maxi("(" .. a .. ")", M)
+      local res, ok = M.eval("(" .. a .. ")", M)
       if ok then
          print(res)
       else
@@ -81,9 +81,9 @@ local function onread(err, line)
    end
 end
 
--- coroutine.wrap(function()
-displayPrompt(">")
-uv.read_start(stdin, onread)
--- end)()
+coroutine.wrap(function()
+   displayPrompt(">")
+   uv.read_start(stdin, onread)
+end)()
 
 uv.run()

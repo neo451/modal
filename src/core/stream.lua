@@ -13,8 +13,8 @@ do
             return
          end
          local events = onsetsOnly(self.pattern)(cycleFrom, cycleTo)
-         for _index_0 = 1, #events do
-            local event = events[_index_0]
+         for i = 1, #events do
+            local event = events[i]
             local cycleOn = event.whole._begin
             local cycleOff = event.whole._end
             local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)

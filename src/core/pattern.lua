@@ -1,7 +1,7 @@
-local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams
+local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, concat2
 do
    local utils = require("modal.utils")
-   map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams =
+   map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, concat2 =
       utils.map,
       utils.filter,
       utils.string_lambda,
@@ -14,7 +14,8 @@ do
       utils.timeToRand,
       utils.curry,
       utils.type,
-      utils.nparams
+      utils.nparams,
+      utils.concat2
 end
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
@@ -499,17 +500,19 @@ end
 
 M.pure = pure
 
+local env = concat2(M, _G)
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      -- return M.mini(thing, M)
-      return pure(thing)
+      local res = M.eval("(" .. thing .. ")", env)
+      return res
    elseif "pattern" == t then
       return thing
    else
       return pure(thing)
    end
 end
+
 M.reify = reify
 
 local patternify = { id }
@@ -607,7 +610,8 @@ end
 -- end
 
 function M.slowcat(...)
-   local pats = map(reify, totable(...))
+   -- local pats = map(reify, totable(...))
+   local pats = totable(...)
    local query
    query = function(_, state)
       local span = state.span
@@ -633,7 +637,7 @@ end
 ---@usage
 ---fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
 function M.fastcat(...)
-   local pats = map(reify, totable(...))
+   local pats = totable(...)
    return U.fast(#pats, M.slowcat(...))
 end
 
@@ -646,7 +650,7 @@ function M.timecat(tuples)
    local accum = Fraction(0)
    for i = 1, #tuples do
       local tup = tuples[i]
-      local time, pat = tup[1], reify(tup[2]) -- HACK:??? do for all?
+      local time, pat = tup[1], tup[2]
       local b = accum / total
       local e = (accum + time) / total
       local new_pat = U.compress(b, e, pat)
@@ -862,12 +866,10 @@ M.randcat = function(...)
 end
 
 register("degradeByWith", function(prand, by, pat)
-   pat = reify(pat) -- TODO:
    if T(by) == "fraction" then
       by = by:asFloat()
    end
-   local f
-   f = function(v)
+   local f = function(v)
       return v > by
    end
    return appLeft(
@@ -1047,8 +1049,9 @@ M.print = function(x)
 end
 
 M.id = id
-M.maxi = require("modal.maxi").eval
-
+local maxi = require("modal.maxi")
+M.eval = maxi.eval
+M.to_lua = maxi.to_lua
 M.T = T
 
 return M

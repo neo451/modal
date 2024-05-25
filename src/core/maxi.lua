@@ -3,9 +3,8 @@ P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
 
-local mlc = require("metalua.compiler").new()
+local ast_to_src = require("modal.ast_to_src")
 local mpp = require("metalua.pprint").print
-local moon = require("moon")
 
 local sequence = V("sequence")
 local slice = V("slice")
@@ -45,6 +44,10 @@ end
 
 Num = function(a)
    return { tag = "Number", a }
+end
+
+Pure = function(a)
+   return { tag = "Call", Id("pure"), a }
 end
 
 local id = function(x)
@@ -211,6 +214,22 @@ local use_timecat = function(args)
    end
 end
 
+local purify = function(args)
+   for i, v in pairs(args) do
+      if v.tag ~= "Call" and v.tag ~= "Id" then
+         args[i] = Pure(v)
+      end
+   end
+   return args
+end
+
+local purify_one = function(v)
+   if v.tag ~= "Call" and v.tag ~= "Id" then
+      return Pure(v)
+   end
+   return v
+end
+
 local resolveweight = function(args)
    local addWeight = function(a, b)
       return a + (b.weight and b.weight or 1)
@@ -218,21 +237,21 @@ local resolveweight = function(args)
    local weightSum = reduce(addWeight, 0, args)
    local acc = {}
    for i, v in pairs(args) do
-      acc[i] = Table({ Num(v.weight) or Num(1), args[i] })
+      acc[i] = Table({ Num(v.weight) or Num(1), purify_one(args[i]) })
    end
    return { tag = "Call", Id("timecat"), Table(acc) }, weightSum
 end
 
 local parseSubCycle = function(args, isStack)
    if isStack then
-      return { tag = "Call", Id("stack"), unpack(args) }
+      return { tag = "Call", Id("stack"), unpack(purify(args)) }
    else
       if use_timecat(args) then
          -- pp(args)
          local res = resolveweight(args)
          return res
       else
-         return { tag = "Call", Id("fastcat"), unpack(args) }
+         return { tag = "Call", Id("fastcat"), unpack(purify(args)) }
       end
    end
 end
@@ -247,7 +266,7 @@ local parseSlowSeq = function(args, _)
       local tab, weightSum = resolveweight(args)
       return { tag = "Call", Id("slow"), Num(weightSum), tab }
    else
-      return { tag = "Call", Id("slowcat"), unpack(args) }
+      return { tag = "Call", Id("slowcat"), unpack(purify(args)) }
    end
 end
 
@@ -287,6 +306,9 @@ end
 local function plist(...)
    local args = { ... }
    if #args == 1 then
+      if args[1].tag ~= "Call" then
+         return { tag = "Call", Id("pure"), args }
+      end
       return args
    elseif #args == 3 then
       if is_op(args[2][1]) then
@@ -314,7 +336,6 @@ local function pdollar(...)
 end
 
 -- TODO: weight in polymeter
--- TODO: quotes?
 -- TODO: to fraction ?
 -- TODO:  code blocks
 
@@ -367,7 +388,7 @@ local function eval(src, env)
    if ast.tag ~= "Set" then
       ast = { tag = "Return", ast }
    end
-   local lua_src = mlc:ast_to_src(ast)
+   local lua_src = ast_to_src(ast)
    ok, f = pcall(loadstring, lua_src)
    if not ok then
       return f, false
@@ -377,15 +398,9 @@ local function eval(src, env)
    return res, ok
 end
 
--- if _VERSION == "Lua 5.2" then
---    function setfenv(f, env)
---       return load(string.dump(f), nil, nil, env)
---    end
--- end
-
 local function to_lua(src)
    local ast = read(src)
-   local lua_src = mlc:ast_to_src(ast)
+   local lua_src = ast_to_src(ast)
    return lua_src
 end
 -- TODO: > fast 2 $ s [bd sd] # room 0.2

@@ -50,12 +50,15 @@ build = {
 
       ["modal.mini"] = "src/core/mini.lua",
       ["modal.maxi"] = "src/core/maxi.lua",
+      ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
+      ["modal.rrepl"] = "src/repl/rrepl.lua",
    },
    install = {
       bin = {
          "bin/modal",
+         "bin/mod",
       },
    },
 }

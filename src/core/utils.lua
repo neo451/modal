@@ -271,4 +271,8 @@ utils.nparams = function(func)
    end
 end
 
+utils.concat2 = function(a, b)
+   return fun.tomap(fun.chain(a, b))
+end
+
 return utils
