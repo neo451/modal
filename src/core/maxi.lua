@@ -2,6 +2,7 @@ local lpeg = require("lpeg")
 P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
+local map = require("modal.utils").map
 
 local ast_to_src = require("modal.ast_to_src")
 local mpp = require("metalua.pprint").print
@@ -26,9 +27,12 @@ local range = V("range")
 local list = V("list")
 local dollar = V("dollar")
 local tailop = V("tailop")
--- local topcall = V("topcall")
--- local fn = V("fn")
-local set = V("set")
+local elem = V("elem")
+
+-- TODO:
+-- M.fonf = reify("bd sd bd sd")
+-- bd = '808bd
+-- then fonf = 808bd sd 808 bd
 
 Id = function(a)
    return { tag = "Id", a }
@@ -82,7 +86,7 @@ local parseStep = function(chars)
 end
 
 -- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
-local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") / id
+local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") + P("=") / id
 local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
 local minus = P("-")
 local plus = P("+")
@@ -96,19 +100,19 @@ local exp = e * (minus + plus) ^ -1 * digit ^ 1
 local frac = decimal_point * digit ^ 1
 local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
 
-local parseFast = function(a)
+local pFast = function(a)
    return function(x)
       return { tag = "Call", Id("fast"), a, x }
    end
 end
 
-local parseSlow = function(a)
+local pSlow = function(a)
    return function(x)
       return { tag = "Call", Id("slow"), a, x }
    end
 end
 
-local parseDegrade = function(a)
+local pDegrade = function(a)
    if a == "?" then
       a = Num(0.5)
    end
@@ -118,7 +122,8 @@ local parseDegrade = function(a)
    end
 end
 
-local parseTail = function(s)
+-- TODO:
+local pTail = function(s)
    -- return function(x)
    --    return tinsert(x.options.ops, {
    --       type = "tail",
@@ -127,27 +132,27 @@ local parseTail = function(s)
    -- end
 end
 
-local parseRange = function(s)
+local pRange = function(s)
    return function(x)
       return { tag = "Call", Id("iota"), x, s }
    end
 end
 
-local parseEuclid = function(p, s, r)
+local pEuclid = function(p, s, r)
    r = r and r or Num(0)
    return function(x)
       return { tag = "Call", Id("euclid"), p, s, r, x }
    end
 end
 
-local parseWeight = function(a)
+local pWeight = function(a)
    return function(x)
       x.weight = (x.weight or 1) + (tonumber(a) or 2) - 1
       return x
    end
 end
 
-local parseReplicate = function(a)
+local pReplicate = function(a)
    return function(x)
       x.reps = (x.reps or 1) + (tonumber(a) or 2) - 1
       return x
@@ -170,7 +175,7 @@ local function resolvereps(ast)
    return res
 end
 
-local parseSlices = function(sli, ...)
+local pSlices = function(sli, ...)
    local ops = { ... }
    sli.reps = 1
    sli.weight = 1
@@ -181,20 +186,20 @@ local parseSlices = function(sli, ...)
    return sli
 end
 
-local pseq = function(...)
+local pSeq = function(...)
    local args = { ... }
    args = resolvereps(args)
    return args, false
 end
 
-local pstack = function(...)
+local pStack = function(...)
    local args = { ... }
    args = resolvereps(args)
    return args, true
 end
 
 -- TODO: expand to all tidal ops
-local ptailop = function(...)
+local pTailop = function(...)
    local args = { ... }
    args.tag = "Call"
    args[1].tag = "Id"
@@ -242,7 +247,7 @@ local resolveweight = function(args)
    return { tag = "Call", Id("timecat"), Table(acc) }, weightSum
 end
 
-local parseSubCycle = function(args, isStack)
+local pSubCycle = function(args, isStack)
    if isStack then
       return { tag = "Call", Id("stack"), unpack(purify(args)) }
    else
@@ -256,12 +261,25 @@ local parseSubCycle = function(args, isStack)
    end
 end
 
-local parsePolymeter = function(s, steps)
-   steps = steps and steps or Num(#s)
-   return { tag = "Call", Id("polymeter"), steps, unpack(s) }
+local pPolymeter = function(...)
+   local args = { ... }
+   -- HACK: where bools form?????
+   args = filter(function(s)
+      return type(s) ~= "boolean"
+   end, args)
+   local steps = table.remove(args, #args)
+   if steps == -1 then
+      steps = Num(#args)
+   end
+   -- TODO: into stack, proper stack with sequence
+   local function f(s)
+      return { tag = "Call", Id("fastcat"), unpack(purify(s)) }
+   end
+   args = map(f, args)
+   return { tag = "Call", Id("polymeter"), steps, unpack(args) }
 end
 
-local parseSlowSeq = function(args, _)
+local pSlowSeq = function(args, _)
    if use_timecat(args) then
       local tab, weightSum = resolveweight(args)
       return { tag = "Call", Id("slow"), Num(weightSum), tab }
@@ -270,7 +288,7 @@ local parseSlowSeq = function(args, _)
    end
 end
 
-local pset = function(lhs, rhs)
+local pSet = function(lhs, rhs)
    return { tag = "Set", { string2id(lhs) }, { rhs } }
 end
 
@@ -302,9 +320,42 @@ local resolvetails = function(args, fname)
    return main
 end
 
+local find_equals = function(args)
+   for i, v in pairs(args) do
+      if v[1] == "=" then
+         return i
+      end
+   end
+   return false
+end
+
 -- TODO: set into this
-local function plist(...)
+local function pList(...)
    local args = { ... }
+   mpp(args)
+   local def = find_equals(args)
+   if def then
+      if def == 2 then
+         -- TODO: id = fast . slow, point free style
+         return { tag = "Set", { string2id(args[1]) }, { args[3] } }
+      else
+         local params, body = {}, {}
+         local fname = args[1]
+         for i = 2, #args do
+            local v = args[i]
+            if i < def then
+               params[#params + 1] = string2id(v)
+            elseif i > def then
+               -- TODO: generic body with string2id applied
+               body[#body + 1] = { tag = "Return", string2id(v) }
+            end
+         end
+         local f_ast = { tag = "Function", params, body }
+         mpp({ tag = "Set", { string2id(fname) }, { f_ast } })
+         return { tag = "Set", { string2id(fname) }, { f_ast } }
+      end
+   end
+
    if #args == 1 then
       if args[1].tag ~= "Call" then
          return { tag = "Call", Id("pure"), args }
@@ -327,7 +378,7 @@ local function plist(...)
    return resolvetails(args, fname)
 end
 
-local function pdollar(...)
+local function pDollar(...)
    local args = { ... }
    local fname = args[1]
    fname.tag = "Id"
@@ -343,33 +394,36 @@ local grammar =
    {
       "root",
       -- root = fn + set + list + slice_with_ops,
-      root = set + list + slice_with_ops + dollar,
+      root = list + slice_with_ops + dollar,
       -- fn = P"fn" * ws * step * param * body,
-      list = P("(") * ws * (step + list + slice_with_ops + dollar + tailop) ^ 0 * ws * P(")") / plist,
-      dollar = P("$") * ws * (step + list + slice_with_ops + dollar + tailop) ^ 0 * ws / pdollar,
-      set = P("(") * ws * step * ws * P("=") * ws * (step + list + slice_with_ops) * ws * P(")") / pset,
-      sequence = (slice_with_ops ^ 1) / pseq,
-      stack = slice_with_ops * (comma * slice_with_ops) ^ 1 / pstack,
+      list = P("(") * ws * elem ^ 0 * ws * P(")") / pList,
+      dollar = P("$") * ws * elem ^ 0 * ws / pDollar,
+      elem = step + list + slice_with_ops + dollar + tailop,
+      -- set = P("(") * ws * step * ws * P("=") * ws * (step + list + slice_with_ops) * ws * P(")") / pSet,
+      sequence = (slice_with_ops ^ 1) / pSeq,
+      stack = slice_with_ops * (comma * slice_with_ops) ^ 1 / pStack,
       -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
       -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
-      tailop = P("#") * ws * step * ws * slice_with_ops * ws / ptailop,
-      slice_with_ops = (slice * op ^ 0) / parseSlices,
+      tailop = P("#") * ws * step * ws * slice_with_ops * ws / pTailop,
+      slice_with_ops = (slice * op ^ 0) / pSlices,
       slice = step + sub_cycle + polymeter + slow_sequence,
-      sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / parseSubCycle,
-      slow_sequence = P("<") * ws * sequence * ws * P(">") / parseSlowSeq,
-      polymeter = P("{") * ws * sequence * ws * P("}") * polymeter_steps ^ -1 * ws / parsePolymeter,
-      polymeter_steps = P("%") * slice,
+      sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / pSubCycle,
+      slow_sequence = P("<") * ws * sequence * ws * P(">") / pSlowSeq,
+      polymeter = P("{") * ws * sequence * (comma * sequence) ^ 0 * ws * P("}") * polymeter_steps * ws / pPolymeter,
+      polymeter_steps = (P("%") * slice) ^ -1 / function(s)
+         return (s ~= "") and s or -1
+      end,
       op = fast + slow + tail + range + replicate + degrade + weight + euclid,
-      fast = P("*") * slice / parseFast,
-      slow = P("/") * slice / parseSlow,
-      tail = P(":") * slice / parseTail,
-      range = P("..") * ws * slice / parseRange,
-      degrade = P("?") * (number ^ -1) / parseDegrade,
-      replicate = ws * P("!") * (number ^ -1) / parseReplicate,
-      weight = ws * (P("@") + P("_")) * (number ^ -1) / parseWeight,
+      fast = P("*") * slice / pFast,
+      slow = P("/") * slice / pSlow,
+      tail = P(":") * slice / pTail,
+      range = P("..") * ws * slice / pRange,
+      degrade = P("?") * (number ^ -1) / pDegrade,
+      replicate = ws * P("!") * (number ^ -1) / pReplicate,
+      weight = ws * (P("@") + P("_")) * (number ^ -1) / pWeight,
       euclid = P("(") * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(
          ")"
-      ) / parseEuclid,
+      ) / pEuclid,
    }
 
 grammar = Ct(C(grammar))
@@ -404,5 +458,7 @@ local function to_lua(src)
    return lua_src
 end
 -- TODO: > fast 2 $ s [bd sd] # room 0.2
+
+-- print(evalf("(fast 2 1)"))
 
 return { eval = eval, to_lua = to_lua }

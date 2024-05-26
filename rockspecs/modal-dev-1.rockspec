@@ -53,12 +53,12 @@ build = {
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
-      ["modal.rrepl"] = "src/repl/rrepl.lua",
+      ["modal.server"] = "src/repl/server.lua",
    },
    install = {
       bin = {
          "bin/modal",
-         "bin/mod",
+         "bin/mods",
       },
    },
 }

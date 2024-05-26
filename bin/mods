@@ -1,0 +1,4 @@
+#!/usr/bin/luajit
+require("modal.server")
+
+-- -- vi: ft=lua ts=3 sw=3

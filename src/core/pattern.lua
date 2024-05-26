@@ -500,11 +500,12 @@ end
 
 M.pure = pure
 
-local env = concat2(M, _G)
+-- TODO:
+-- local env = concat2(M, _G)
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = M.eval("(" .. thing .. ")", env)
+      local res = M.eval("[" .. thing .. "]", M)
       return res
    elseif "pattern" == t then
       return thing
@@ -1048,10 +1049,28 @@ M.print = function(x)
    end
 end
 
+function M.polymeter(steps, ...)
+   local children = map(reify, { ... })
+   local aligned = map(function(child)
+      return M.fast(
+         fmap(reify(steps), function(x)
+            if x == 1 then
+               return 1
+            end -- HACK:
+            return x / #(firstCycle(child))
+         end),
+         child
+      )
+   end, children)
+   return M.stack(aligned)
+end
+
 M.id = id
 local maxi = require("modal.maxi")
 M.eval = maxi.eval
 M.to_lua = maxi.to_lua
 M.T = T
+
+M.fonf = reify("bd sd bd sd")
 
 return M
