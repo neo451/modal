@@ -87,7 +87,8 @@ end
 
 -- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
 local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") + P("=") / id
-local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
+-- local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
+local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws
 local minus = P("-")
 local plus = P("+")
 local zero = P("0")
@@ -288,17 +289,14 @@ local pSlowSeq = function(args, _)
    end
 end
 
-local pSet = function(lhs, rhs)
-   return { tag = "Set", { string2id(lhs) }, { rhs } }
-end
-
 local opsymb = {
-   ["+"] = "add",
-   ["-"] = "sub",
-   ["*"] = "mul",
-   ["/"] = "div",
-   ["^"] = "pow",
-   ["%"] = "mod",
+   ["+"] = { "add", true },
+   ["-"] = { "sub", true },
+   ["*"] = { "mul", true },
+   ["/"] = { "div", true },
+   ["^"] = { "pow", true },
+   ["%"] = { "mod", true },
+   ["."] = { "pipe", false },
    -- TODO: tidal ops!!
 }
 
@@ -337,7 +335,23 @@ local function pList(...)
    if def then
       if def == 2 then
          -- TODO: id = fast . slow, point free style
-         return { tag = "Set", { string2id(args[1]) }, { args[3] } }
+         local body = {}
+         local fname = args[1]
+         for i = 2, #args do
+            local v = args[i]
+            if i > def then
+               -- TODO: generic body with string2id applied
+               -- body[#body + 1] = { tag = "Return", string2id(v) }
+               body[#body + 1] = v
+            end
+         end
+         if #body == 1 then
+            return { tag = "Set", { string2id(fname) }, { args[3] } }
+         end
+         -- modal> te = (fast 2) . rev
+         local body_ast = { tag = "Return", { tag = "Call", pList(unpack(body)), Id("x") } }
+         local f_ast = { tag = "Function", { Id("x") }, body_ast }
+         return { tag = "Set", { string2id(fname) }, { f_ast } }
       else
          local params, body = {}, {}
          local fname = args[1]
@@ -350,6 +364,7 @@ local function pList(...)
                body[#body + 1] = { tag = "Return", string2id(v) }
             end
          end
+         mpp(body)
          local f_ast = { tag = "Function", params, body }
          mpp({ tag = "Set", { string2id(fname) }, { f_ast } })
          return { tag = "Set", { string2id(fname) }, { f_ast } }
@@ -357,15 +372,16 @@ local function pList(...)
    end
 
    if #args == 1 then
-      if args[1].tag ~= "Call" then
-         return { tag = "Call", Id("pure"), args }
-      end
       return args
    elseif #args == 3 then
       if is_op(args[2][1]) then
-         local opname = opsymb[args[2][1]]
+         local opname, is_native = opsymb[args[2][1]][1], opsymb[args[2][1]][2]
          table.remove(args, 2)
-         return { tag = "Op", opname, unpack(args) }
+         if is_native then
+            return { tag = "Op", opname, unpack(args) }
+         else
+            return { tag = "Call", Id(opname), unpack(map(string2id, args)) }
+         end
       elseif is_op(args[1][1]) then
          local opname = opsymb[args[1][1]]
          table.remove(args, 1)
@@ -399,7 +415,6 @@ local grammar =
       list = P("(") * ws * elem ^ 0 * ws * P(")") / pList,
       dollar = P("$") * ws * elem ^ 0 * ws / pDollar,
       elem = step + list + slice_with_ops + dollar + tailop,
-      -- set = P("(") * ws * step * ws * P("=") * ws * (step + list + slice_with_ops) * ws * P(")") / pSet,
       sequence = (slice_with_ops ^ 1) / pSeq,
       stack = slice_with_ops * (comma * slice_with_ops) ^ 1 / pStack,
       -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
@@ -451,6 +466,36 @@ local function eval(src, env)
    ok, res = pcall(f)
    return res, ok
 end
+--
+-- local function evalf(src, env)
+--    -- env = env and env or _G
+--    local ok, res, ast, f
+--    ok, ast = pcall(read, src)
+--    if not ok then
+--       return ast, false
+--    end
+--    if ast.tag ~= "Set" then
+--       ast = { tag = "Return", ast }
+--       ast = {
+--          tag = "Call",
+--          { tag = "Function", { { tag = "Dots" } }, { ast } },
+--          { tag = "Dots" },
+--       }
+--       ast = { tag = "Return", ast }
+--
+--       mpp(ast)
+--       -- ast = { tag = "Return", ast }
+--    end
+--    local lua_src = ast_to_src(ast)
+--    print(lua_src)
+--    ok, f = pcall(loadstring, lua_src)
+--    if not ok then
+--       return f, false
+--    end
+--    f = setfenv(f, env)
+--    ok, res = pcall(f)
+--    return res, ok
+-- end
 
 local function to_lua(src)
    local ast = read(src)

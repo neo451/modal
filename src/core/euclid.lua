@@ -8,14 +8,14 @@ end
 local function left(n, m)
    local ons, offs = n[1], n[2]
    local xs, ys = m[1], m[2]
-   local _xs, __xs = unpack(splitAt(offs, xs))
+   local _xs, __xs = splitAt(offs, xs)
    return { offs, ons - offs }, { zipWith(concat, _xs, ys), __xs }
 end
 
 local function right(n, m)
    local ons, offs = n[1], n[2]
    local xs, ys = m[1], m[2]
-   local _ys, __ys = unpack(splitAt(ons, ys))
+   local _ys, __ys = splitAt(ons, ys)
    return { ons, offs - ons }, { zipWith(concat, xs, _ys), __ys }
 end
 
@@ -44,8 +44,7 @@ local function bjork(ons, steps, offset)
    end
    local result = _bjork({ ons, offs }, { x, y })
    result = concat(flatten(result[2][1]), flatten(result[2][2]))
-   return rotate(result, offset)
+   return rotate(offset, result)
 end
--- require("moon.all")
--- p(bjork(3, 8))
+
 return { bjork = bjork }
