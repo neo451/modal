@@ -1,7 +1,8 @@
 local socket = require("socket")
 print("modal repl")
-local host = arg[2] or "localhost"
-local port = arg[1] or 9000
+local host = "localhost"
+-- local port = arg[1] or 9000
+local port = 9000
 local RL = require("readline")
 local M = require("modal")
 
@@ -23,6 +24,18 @@ local eval = function(a)
          print(res)
       else
          print("Compilation error: " .. res)
+      end
+   end
+end
+
+if arg[1] == "og" then
+   eval = function(a)
+      local ok, res = pcall(loadstring, "return " .. a)
+      if ok then
+         setfenv(res, M)
+         print(res())
+      else
+         print("lua error" .. res())
       end
    end
 end

@@ -3,21 +3,28 @@ local params = require("modal.params")
 local pattern_factory = require("modal.pattern_factory")
 local ui = require("modal.ui")
 local P = require("modal.params")
-local drawline
-drawline = require("modal.drawline").drawline
+local drawline = require("modal.drawline").drawline
+local lib = require("modal.lib")
+
 local modal = {
    _VERSION = "modal dev-1",
    _URL = "https://github.com/noearc/modal",
    _DESCRIPTION = "A language for algorithmic pattern. Tidalcycles for moonscript",
 }
+
 modal.drawline = drawline
 for name, func in pairs(pattern) do
    if name ~= "Pattern" then
       modal[name] = func
    end
 end
+
 for name, func in pairs(pattern_factory) do
    modal[name] = func
+end
+
+for name, pat in pairs(lib) do
+   modal[name] = modal.reify(pat)
 end
 
 for name, func in pairs(ui) do
@@ -31,6 +38,7 @@ end
 for name, func in pairs(P) do
    modal[name] = func
 end
+
 setmetatable(modal, {
    __call = function(t, override)
       for k, v in pairs(t) do

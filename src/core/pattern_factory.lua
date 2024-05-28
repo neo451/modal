@@ -3,6 +3,7 @@ local Clock = require("modal.clock").Clock
 local P = require("modal.params")
 local Streams = {}
 local DefaultClock = Clock()
+
 local p = function(key, pattern)
    if not Streams[key] then
       local stream = Stream(Clock.sendf)
@@ -12,6 +13,7 @@ local p = function(key, pattern)
    Streams[key].pattern = pattern
    return pattern
 end
+
 local hush = function()
    for _index_0 = 1, #Streams do
       local stream = Streams[_index_0]

@@ -46,6 +46,7 @@ build = {
       ["modal.euclid"] = "src/core/euclid.lua",
       ["modal.scales"] = "src/core/scales.lua",
       ["modal.chords"] = "src/core/chords.lua",
+      ["modal.lib"] = "src/core/lib.lua",
 
       ["modal.maxi"] = "src/core/maxi.lua",
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",

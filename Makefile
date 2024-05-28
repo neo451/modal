@@ -17,8 +17,4 @@ remove:
 	luarocks remove modal
 
 install:
-	moonc src/
 	luarocks build
-
-lint:
-	moonc -l src

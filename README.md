@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/github/license/noearc/xi?style=for-the-badge)
 ![Version](https://img.shields.io/luarocks/v/neo451/xi?style=for-the-badge)
 
-moonscript port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
+lua port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
 
 ## install
 

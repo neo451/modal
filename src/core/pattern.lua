@@ -28,7 +28,6 @@ local Pattern
 local reify, pure, silence
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin
 local fmap, firstCycle, querySpan
-local combineRight, combineLeft
 local withEventTime
 local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
@@ -63,7 +62,31 @@ function base:__tostring()
 end
 
 function base:__concat(other)
-   return combineLeft(self, other)
+   return M.op["|>"](self, other)
+end
+
+function base:__add(other)
+   return M.op["|+"](self, other)
+end
+
+function base:__sub(other)
+   return M.op["|-"](self, other)
+end
+
+function base:__mul(other)
+   return M.op["|*"](self, other)
+end
+
+function base:__div(other)
+   return M.op["|/"](self, other)
+end
+
+function base:__mod(other)
+   return M.op["|%"](self, other)
+end
+
+function base:__pow(other)
+   return M.op["|^"](self, other)
 end
 
 function base:__eq(other)
@@ -103,8 +126,8 @@ base.__class = Pattern
 function fmap(pat, func)
    return withValue(pat, func)
 end
-M.fmap = fmap
 base.fmap = fmap
+M.fmap = fmap
 
 function querySpan(pat, b, e)
    local span = Span(b, e)
@@ -115,30 +138,6 @@ end
 function firstCycle(pat)
    return pat(0, 1)
 end
-
-combineRight = function(pat, other)
-   return appLeft(
-      fmap(pat, function(x)
-         return function(y)
-            return union(y, x)
-         end
-      end),
-      other
-   )
-end
-base.combineRight = combineRight
-
-combineLeft = function(pat, other)
-   return appLeft(
-      fmap(pat, function(x)
-         return function(y)
-            return union(x, y)
-         end
-      end),
-      other
-   )
-end
-base.combineLeft = combineLeft
 
 local appWhole = function(pat, whole_func, pat_val)
    local query = function(_, state)
@@ -506,7 +505,6 @@ reify = function(thing)
       return pure(thing)
    end
 end
-
 M.reify = reify
 
 local patternify = { id }
@@ -1038,10 +1036,6 @@ register("scale", function(name, pat)
    return fmap(pat, toScale)
 end)
 
-M.app = function(x, pat)
-   return pat .. x
-end
-
 M.sl = string_lambda
 
 M.print = function(x)
@@ -1057,31 +1051,27 @@ end
 M.id = id
 M.T = T
 
-M.fonf = reify("bd [bd, sd] bd [bd, sd]")
-
 M.pipe = utils.pipe
-
--- TODO: methods???
--- keep: [(a) => a],
--- keepif: [(a, b) => (b ? a : undefined)],
---
 
 local _op = {}
 function _op.In(f)
    return function(a, b)
-      return appLeft(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appLeft(a, b):removeNils()
    end
 end
 
 function _op.Out(f)
    return function(a, b)
-      return appRight(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appRight(a, b):removeNils()
    end
 end
 
 function _op.Mix(f)
    return function(a, b)
-      return appBoth(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appBoth(a, b):removeNils()
    end
 end
 
@@ -1105,9 +1095,6 @@ function _op.SqueezeOut(f)
    end
 end
 
--- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
-local hows = { "In", "Out", "Mix", "Squeeze" }
-
 -- stylua: ignore start
 local ops = {
    add = function(a, b) return a + b end,
@@ -1123,6 +1110,8 @@ local ops = {
 }
 -- stylua: ignore end
 
+-- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
+local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
 local op_set = {
    add = "+",
    sub = "-",
@@ -1130,7 +1119,7 @@ local op_set = {
    div = "/",
    mod = "%",
    pow = "^",
-   concat = "..",
+   concat = "..", -- ?
    uni = "<",
    funi = ">",
 }
@@ -1140,6 +1129,7 @@ local how_format = {
    Out = "%s|",
    Mix = "|%s|",
    Squeeze = "||%s",
+   SqueezeOut = "%s||",
 }
 
 local op = {}
