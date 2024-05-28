@@ -161,6 +161,7 @@ describe("withQuerySpan", function()
       assert.are.same(expected, newPat(0, 1))
    end)
 end)
+
 describe("splitQueries", function()
    it("should break a query that spans multiple cycles into multiple queries each spanning one cycle", function()
       local query
@@ -182,6 +183,7 @@ describe("splitQueries", function()
       assert.are.same(expectedSplit, splitPat(0, 2))
    end)
 end)
+
 describe("withQueryTime", function()
    it(
       "should return new pattern whose query function will pass the query timespan through a function before mapping it to events",
@@ -199,6 +201,7 @@ describe("withQueryTime", function()
       end
    )
 end)
+
 describe("withEventTime", function()
    it("should return new pattern with function mapped over event times", function()
       local pat = pure(5)
@@ -213,6 +216,86 @@ describe("withEventTime", function()
       assert.are.same(expected, newPat(0, 1))
    end)
 end)
+
+describe("appLeft", function()
+   it("should take structure from left and appliy f", function()
+      local add = function(a)
+         return function(b)
+            return a + b
+         end
+      end
+      local left = reify("1 2"):fmap(add)
+      local right = reify("4 5 6")
+      local expected = {
+         Event(Span(0, 1 / 2), Span(0, 1 / 3), 5),
+         Event(Span(0, 1 / 2), Span(1 / 3, 1 / 2), 6),
+         Event(Span(1 / 2, 1), Span(1 / 2, 2 / 3), 7),
+         Event(Span(1 / 2, 1), Span(2 / 3, 1), 8),
+      }
+      local pat = left:appLeft(right)
+      assert.same(expected, pat(0, 1))
+   end)
+end)
+describe("appRight", function()
+   it("should take structure from right and appliy f", function()
+      local add = function(a)
+         return function(b)
+            return a + b
+         end
+      end
+      local left = reify("1 2"):fmap(add)
+      local right = reify("4 5 6")
+      local expected = {
+         Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 3, 1 / 2), 6),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 2, 2 / 3), 7),
+         Event(Span(2 / 3, 1), Span(2 / 3, 1), 8),
+      }
+      local pat = left:appRight(right)
+      assert.same(expected, pat(0, 1))
+   end)
+end)
+
+describe("appRight", function()
+   it("should take structure from right and appliy f", function()
+      local add = function(a)
+         return function(b)
+            return a + b
+         end
+      end
+      local left = reify("1 2"):fmap(add)
+      local right = reify("4 5 6")
+      local expected = {
+         Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 3, 1 / 2), 6),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 2, 2 / 3), 7),
+         Event(Span(2 / 3, 1), Span(2 / 3, 1), 8),
+      }
+      local pat = left:appRight(right)
+      assert.same(expected, pat(0, 1))
+   end)
+end)
+
+describe("appBoth", function()
+   it("should take structure from both sides and appliy f", function()
+      local add = function(a)
+         return function(b)
+            return a + b
+         end
+      end
+      local left = reify("1 2"):fmap(add)
+      local right = reify("4 5 6")
+      local expected = {
+         Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
+         Event(Span(1 / 3, 1 / 2), Span(1 / 3, 1 / 2), 6),
+         Event(Span(1 / 2, 2 / 3), Span(1 / 2, 2 / 3), 7),
+         Event(Span(2 / 3, 1), Span(2 / 3, 1), 8),
+      }
+      local pat = left:appBoth(right)
+      assert.same(expected, pat(0, 1))
+   end)
+end)
+
 describe("outerJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern",
@@ -227,6 +310,7 @@ describe("outerJoin", function()
       end
    )
 end)
+
 describe("squeezeJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each event in the outer pattern.\n ",
@@ -245,6 +329,7 @@ describe("squeezeJoin", function()
       end
    )
 end)
+
 describe("pure", function()
    it("should create Pattern of a single value repeating once per cycle", function()
       local atom = pure(5)
@@ -262,6 +347,7 @@ describe("pure", function()
       assert.are.same(expected, actual)
    end)
 end)
+
 describe("slowcat", function()
    it("should alternate between the patterns in the list, one pattern per cycle", function()
       local pat = slowcat(reify(1), reify(2), reify(3))
@@ -273,6 +359,7 @@ describe("slowcat", function()
       assert.are.same(expected, pat(0, 3))
    end)
 end)
+
 describe("fastcat", function()
    it("should alternate between the patterns in the list, all in one cycle", function()
       local pat = fastcat(reify(1), reify(2), reify(3))

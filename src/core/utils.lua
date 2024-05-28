@@ -74,7 +74,7 @@ end
 M.reduce = fun.reduce
 
 M.dump = function(o)
-   if type(o) == "table" then
+   if M.type(o) == "table" then
       local s = "{"
       for k, v in pairs(o) do
          s = s .. " " .. k .. ": " .. M.dump(v)
@@ -160,16 +160,6 @@ M.curry = function(func, num_args)
    return curry_h(function() end, num_args)
 end
 
-M.uncarry = function(f, n)
-   return function(...)
-      local args = { ... }
-      for i = 1, n do
-         f = f(args[i])
-      end
-      return f
-   end
-end
-
 M.reverse = function(...)
    local reverse_h
    reverse_h = function(acc, v, ...)
@@ -182,6 +172,12 @@ M.reverse = function(...)
       end
    end
    return reverse_h(function() end, ...)
+end
+
+M.flip = function(f)
+   return function(a, b)
+      return f(b, a)
+   end
 end
 
 local xorwise = function(x)

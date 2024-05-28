@@ -30,7 +30,6 @@ build = {
       ["modal.fraction"] = "src/core/fraction.lua",
       ["modal.bitop"] = "src/core/bitop.lua",
       ["modal.drawline"] = "src/core/drawline.lua",
-      ["modal.inspect"] = "src/core/inspect.lua",
       ["modal.fun"] = "src/core/fun.lua",
 
       ["modal.stream"] = "src/core/stream.lua",
@@ -48,7 +47,6 @@ build = {
       ["modal.scales"] = "src/core/scales.lua",
       ["modal.chords"] = "src/core/chords.lua",
 
-      ["modal.mini"] = "src/core/mini.lua",
       ["modal.maxi"] = "src/core/maxi.lua",
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
 

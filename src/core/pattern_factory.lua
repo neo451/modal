@@ -1,4 +1,3 @@
-local cpm = require("modal.pattern").cpm
 local Stream = require("modal.stream").Stream
 local Clock = require("modal.clock").Clock
 local P = require("modal.params")
@@ -21,36 +20,28 @@ local hush = function()
    Streams = {}
 end
 
-local d1
-d1 = function(a)
+local d1 = function(a)
    return p(1, a .. P.orbit("1"))
 end
-local d2
-d2 = function(a)
+local d2 = function(a)
    return p(2, a .. P.orbit("2"))
 end
-local d3
-d3 = function(a)
+local d3 = function(a)
    return p(3, a .. P.orbit("3"))
 end
-local d4
-d4 = function(a)
+local d4 = function(a)
    return p(4, a .. P.orbit("4"))
 end
-local d5
-d5 = function(a)
+local d5 = function(a)
    return p(5, a .. P.orbit("5"))
 end
-local d6
-d6 = function(a)
+local d6 = function(a)
    return p(6, a .. P.orbit("6"))
 end
-local d7
-d7 = function(a)
+local d7 = function(a)
    return p(7, a .. P.orbit("7"))
 end
-local d8
-d8 = function(a)
+local d8 = function(a)
    return p(8, a .. P.orbit("8"))
 end
 

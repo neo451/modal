@@ -123,6 +123,17 @@ do
       type = function()
          return "event"
       end,
+      -- TODO: ?
+      -- __eq = function(self, other)
+      --    return (self.part == other.part)
+      --       and (self.whole == other.whole)
+      --       and (compare(self.value, other.value))
+      --       and (compare(self.context, other.context))
+      --       and (self.stateful == other.stateful)
+      -- end,
+      __eq = function(self, other)
+         return self:__tostring() == other:__tostring()
+      end,
       duration = function(self)
          return self.whole._end - self.whole._begin
       end,
@@ -152,28 +163,18 @@ do
          return self:__tostring()
       end,
       __tostring = function(self)
-         local partStartsWithWhole = self:hasWhole() and self.whole._begin == self.part._begin
-         local partEndsWithWhole = self:hasWhole() and self.whole._end == self.part._end
-         local partFormat = "(%s)"
-         if partStartsWithWhole and partEndsWithWhole then
-            partFormat = "%s"
-         elseif partStartsWithWhole then
-            partFormat = "(%s) ⇝"
+         local partString = string.format("p: (%s)", self.part:__tostring())
+         local wholeString
+         if self:hasWhole() then
+            wholeString = string.format("w: (%s)", self.whole:__tostring())
          else
-            partFormat = "(%s) ⇜"
+            wholeString = ""
          end
-         local partString = string.format(partFormat, self.part:show())
-         return "[" .. tostring(partString) .. " | " .. tostring(dump(self.value)) .. "]"
+         return "[" .. partString .. " | " .. wholeString .. " | " .. dump(self.value) .. "]"
       end,
+
       spanEquals = function(self, other)
          return ((other.whole == nil) and (self.whole == nil)) or (other.whole == self.whole)
-      end,
-      __eq = function(self, other)
-         return (self.part == other.part)
-            and (self.whole == other.whole)
-            and (compare(self.value, other.value))
-            and (compare(self.context, other.context))
-            and (self.stateful == other.stateful)
       end,
       setContext = function(self, newContext)
          return Event(self.whole, self.part, self.value, newContext, self.stateful)

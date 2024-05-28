@@ -448,7 +448,7 @@ local read = function(str)
 end
 
 local function eval(src, env)
-   -- env = env and env or _G
+   env = env and env or _G
    local ok, res, ast, f
    ok, ast = pcall(read, src)
    if not ok then
@@ -503,7 +503,5 @@ local function to_lua(src)
    return lua_src
 end
 -- TODO: > fast 2 $ s [bd sd] # room 0.2
-
--- print(evalf("(fast 2 1)"))
 
 return { eval = eval, to_lua = to_lua }

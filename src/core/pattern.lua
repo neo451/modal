@@ -1,5 +1,5 @@
 local utils = require("modal.utils")
-local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, uncarry =
+local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip =
    utils.map,
    utils.filter,
    utils.string_lambda,
@@ -13,7 +13,7 @@ local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, tim
    utils.curry,
    utils.type,
    utils.nparams,
-   utils.uncarry
+   utils.flip
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
 local Fraction, tofrac, tofloat
@@ -33,6 +33,7 @@ local withEventTime
 local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
+local maxi = require("modal.maxi")
 local fun = require("modal.fun")
 local sin = math.sin
 local min = math.min
@@ -41,9 +42,11 @@ local pi = math.pi
 local floor = math.floor
 local tinsert = table.insert
 
---- Unpatternified versions
 local M = {}
+--- Unpatternified versions
 local U = {}
+M.eval = maxi.eval
+M.to_lua = maxi.to_lua
 
 local base = {}
 
@@ -137,25 +140,61 @@ combineLeft = function(pat, other)
 end
 base.combineLeft = combineLeft
 
--- TODO:
-appBoth = function() end
+local appWhole = function(pat, whole_func, pat_val)
+   local query = function(_, state)
+      local event_funcs = pat:query(state)
+      local event_vals = pat_val:query(state)
+      local apply = function(event_func, event_val)
+         local new_part = event_func.part:sect(event_val.part)
+         if not new_part then
+            return
+         end
+         return Event(
+            whole_func(event_func.whole, event_val.whole),
+            new_part,
+            event_func.value(event_val.value),
+            event_val:combineContext(event_func)
+         )
+      end
+      local events = {}
+      for _, ef in pairs(event_funcs) do
+         for _, ev in ipairs(event_vals) do
+            events[#events + 1] = apply(ef, ev)
+         end
+      end
+      return events
+   end
+   return Pattern(query)
+end
 
+-- Tidal's <*>
+appBoth = function(pat, pat_val)
+   local whole_func = function(span_a, span_b)
+      if not span_a or not span_b then
+         return
+      end
+      return span_a:sect(span_b)
+   end
+   return appWhole(pat, whole_func, pat_val)
+end
+base.appBoth = appBoth
+
+-- Tidal's <*
 appLeft = function(pat, pat_val)
    local query = function(_, state)
       local events = {}
       local event_funcs = pat:query(state)
-      for i = 1, #event_funcs do
-         local event_func = event_funcs[i]
+      for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
          local event_vals = pat_val(whole._begin, whole._end)
-         for j = 1, #event_vals do
-            local event_val = event_vals[j]
+         for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
             local new_context = event_val:combineContext(event_func)
-            if new_part ~= nil then
+            if new_part then
                local new_value = event_func.value(event_val.value)
-               tinsert(events, Event(new_whole, new_part, new_value, new_context))
+               -- tinsert(events, Event(new_whole, new_part, new_value, new_context))
+               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
             end
          end
       end
@@ -165,26 +204,25 @@ appLeft = function(pat, pat_val)
 end
 base.appLeft = appLeft
 
+-- Tidal's *>
 appRight = function(pat, pat_val)
    local query = function(_, state)
       local events = {}
       local event_vals = pat_val:query(state)
-      for i = 1, #event_vals do
-         local event_val = event_vals[i]
+      for _, event_val in ipairs(event_vals) do
          local whole = event_val:wholeOrPart()
          local event_funcs = pat(whole._begin, whole._end)
-         for j = 1, #event_funcs do
-            local event_func = event_funcs[j]
+         for _, event_func in ipairs(event_funcs) do
             local new_whole = event_val.whole
             local new_part = event_func.part:sect(event_val.part)
-            local new_context = event_val:combineContext(event_func)
-            if new_part ~= nil then
+            if new_part then
                local new_value = event_func.value(event_val.value)
-               tinsert(events, Event(new_whole, new_part, new_value, new_context))
+               local new_context = event_val:combineContext(event_func)
+               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
             end
          end
-         return events
       end
+      return events
    end
    return Pattern(query)
 end
@@ -1017,9 +1055,6 @@ M.print = function(x)
 end
 
 M.id = id
-local maxi = require("modal.maxi")
-M.eval = maxi.eval
-M.to_lua = maxi.to_lua
 M.T = T
 
 M.fonf = reify("bd [bd, sd] bd [bd, sd]")
@@ -1030,38 +1065,48 @@ M.pipe = utils.pipe
 -- keep: [(a) => a],
 -- keepif: [(a, b) => (b ? a : undefined)],
 --
-local op = {}
 
 local _op = {}
-function _op.In(f, a, b)
-   return appLeft(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+function _op.In(f)
+   return function(a, b)
+      return appLeft(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+   end
 end
 
-function _op.Out(f, a, b)
-   return appRight(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
-end
--- TODO:
--- function _op.Mix(f, a, b)
---    return appBoth(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
--- end
-
-function _op.Squeeze(f, a, b)
-   return removeNils(squeezeJoin(fmap(reify(a), function(c)
-      return fmap(reify(b), function(d)
-         return f(c, d)
-      end)
-   end)))
+function _op.Out(f)
+   return function(a, b)
+      return appRight(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+   end
 end
 
-function _op.SqueezeOut(f, a, b)
-   return removeNils(squeezeJoin(fmap(reify(b), function(c)
-      return fmap(reify(a), function(d)
-         return f(d, c)
-      end)
-   end)))
+function _op.Mix(f)
+   return function(a, b)
+      return appBoth(fmap(reify(a), curry(f, 2)), reify(b)):removeNils()
+   end
 end
 
-local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut", "Trig", "Trigzero" }
+function _op.Squeeze(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(a), function(c)
+         return fmap(reify(b), function(d)
+            return f(c, d)
+         end)
+      end)):removeNils()
+   end
+end
+
+function _op.SqueezeOut(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(b), function(c)
+         return fmap(reify(a), function(d)
+            return f(d, c)
+         end)
+      end)):removeNils()
+   end
+end
+
+-- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
+local hows = { "In", "Out", "Mix", "Squeeze" }
 
 -- stylua: ignore start
 local ops = {
@@ -1069,18 +1114,45 @@ local ops = {
    sub = function(a, b) return a - b end,
    mul = function(a, b) return a * b end,
    div = function(a, b) return a / b end,
+   mod = function(a, b) return a % b end,
+   pow = function(a, b) return a ^ b end,
+   concat = function (a, b) return a .. b end,
    keepif = function (a, b) return b and a or nil end,
+   uni = function (a, b) return union(a, b) end,
+   funi = function (a, b) return flip(union)(a, b) end,
 }
 -- stylua: ignore end
 
-for _, v in pairs(hows) do
-   op[v] = {}
-   for k, f in pairs(ops) do
-      op[v][k] = uncarry(curry(_op[v], 3)(f), 2)
+local op_set = {
+   add = "+",
+   sub = "-",
+   mul = "*",
+   div = "/",
+   mod = "%",
+   pow = "^",
+   concat = "..",
+   uni = "<",
+   funi = ">",
+}
+
+local how_format = {
+   In = "|%s",
+   Out = "%s|",
+   Mix = "|%s|",
+   Squeeze = "||%s",
+}
+
+local op = {}
+for k, f in pairs(ops) do
+   op[k] = {}
+   for _, v in ipairs(hows) do
+      op[k][v] = _op[v](f)
+      if op_set[k] and how_format[v] then
+         local symb = string.format(how_format[v], op_set[k])
+         op[symb] = _op[v](f)
+      end
    end
 end
-
--- HACK: wrong?
 
 M.op = op
 -- _opTrig(other, func) {
