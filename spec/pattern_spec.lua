@@ -1,40 +1,13 @@
 local describe = require("busted").describe
+local M = require("modal")
 local it = require("busted").it
 local assert = require("busted").assert
 
-local Span, State, Event
-do
-   local _obj_0 = require("modal.types")
-   Span, State, Event = _obj_0.Span, _obj_0.State, _obj_0.Event
-end
-local Pattern, reify, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice, iter
-do
-   local _obj_0 = require("modal.pattern")
-   Pattern, reify, pure, stack, slowcat, fastcat, timecat, fast, slow, early, late, inside, outside, fastgap, compress, zoom, focus, degradeBy, striate, chop, slice, splice, iter =
-      _obj_0.Pattern,
-      _obj_0.reify,
-      _obj_0.pure,
-      _obj_0.stack,
-      _obj_0.slowcat,
-      _obj_0.fastcat,
-      _obj_0.timecat,
-      _obj_0.fast,
-      _obj_0.slow,
-      _obj_0.early,
-      _obj_0.late,
-      _obj_0.inside,
-      _obj_0.outside,
-      _obj_0.fastgap,
-      _obj_0.compress,
-      _obj_0.zoom,
-      _obj_0.focus,
-      _obj_0.degradeBy,
-      _obj_0.striate,
-      _obj_0.chop,
-      _obj_0.slice,
-      _obj_0.splice,
-      _obj_0.iter
-end
+local _obj_0 = require("modal.types")
+local Span, State, Event = _obj_0.Span, _obj_0.State, _obj_0.Event
+local P = require("modal.pattern")
+local Pattern, reify, pure = P.Pattern, P.reify, P.pure
+
 do
    local _obj_0 = require("modal.ui")
    striate, chop, slice, splice = _obj_0.striate, _obj_0.chop, _obj_0.slice, _obj_0.splice
@@ -54,15 +27,15 @@ describe("new", function()
             Event(),
          }
       end)
-      local events = pat:query(State())
+      local Events = pat:query(State())
       assert.are.same({
          Event(),
-      }, events)
+      }, Events)
    end)
 end)
 
 describe("withValue", function()
-   it("should return new pattern with function mapped over event values on query", function()
+   it("should return new pattern with function mapped over Event values on query", function()
       local pat = pure(5)
       local func
       func = function(v)
@@ -77,26 +50,26 @@ describe("withValue", function()
 end)
 
 describe("onsetsOnly", function()
-   it("should return only events where the start of the whole equals the start of the part", function()
+   it("should return only Events where the start of the whole equals the start of the part", function()
       local whole1 = Span(1 / 2, 2)
       local part1 = Span(1 / 2, 1)
-      local event1 = Event(whole1, part1, 1, {}, false)
+      local Event1 = Event(whole1, part1, 1, {}, false)
       local whole2 = Span(2 / 3, 3)
       local part2 = Span(5 / 6, 1)
-      local event2 = Event(whole2, part2, 2, {}, false)
-      local events = {
-         event1,
-         event2,
+      local Event2 = Event(whole2, part2, 2, {}, false)
+      local Events = {
+         Event1,
+         Event2,
       }
       local query
       query = function()
-         return events
+         return Events
       end
       local p = Pattern(query)
       local patternWithOnsetsOnly = p:onsetsOnly()
       local actual = patternWithOnsetsOnly(0, 3)
       return assert.are.same({
-         event1,
+         Event1,
       }, actual)
    end)
    return it("pure patterns should not behave like continuous signals... they should have discrete onsets", function()
@@ -113,7 +86,7 @@ describe("onsetsOnly", function()
 end)
 
 describe("discreteOnly", function()
-   return it("should return only events where the start of the whole equals the start of the part", function()
+   return it("should return only Events where the start of the whole equals the start of the part", function()
       local ev1 = { Event() }
       local pat = Pattern(function(state)
          return ev1
@@ -136,7 +109,7 @@ describe("discreteOnly", function()
 end)
 describe("filterEvents", function()
    return it("should return new pattern with values removed based on filter func", function()
-      local pat = slowcat(reify("bd"), reify("sd"), reify("hh"), reify("mt"))
+      local pat = M.fromList { "bd", "sd", "hh", "mt" }
       local newPat = pat:filterEvents(function(e)
          return e.value == "bd" or e.value == "hh"
       end)
@@ -148,7 +121,7 @@ describe("filterEvents", function()
    end)
 end)
 describe("withQuerySpan", function()
-   it("should return new pattern with that modifies query span with function when queried", function()
+   it("should return new pattern with that modifies query Span with function when queried", function()
       local pat = pure(5)
       local func = function(span)
          return Span(span._begin + 0.5, span._end + 0.5)
@@ -163,12 +136,9 @@ describe("withQuerySpan", function()
 end)
 
 describe("splitQueries", function()
-   it("should break a query that spans multiple cycles into multiple queries each spanning one cycle", function()
-      local query
-      query = function(self, state)
-         return {
-            Event(state.span, state.span, "a"),
-         }
+   it("should break a query that Spans multiple cycles into multiple queries each Spanning one cycle", function()
+      local query = function(_, state)
+         return { Event(state.span, state.span, "a") }
       end
       local pat = Pattern(query)
       local splitPat = pat:splitQueries()
@@ -186,7 +156,7 @@ end)
 
 describe("withQueryTime", function()
    it(
-      "should return new pattern whose query function will pass the query timespan through a function before mapping it to events",
+      "should return new pattern whose query function will pass the query timeSpan through a function before mapping it to Events",
       function()
          local pat = pure(5)
          local add1
@@ -203,7 +173,7 @@ describe("withQueryTime", function()
 end)
 
 describe("withEventTime", function()
-   it("should return new pattern with function mapped over event times", function()
+   it("should return new pattern with function mapped over Event times", function()
       local pat = pure(5)
       local func
       func = function(time)
@@ -224,8 +194,8 @@ describe("appLeft", function()
             return a + b
          end
       end
-      local left = reify("1 2"):fmap(add)
-      local right = reify("4 5 6")
+      local left = reify({ 1, 2 }):fmap(add)
+      local right = reify { 4, 5, 6 }
       local expected = {
          Event(Span(0, 1 / 2), Span(0, 1 / 3), 5),
          Event(Span(0, 1 / 2), Span(1 / 3, 1 / 2), 6),
@@ -243,8 +213,8 @@ describe("appRight", function()
             return a + b
          end
       end
-      local left = reify("1 2"):fmap(add)
-      local right = reify("4 5 6")
+      local left = reify({ 1, 2 }):fmap(add)
+      local right = reify { 4, 5, 6 }
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
          Event(Span(1 / 3, 2 / 3), Span(1 / 3, 1 / 2), 6),
@@ -263,8 +233,8 @@ describe("appRight", function()
             return a + b
          end
       end
-      local left = reify("1 2"):fmap(add)
-      local right = reify("4 5 6")
+      local left = reify({ 1, 2 }):fmap(add)
+      local right = reify { 4, 5, 6 }
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
          Event(Span(1 / 3, 2 / 3), Span(1 / 3, 1 / 2), 6),
@@ -283,8 +253,8 @@ describe("appBoth", function()
             return a + b
          end
       end
-      local left = reify("1 2"):fmap(add)
-      local right = reify("4 5 6")
+      local left = reify({ 1, 2 }):fmap(add)
+      local right = reify { 4, 5, 6 }
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
          Event(Span(1 / 3, 1 / 2), Span(1 / 3, 1 / 2), 6),
@@ -300,7 +270,7 @@ describe("outerJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern",
       function()
-         local patOfPats = pure(fastcat(reify("a"), reify("b")))
+         local patOfPats = pure(M.fastFromList { "a", "b" })
          local pat = patOfPats:outerJoin()
          local expected = {
             Event(Span(0, 1), Span(0, 1 / 2), "a"),
@@ -313,9 +283,9 @@ end)
 
 describe("squeezeJoin", function()
    it(
-      "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each event in the outer pattern.\n ",
+      "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each Event in the outer pattern.\n ",
       function()
-         local patOfPats = fastcat(fastcat(reify("1 2 3")), fastcat(reify("1 2 3")))
+         local patOfPats = M.fastFromList { M.fastFromList { 1, 2, 3 }, M.fastFromList { 1, 2, 3 } }
          local pat = patOfPats:squeezeJoin()
          local expected = {
             Event(Span(0, 1 / 6), Span(0, 1 / 6), 1),
@@ -350,7 +320,7 @@ end)
 
 describe("slowcat", function()
    it("should alternate between the patterns in the list, one pattern per cycle", function()
-      local pat = slowcat(reify(1), reify(2), reify(3))
+      local pat = M.fromList { 1, 2, 3 }
       local expected = {
          Event(Span(0, 1), Span(0, 1), 1),
          Event(Span(1, 2), Span(1, 2), 2),
@@ -362,7 +332,7 @@ end)
 
 describe("fastcat", function()
    it("should alternate between the patterns in the list, all in one cycle", function()
-      local pat = fastcat(reify(1), reify(2), reify(3))
+      local pat = M.fastFromList { 1, 2, 3 }
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 1),
          Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 2),
@@ -374,7 +344,7 @@ end)
 
 describe("stack", function()
    it("should stack up the pats to be played together", function()
-      local pat = stack("bd", "sd", "hh")
+      local pat = M.stack(M.map(pure, { "bd", "sd", "hh" }))
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
          Event(Span(0, 1), Span(0, 1), "sd"),
@@ -386,7 +356,7 @@ end)
 
 describe("timecat", function()
    it("should return a pattern based one the time-pat 'tuples' passed in", function()
-      local pat = timecat({ { 3, fast(4, reify("bd")) }, { 1, fast(8, reify("hh")) } })
+      local pat = M.timecat { 3, M.fast(4, pure("bd")), 1, M.fast(8, pure("hh")) }
       local expected = {
          Event(Span(0, 3 / 16), Span(0, 3 / 16), "bd"),
          Event(Span(3 / 16, 3 / 8), Span(3 / 16, 3 / 8), "bd"),
@@ -405,9 +375,19 @@ describe("timecat", function()
    end)
 end)
 
+describe("polymeter", function()
+   it("should stack up pats with right time compress ratios", function()
+      local pat = M.polymeter(2, { reify { "bd", "sd" }, reify { "1", "2", "3" } })
+      local expected1 = M.stack { reify { "bd", "sd" }, reify { 1, 2 } }
+      assert.are.same(expected1(0, 1), pat(0, 1))
+      local expected2 = M.stack { reify { "bd", "sd" }, reify { 3, 1 } }
+      assert.are.same(expected2(1, 2), pat(1, 2))
+   end)
+end)
+
 describe("fast", function()
-   it("should return a pattern whose events are closer together in time", function()
-      local pat = fast(2, reify("bd"))
+   it("should return a pattern whose Events are closer together in time", function()
+      local pat = M.fast(2, pure("bd"))
       local expected = {
          Event(Span(0, 0.5), Span(0, 0.5), "bd"),
          Event(Span(0.5, 1), Span(0.5, 1), "bd"),
@@ -417,8 +397,8 @@ describe("fast", function()
 end)
 
 describe("slow", function()
-   it("should return a pattern whose events are closer together in time", function()
-      local pat = slow(2, reify("bd sd"))
+   it("should return a pattern whose Events are closer together in time", function()
+      local pat = M.slow(2, reify { "bd", "sd" })
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
          Event(Span(1, 2), Span(1, 2), "sd"),
@@ -428,8 +408,8 @@ describe("slow", function()
 end)
 
 describe("early", function()
-   it("should return a pattern whose events are moved backword in time", function()
-      local pat = early(0.5, reify("bd sd"))
+   it("should return a pattern whose Events are moved backword in time", function()
+      local pat = M.early(0.5, reify { "bd", "sd" })
       local expected = {
          Event(Span(0, 1 / 2), Span(0, 1 / 2), "sd"),
          Event(Span(1 / 2, 1), Span(1 / 2, 1), "bd"),
@@ -440,7 +420,7 @@ end)
 
 describe("fastgap", function()
    it("should bring pattern closer together", function()
-      local pat = fastgap(4, reify("bd sd"))
+      local pat = M.fastgap(4, reify { "bd", "sd" })
       local expected = {
          Event(Span(0, 1 / 8), Span(0, 1 / 8), "bd"),
          Event(Span(1 / 8, 1 / 4), Span(1 / 8, 1 / 4), "sd"),
@@ -451,7 +431,7 @@ end)
 
 describe("compress", function()
    it("should bring pattern closer together", function()
-      local pat = compress(1 / 4, 3 / 4, reify("bd sd"))
+      local pat = M.compress(1 / 4, 3 / 4, reify { "bd", "sd" })
       local expected = {
          Event(Span(1 / 4, 1 / 2), Span(1 / 4, 1 / 2), "bd"),
          Event(Span(1 / 2, 3 / 4), Span(1 / 2, 3 / 4), "sd"),
@@ -462,7 +442,7 @@ end)
 
 describe("focus", function()
    it("should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", function()
-      local pat = focus(1 / 4, 3 / 4, reify("bd sd"))
+      local pat = M.focus(1 / 4, 3 / 4, reify { "bd", "sd" })
       local expected = {
          Event(Span(0, 1 / 4), Span(0, 1 / 4), "sd"),
          Event(Span(1 / 4, 1 / 2), Span(1 / 4, 1 / 2), "bd"),
@@ -475,7 +455,7 @@ end)
 
 describe("zoom", function()
    it("should play a portion of a pattern", function()
-      local pat = zoom(1 / 4, 3 / 4, reify("~ bd sd ~"))
+      local pat = M.zoom(1 / 4, 3 / 4, reify { "x", "bd", "sd", "x" })
       local expected = {
          Event(Span(0, 1 / 2), Span(0, 1 / 2), "bd"),
          Event(Span(1 / 2, 1), Span(1 / 2, 1), "sd"),
@@ -485,8 +465,8 @@ describe("zoom", function()
 end)
 
 describe("degrade_by", function()
-   it("should randomly drop events from a pattern", function()
-      local pat = degradeBy(0.75, fast(8, reify("sd")))
+   it("should randomly drop Events from a pattern", function()
+      local pat = M.degradeBy(0.75, M.fast(8, "sd"))
       local expected = {
          Event(Span(1 / 8, 1 / 4), Span(1 / 8, 1 / 4), "sd"),
          Event(Span(1 / 2, 5 / 8), Span(1 / 2, 5 / 8), "sd"),
@@ -495,3 +475,27 @@ describe("degrade_by", function()
       assert.are.same(expected, pat(0, 1))
    end)
 end)
+
+describe("run", function()
+   it("should gen 0 - n numbers", function()
+      local pat = M.run(3)
+      local expected = {
+         Event(Span(0, 1 / 3), Span(0, 1 / 3), 0),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 1),
+         Event(Span(2 / 3, 1), Span(2 / 3, 1), 2),
+      }
+      assert.are.same(expected, pat(0, 1))
+   end)
+end)
+
+-- describe("euclid", function()
+--    it("shoudl gen euclid pats", function()
+--       local pat = M.euclid(3, 8, 1, "bd")
+--       -- local expected = {
+--       --    Event(Span(0, 1 / 3), Span(0, 1 / 3), 0),
+--       --    Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 1),
+--       --    Event(Span(2 / 3, 1), Span(2 / 3, 1), 2),
+--       -- }
+--       -- assert.are.same(expected, pat(0, 1))
+--    end)
+-- end)

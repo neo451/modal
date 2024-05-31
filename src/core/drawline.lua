@@ -47,12 +47,9 @@ drawline = function(pat, chars)
       local durations = map(mapfunc, events_with_onset)
       local charFraction = gcd_reduce(durations)
       local totalSlots = Fraction(1) / charFraction
-      lines = map(
-         function(line)
-            return line .. "|"
-         end,
-         lines
-      )
+      lines = map(function(line)
+         return line .. "|"
+      end, lines)
       emptyLine = emptyLine .. "|"
       for _ = 1, totalSlots:asFloat() do
          local _begin, _end = pos, pos + charFraction
@@ -88,6 +85,4 @@ drawline = function(pat, chars)
    end
    return table.concat(lines)
 end
-return {
-   drawline = drawline,
-}
+return { drawline = drawline }

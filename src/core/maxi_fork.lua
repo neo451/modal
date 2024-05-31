@@ -14,7 +14,7 @@ local polymeter = V("polymeter")
 local slow_sequence = V("slow_sequence")
 local polymeter_steps = V("polymeter_steps")
 local stack = V("stack")
-local slice_with_ops = V("slice_with_ops")
+local mini = V("mini")
 local op = V("op")
 local fast = V("fast")
 local slow = V("slow")
@@ -25,11 +25,11 @@ local euclid = V("euclid")
 local tail = V("tail")
 local range = V("range")
 local list = V("list")
-local dollar = V("dollar")
+local apply = V("apply")
 local tailop = V("tailop")
-local elem = V("elem")
-local ret = V"ret"
-local set = V"set"
+local expr = V("expr")
+local ret = V("ret")
+local set = V("set")
 -- TODO:
 -- M.fonf = reify("bd sd bd sd")
 -- bd = '808bd
@@ -55,16 +55,14 @@ Pure = function(a)
    return { tag = "Call", Id("pure"), a }
 end
 
+String = function(a)
+   return { tag = "String", a }
+end
+
 local id = function(x)
    return x
 end
 
-local purify = function(v)
-   if v.tag ~= "Call" and v.tag ~= "Id" then
-      return Pure(v)
-   end
-   return v
-end
 local string2id = function(v)
    if v.tag == "String" then
       v.tag = "Id"
@@ -84,17 +82,16 @@ end
 
 local parseStep = function(chars)
    if tonumber(chars) then
-      return { tag = "Number", tonumber(chars) }
+      return parseNumber(chars)
    end
    if string.sub(chars, 0, 1) == "'" then
-      return { tag = "Id", chars:sub(2, #chars) }
+      return Id(chars:sub(2, #chars))
    end
-   return { tag = "String", chars }
+   return String(chars)
 end
-
--- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
-local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~")  / id
 local tidalop = S("|+-*/^%><") ^ 1 / id
+-- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
+local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") + P("=") / id
 -- local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
 local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws
 local minus = P("-")
@@ -120,7 +117,6 @@ local pSlow = function(a)
       return { tag = "Call", Id("slow"), a, x }
    end
 end
-
 local pDegrade = function(a)
    if a == "?" then
       a = Num(0.5)
@@ -150,7 +146,6 @@ end
 local pEuclid = function(p, s, r)
    r = r and r or Num(0)
    return function(x)
-      -- return { tag = "Call", Id("euclid"), p, s, r, x }
       return { tag = "Call", Id("euclid"), p, s, r, x }
    end
 end
@@ -186,7 +181,6 @@ local function resolvereps(ast)
 end
 
 local pSlices = function(sli, ...)
-   sli = purify(sli)
    local ops = { ... }
    sli.reps = 1
    sli.weight = 1
@@ -209,13 +203,15 @@ local pStack = function(...)
    return args, true
 end
 
+-- TODO: expand to all tidal ops
 local pTailop = function(...)
    local args = { ... }
    args.tag = "Call"
    local opsymb = table.remove(args, 1)
+   mpp(opsymb)
    args[1].tag = "Id"
    return function(x)
-      return { tag = "Call", { tag = "Index", Id("op"), Str(opsymb) }, x, args }
+      return { tag = "Call", { tag = "Index", Id("op"), String(opsymb) }, x, args }
    end
 end
 
@@ -230,6 +226,21 @@ local use_timecat = function(args)
    end
 end
 
+local purify = function(args)
+   for i, v in pairs(args) do
+      if v.tag ~= "Call" and v.tag ~= "Id" then
+         args[i] = Pure(v)
+      end
+   end
+   return args
+end
+
+local purify_one = function(v)
+   if v.tag ~= "Call" and v.tag ~= "Id" then
+      return Pure(v)
+   end
+   return v
+end
 
 local resolveweight = function(args)
    local addWeight = function(a, b)
@@ -237,23 +248,22 @@ local resolveweight = function(args)
    end
    local weightSum = reduce(addWeight, 0, args)
    local acc = {}
-   for _, v in ipairs(args) do
-      acc[#acc+1] = Num(v.weight) or Num(1)
-      -- acc[#acc+1] = purify(v)
-      acc[#acc+1] = v
+   for i, v in pairs(args) do
+      acc[i] = Table({ Num(v.weight) or Num(1), purify_one(args[i]) })
    end
    return { tag = "Call", Id("timecat"), Table(acc) }, weightSum
 end
 
 local pSubCycle = function(args, isStack)
    if isStack then
-      return { tag = "Call", Id("stack"), Table(args) }
+      return { tag = "Call", Id("stack"), unpack(purify(args)) }
    else
       if use_timecat(args) then
+         -- pp(args)
          local res = resolveweight(args)
          return res
       else
-         return { tag = "Call", Id("fastcat"), Table(args) }
+         return { tag = "Call", Id("fastcat"), unpack(purify(args)) }
       end
    end
 end
@@ -270,10 +280,10 @@ local pPolymeter = function(...)
    end
    -- TODO: into stack, proper stack with sequence
    local function f(s)
-      return { tag = "Call", Id("fastcat"), Table(s) }
+      return { tag = "Call", Id("fastcat"), unpack(purify(s)) }
    end
    args = map(f, args)
-   return { tag = "Call", Id("polymeter"), steps, Table(args) }
+   return { tag = "Call", Id("polymeter"), steps, unpack(args) }
 end
 
 local pSlowSeq = function(args, _)
@@ -281,9 +291,20 @@ local pSlowSeq = function(args, _)
       local tab, weightSum = resolveweight(args)
       return { tag = "Call", Id("slow"), Num(weightSum), tab }
    else
-      return { tag = "Call", Id("slowcat"), Table(args) }
+      return { tag = "Call", Id("slowcat"), unpack(purify(args)) }
    end
 end
+
+local native_symb = {
+   ["+"] = { "add", true },
+   ["-"] = { "sub", true },
+   ["*"] = { "mul", true },
+   ["/"] = { "div", true },
+   ["^"] = { "pow", true },
+   ["%"] = { "mod", true },
+   -- ["."] = { "pipe", false },
+   -- TODO: tidal ops!!
+}
 
 local opsymb = {
    ["+"] = { "add", true },
@@ -300,7 +321,10 @@ local function is_op(a)
    return opsymb[a]
 end
 
-local resolvetails = function(args, fname)
+local pApply = function(...)
+   local args = { ... }
+   local fname = table.remove(args, 1)
+   fname.tag = "Id"
    local params = filter(function(a)
       return type(a) ~= "function"
    end, args)
@@ -308,151 +332,62 @@ local resolvetails = function(args, fname)
       return type(a) == "function"
    end, args)
    local main = { tag = "Call", fname, unpack(params) }
+   mpp(main)
    for i = 1, #tails do
       main = tails[i](main)
    end
    return main
 end
 
--- local find_equals = function(args)
---    for i, v in pairs(args) do
---       if v[1] == "=" then
---          return i
---       end
---    end
---    return false
+-- local function pApply(...)
+--    local args = { ... }
+--    local fname = args[1]
+--    fname.tag = "Id"
+--    table.remove(args, 1)
+--    return resolvetails(args, fname)
 -- end
 --
-local function pList(...)
-   local args = { ... }
-   -- local def = find_equals(args)
-   -- if def then
-   --    if def == 2 then
-   --       -- TODO: id = fast . slow, point free style
-   --       local body = {}
-   --       local fname = args[1]
-   --       for i = 2, #args do
-   --          local v = args[i]
-   --          if i > def then
-   --             -- TODO: generic body with string2id applied
-   --             -- body[#body + 1] = { tag = "Return", string2id(v) }
-   --             body[#body + 1] = v
-   --          end
-   --       end
-   --       if #body == 1 then
-   --          return { tag = "Set", { string2id(fname) }, { args[3] } }
-   --       end
-   --       -- modal> te = (fast 2) . rev
-   --       local body_ast = { tag = "Return", { tag = "Call", pList(unpack(body)), Id("x") } }
-   --       local f_ast = { tag = "Function", { Id("x") }, body_ast }
-   --       return { tag = "Set", { string2id(fname) }, { f_ast } }
-   --    else
-   --       local params, body = {}, {}
-   --       local fname = args[1]
-   --       for i = 2, #args do
-   --          local v = args[i]
-   --          if i < def then
-   --             params[#params + 1] = string2id(v)
-   --          elseif i > def then
-   --             -- TODO: generic body with string2id applied
-   --             body[#body + 1] = { tag = "Return", string2id(v) }
-   --          end
-   --       end
-   --       local f_ast = { tag = "Function", params, body }
-   --       return { tag = "Set", { string2id(fname) }, { f_ast } }
-   --    end
-   -- end
-   --
-   if #args == 1 then
-      return args
-   elseif #args == 3 then
-      if is_op(args[2][1]) then
-         local opname, is_native = opsymb[args[2][1]][1], opsymb[args[2][1]][2]
-         table.remove(args, 2)
-         if is_native then
-            return { tag = "Op", opname, unpack(args) }
-         else
-            return { tag = "Call", Id(opname), unpack(map(string2id, args)) }
-         end
-      elseif is_op(args[1][1]) then
-         local opname = opsymb[args[1][1]]
-         table.remove(args, 1)
-         return { tag = "Op", opname, unpack(args) }
-      end
-   end
-   local fname = args[1]
-   fname.tag = "Id"
-   table.remove(args, 1)
-   return resolvetails(args, fname)
+local function pRet(a)
+   print(a)
+   return { tag = "Return", a }
 end
-
-local function pDollar(...)
-   local args = { ... }
-   local fname = args[1]
-   fname.tag = "Id"
-   table.remove(args, 1)
-   return resolvetails(args, fname)
-end
-
 -- TODO: weight in polymeter
 -- TODO: to fraction ?
 -- TODO:  code blocks
-
-local function pRoot(...)
-   local stats = {...}
-   for i, a in ipairs(stats) do
-      stats[i] = a
-   end
-   stats.tag = "Chunk"
-   return stats
-end
-
-local function pRet(a)
-   return { tag = "Return", a }
-end
-
-local function pSet(lhs, rhs)
-   lhs.tag = "Id"
-   return {tag = "Set", {lhs}, {rhs}}
-end
-
-local semi = P(";") ^-1
-local grammar =
-   {
-      "root",
-      root = ((set + ret) * semi) ^ 1 / pRoot,
-      -- root = ret / pRoot,
-      set = step * P"=" * ws * step / pSet,
-      ret = (list + slice_with_ops + dollar) / pRet,
-      list = P("(") * ws * elem ^ 0 * ws * P(")") / pList,
-      dollar = P("$") * ws * elem ^ 0 * ws / pDollar,
-      elem = ws * (step + list + slice_with_ops + dollar + tailop) * ws,
-      sequence = (slice_with_ops ^ 1) / pSeq,
-      stack = slice_with_ops * (comma * slice_with_ops) ^ 1 / pStack,
-      -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
-      -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
-      -- tailop = P("#") * ws * step * ws * slice_with_ops * ws / pTailop,
-      tailop = tidalop * ws * step * ws * slice_with_ops * ws / pTailop,
-      slice_with_ops = (slice * op ^ 0) / pSlices,
-      slice = step + sub_cycle + polymeter + slow_sequence,
-      sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / pSubCycle,
-      slow_sequence = P("<") * ws * sequence * ws * P(">") / pSlowSeq,
-      polymeter = P("{") * ws * sequence * (comma * sequence) ^ 0 * ws * P("}") * polymeter_steps * ws / pPolymeter,
-      polymeter_steps = (P("%") * slice) ^ -1 / function(s)
-         return (s ~= "") and s or -1
-      end,
-      op = fast + slow + tail + range + replicate + degrade + weight + euclid,
-      fast = P("*") * slice / pFast,
-      slow = P("/") * slice / pSlow,
-      tail = P(":") * slice / pTail,
-      range = P("..") * ws * slice / pRange,
-      degrade = P("?") * (number ^ -1) / pDegrade,
-      replicate = ws * P("!") * (number ^ -1) / pReplicate,
-      weight = ws * (P("@") + P("_")) * (number ^ -1) / pWeight,
-      euclid = P("(") * ws * slice_with_ops * comma * slice_with_ops * ws * comma ^ -1 * slice_with_ops ^ -1 * ws * P(
-         ")"
-      ) / pEuclid,
-   }
+local semi = P(";")
+local grammar = {
+   "root",
+   -- root = ((set + ret) * semi ^ -1) ^ 1,
+   root = (ret * semi ^ -1) ^ 1,
+   -- set = list / id,
+   ret = list + mini + apply / pRet,
+   expr = ws * (step + list + apply + mini + tailop) * ws,
+   list = P("(") * ws * expr ^ 1 * ws * P(")") / pApply,
+   apply = P("$") * ws * expr ^ 1 * ws / pApply,
+   sequence = (mini ^ 1) / pSeq,
+   stack = mini * (comma * mini) ^ 1 / pStack,
+   -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
+   -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
+   -- TODO: generalize to take any value, not just call
+   tailop = tidalop * ws * step * ws * mini * ws / pTailop,
+   mini = (slice * op ^ 0) / pSlices,
+   slice = step + sub_cycle + polymeter + slow_sequence,
+   sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / pSubCycle,
+   slow_sequence = P("<") * ws * sequence * ws * P(">") / pSlowSeq,
+   polymeter = P("{") * ws * sequence * (comma * sequence) ^ 0 * ws * P("}") * polymeter_steps * ws / pPolymeter,
+   polymeter_steps = (P("%") * slice) ^ -1 / function(s)
+      return (s ~= "") and s or -1
+   end,
+   op = fast + slow + tail + range + replicate + degrade + weight + euclid,
+   fast = P("*") * slice / pFast,
+   slow = P("/") * slice / pSlow,
+   tail = P(":") * slice / pTail,
+   range = P("..") * ws * slice / pRange,
+   degrade = P("?") * (number ^ -1) / pDegrade,
+   replicate = ws * P("!") * (number ^ -1) / pReplicate,
+   weight = ws * (P("@") + P("_")) * (number ^ -1) / pWeight,
+   euclid = P("(") * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P(")") / pEuclid,
+}
 
 grammar = Ct(C(grammar))
 
@@ -460,25 +395,22 @@ local read = function(str)
    return grammar:match(str)[2]
 end
 
-local function eval(env)
-   return function(src)
-      env = env and env or _G
-      local ok, res, ast, f
-      ok, ast = pcall(read, src)
-
-      if not ok then
-         return ast, false
-      end
-
-      local lua_src = ast_to_src(ast)
-      ok, f = pcall(loadstring, lua_src)
-      if not ok then
-         return f, false
-      end
-      f = setfenv(f, env)
-      ok, res = pcall(f)
-      return res, ok
+local function eval(src, env)
+   -- env = env and env or _G
+   local ok, res, ast, f
+   ok, ast = pcall(read, src)
+   mpp(ast)
+   if not ok then
+      return ast, false
    end
+   local lua_src = ast_to_src(ast)
+   ok, f = pcall(loadstring, lua_src)
+   if not ok then
+      return f, false
+   end
+   f = setfenv(f, env)
+   ok, res = pcall(f)
+   return res, ok
 end
 
 local function to_lua(src)
@@ -486,9 +418,5 @@ local function to_lua(src)
    local lua_src = ast_to_src(ast)
    return lua_src
 end
-
--- local M = require"modal"
---
--- print(eval(M)("bd"))
 
 return { eval = eval, to_lua = to_lua }

@@ -87,9 +87,9 @@ local string_gen = function(param, state)
    return state, r
 end
 
-local ipairs_gen = ipairs({}) -- get the generating function from ipairs
+local ipairs_gen = ipairs {} -- get the generating function from ipairs
 
-local pairs_gen = pairs({ a = 0 }) -- get the generating function from pairs
+local pairs_gen = pairs { a = 0 } -- get the generating function from pairs
 local map_gen = function(tab, key)
    local value
    local key, value = pairs_gen(tab, key)

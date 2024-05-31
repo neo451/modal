@@ -1,4 +1,5 @@
 local socket = require("socket")
+local inspect = require"inspect"
 print("modal repl")
 local host = "localhost"
 -- local port = arg[1] or 9000
@@ -19,9 +20,11 @@ local ok, c = pcall(socket.connect, host, port)
 
 local eval = function(a)
    if a then
-      local res, ok = M.eval("(" .. a .. ")", M)
+      local res, ok = M.eval(M)(a)
       if ok then
-         print(res)
+         if res then
+            io.write(M.dump(res))
+         end
       else
          print("Compilation error: " .. res)
       end

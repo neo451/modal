@@ -1,9 +1,8 @@
 local utils = require("modal.utils")
-local map, filter, string_lambda, reduce, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip =
+local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip =
    utils.map,
    utils.filter,
    utils.string_lambda,
-   utils.reduce,
    utils.id,
    utils.flatten,
    utils.totable,
@@ -23,9 +22,8 @@ local Event, Span, State
 local types = require("modal.types")
 Event, Span, State = types.Event, types.Span, types.State
 
--- local parse = require("modal.mini").parse
 local Pattern
-local reify, pure, silence
+local reify, pure, silence, overlay
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin
 local fmap, firstCycle, querySpan
 local withEventTime
@@ -34,19 +32,114 @@ local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQue
 
 local maxi = require("modal.maxi")
 local fun = require("modal.fun")
+local iter = fun.iter
 local sin = math.sin
 local min = math.min
 local max = math.max
 local pi = math.pi
 local floor = math.floor
-local tinsert = table.insert
+---@alias State table
+---@alias Event<T> {value: T}
+---@alias Pattern<T> fun(st: State): Event<T>[]
 
 local M = {}
---- Unpatternified versions
-local U = {}
+local U = {} -- Unpatternified versions
 M.eval = maxi.eval
 M.to_lua = maxi.to_lua
 
+local _op = {}
+function _op.In(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appLeft(a, b):removeNils()
+   end
+end
+
+function _op.Out(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appRight(a, b):removeNils()
+   end
+end
+
+function _op.Mix(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appBoth(a, b):removeNils()
+   end
+end
+
+function _op.Squeeze(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(a), function(c)
+         return fmap(reify(b), function(d)
+            return f(c, d)
+         end)
+      end)):removeNils()
+   end
+end
+
+function _op.SqueezeOut(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(b), function(c)
+         return fmap(reify(a), function(d)
+            return f(d, c)
+         end)
+      end)):removeNils()
+   end
+end
+
+-- stylua: ignore start
+local ops = {
+   add = function(a, b) return a + b end,
+   sub = function(a, b) return a - b end,
+   mul = function(a, b) return a * b end,
+   div = function(a, b) return a / b end,
+   mod = function(a, b) return a % b end,
+   pow = function(a, b) return a ^ b end,
+   concat = function (a, b) return a .. b end,
+   keepif = function (a, b) return b and a or nil end,
+   uni = function (a, b) return union(a, b) end,
+   funi = function (a, b) return flip(union)(a, b) end,
+}
+-- stylua: ignore end
+
+-- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
+local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
+local op_set = {
+   add = "+",
+   sub = "-",
+   mul = "*",
+   div = "/",
+   mod = "%",
+   pow = "^",
+   keepif = "?",
+   concat = "..", -- ?
+   uni = "<",
+   funi = ">",
+}
+
+local how_format = {
+   In = "|%s",
+   Out = "%s|",
+   Mix = "|%s|",
+   Squeeze = "||%s",
+   SqueezeOut = "%s||",
+}
+
+local op = {}
+for k, f in pairs(ops) do
+   op[k] = {}
+   for _, v in ipairs(hows) do
+      op[k][v] = _op[v](f)
+      if op_set[k] and how_format[v] then
+         local symb = string.format(how_format[v], op_set[k])
+         op[symb] = _op[v](f)
+      end
+   end
+end
+
+M.op = op
 local base = {}
 
 function base:type()
@@ -139,6 +232,15 @@ function firstCycle(pat)
    return pat(0, 1)
 end
 
+function overlay(a, b)
+   local query = function(_, st)
+      return utils.concat(a:query(st), b:query(st))
+   end
+   return Pattern(query)
+end
+M.overlay = overlay
+base.overlay = overlay
+
 local appWhole = function(pat, whole_func, pat_val)
    local query = function(_, state)
       local event_funcs = pat:query(state)
@@ -185,14 +287,14 @@ appLeft = function(pat, pat_val)
       local event_funcs = pat:query(state)
       for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
-         local event_vals = pat_val(whole._begin, whole._end)
+         local event_vals = pat_val:query(State(whole))
+         -- local event_vals = pat_val(whole._begin, whole._end)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
             local new_context = event_val:combineContext(event_func)
             if new_part then
                local new_value = event_func.value(event_val.value)
-               -- tinsert(events, Event(new_whole, new_part, new_value, new_context))
                events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
             end
          end
@@ -210,7 +312,9 @@ appRight = function(pat, pat_val)
       local event_vals = pat_val:query(state)
       for _, event_val in ipairs(event_vals) do
          local whole = event_val:wholeOrPart()
-         local event_funcs = pat(whole._begin, whole._end)
+         -- local event_funcs = pat(whole._begin, whole._end)
+         -- TODO:
+         local event_funcs = pat:query(State(whole))
          for _, event_func in ipairs(event_funcs) do
             local new_whole = event_val.whole
             local new_part = event_func.part:sect(event_val.part)
@@ -329,8 +433,7 @@ end
 base.squeezeBind = squeezeBind
 
 filterEvents = function(pat, func)
-   local query
-   query = function(_, state)
+   local query = function(_, state)
       local events = pat:query(state)
       return filter(func, events)
    end
@@ -360,13 +463,11 @@ end
 base.removeNils = removeNils
 
 splitQueries = function(pat)
-   local query
-   query = function(_, state)
+   local query = function(_, state)
       local cycles = state.span:spanCycles()
-      local f
-      f = function(span)
-         local sub_state = state:setSpan(span)
-         return pat:query(sub_state)
+      local f = function(subspan)
+         -- return pat(span._begin, span._end)
+         return pat:query(state:setSpan(subspan))
       end
       return flatten(map(f, cycles))
    end
@@ -497,8 +598,10 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = M.eval("[" .. thing .. "]", M)
+      local res = M.eval(M)(thing)
       return res
+   elseif "table" == t then
+      return M.fastFromList(thing)
    elseif "pattern" == t then
       return thing
    else
@@ -562,52 +665,45 @@ local function register(name, f)
    M[name] = patternify[narg](f)
 end
 M.register = register
-
-function M.stack(...)
-   local pats = map(reify, totable(...))
-   local query = function(_, state)
-      local span = state.span
-      local f
-      f = function(pat)
-         return pat(span._begin, span._end)
-      end
-      local events = map(f, pats)
-      return flatten(events)
-   end
-   return Pattern(query)
-end
-
-function M.polymeter(steps, ...)
-   local children = map(reify, { ... })
-   local aligned = map(function(child)
-      return M.fast(
-         fmap(reify(steps), function(x)
-            if x == 1 then
-               return 1
-            end -- HACK:
-            return x / #(firstCycle(child))
-         end),
-         child
-      )
-   end, children)
-   return M.stack(aligned)
-end
--- slowcatPrime = function(...)
--- 	local pats = map(reify, totable(...))
--- 	local query = function(_, state)
--- 		local len = #pats
--- 		local index = state.span._begin:sam():asFloat() % len + 1
--- 		local pat = pats[index]
--- 		return pat:query(state)
--- 	end
--- 	return Pattern(query):splitQueries()
+--
+-- function M.stack(pats)
+--    local query = function(_, state)
+--       local res = {}
+--       for _, pat in iter(pats) do
+--          local events = pat:query(state)
+--          for _, ev in iter(events) do
+--             res[#res + 1] = ev
+--          end
+--       end
+--       return res
+--    end
+--    return Pattern(query)
 -- end
+--
+function M.stack(pats)
+   return fun.reduce(overlay, silence(), iter(pats))
+end
 
-function M.slowcat(...)
-   -- local pats = map(reify, totable(...))
-   local pats = totable(...)
-   local query
-   query = function(_, state)
+function M.stackFromList(list)
+   return M.stack(map(pure, list))
+   
+end
+
+---stack up pats in polymeter way
+---@param steps number | Pattern
+---@param pats Pattern
+---@return Pattern
+function M.polymeter(steps, pats)
+   local nsteps, ratio, res = reify(steps), nil, {}
+   for _, pat in iter(pats) do
+      ratio = nsteps / #(firstCycle(pat))
+      res[#res + 1] = M.fast(ratio, pat)
+   end
+   return M.stack(res)
+end
+
+function M.slowcat(pats)
+   local query = function(_, state)
       local span = state.span
       local len = #pats
       local index = state.span._begin:sam():asFloat() % len + 1
@@ -618,50 +714,58 @@ function M.slowcat(...)
       local offset = span._begin:floor() - (span._begin / len):floor()
       return withEventTime(pat, function(t)
          return t + offset
-      end):query(state:setSpan(span:withTime(function(t)
+      end):query(State(span:withTime(function(t)
          return t - offset
       end)))
    end
    return splitQueries(Pattern(query))
 end
 
----Like slowcat, but the items are crammed into one cycle.
----@param ... any
----@return pattern
----@usage
----fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
-function M.fastcat(...)
-   local pats = totable(...)
-   return U.fast(#pats, M.slowcat(...))
+function M.fromList(list)
+   return M.slowcat(map(pure, list))
 end
 
-function M.timecat(tuples)
-   local pats = {}
-   local times = map(function(x)
-      return x[1]
-   end, tuples)
-   local total = reduce(fun.op.add, Fraction(0), times)
+---Like slowcat, but the items are crammed into one cycle.
+---@param pats Pattern<any>[]
+---@return Pattern<any>
+---@usage
+---fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
+function M.fastcat(pats)
+   return U.fast(#pats, M.slowcat(pats))
+end
+
+function M.fastFromList(list)
+   return M.fastcat(map(pure, list))
+end
+
+---@param args Pattern<any>[] | number[] #####
+---@return Pattern<any>
+function M.timecat(args)
+   local total = 0
+   for i, v in pairs(args) do
+      if i % 2 == 1 then
+         total = total + v
+      end
+   end
    local accum = Fraction(0)
-   for i = 1, #tuples do
-      local tup = tuples[i]
-      local time, pat = tup[1], tup[2]
-      local b = accum / total
-      local e = (accum + time) / total
-      local new_pat = U.compress(b, e, pat)
-      tinsert(pats, new_pat)
+   local pats = {}
+   local time, pat, b, e
+   for i = 1, #args, 2 do
+      time, pat = args[i], args[i + 1]
+      b, e = accum / total, (accum + time) / total
+      pats[#pats + 1] = U.compress(b, e, pat)
       accum = accum + time
    end
    return M.stack(pats)
 end
 
 function M.superimpose(f, pat)
-   return M.stack(pat, M.sl(f)(pat))
+   return M.stack { pat, M.sl(f)(pat) }
 end
 
 function M.layer(tf, pat)
    local acc = {}
-   for i = 1, #tf do
-      local f = tf[i]
+   for i, f in iter(tf) do
       acc[i] = M.sl(f)(pat)
    end
    return M.stack(acc)
@@ -732,9 +836,10 @@ register("fastgap", function(factor, pat)
       end
       return map(f, events)
    end
-   return splitQueries(Pattern(query))
+   return Pattern(query):splitQueries()
 end)
 
+-- TODO: wrong after span correction???
 register("compress", function(b, e, pat)
    b, e = tofrac(b), tofrac(e)
    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
@@ -773,16 +878,27 @@ register("zoom", function(s, e, pat)
 end)
 
 register("run", function(n)
-   return M.fastcat(fun.totable(fun.range(0, n - 1)))
+   local res = {}
+   for _, v in fun.range(0, n - 1) do
+      res[#res + 1] = v
+   end
+   return M.fastFromList(res)
 end)
 
---- HACK: internal??
 register("iota", function(b, e)
-   return M.fastcat(fun.totable(fun.range(b, e)))
+   local res = {}
+   for _, v in fun.range(b, e) do
+      res[#res + 1] = pure(v)
+   end
+   return M.fastFromList(res)
 end)
 
 register("scan", function(n)
-   return M.slowcat(map(U.run, fun.range(1, n)))
+   local res = {}
+   for _, v in fun.map(fun.range(1, n)) do
+      res[#res + 1] = U.run(v)
+   end
+   return M.fromList(res)
 end)
 
 local waveform = function(func)
@@ -794,22 +910,16 @@ end
 
 M.steady = function(value)
    return Pattern(function(state)
-      return {
-         Event(nil, state.span, value),
-      }
+      return { Event(nil, state.span, value) }
    end)
 end
 
 local toBipolar = function(pat)
-   return fmap(pat, function(x)
-      return x * 2 - 1
-   end)
+   return pat * 2 - 1
 end
 
 local fromBipolar = function(pat)
-   return fmap(pat, function(x)
-      return (x + 1) / 2
-   end)
+   return (pat + 1) / 2
 end
 
 M.sine2 = waveform(function(t)
@@ -830,8 +940,8 @@ M.saw = waveform(function(t)
    return t % 1
 end)
 M.saw2 = toBipolar(M.saw)
-M.tri = M.fastcat(M.isaw, M.saw)
-M.tri2 = M.fastcat(M.isaw2, M.saw2)
+M.tri = M.fastcat { M.isaw, M.saw }
+M.tri2 = M.fastcat { M.isaw2, M.saw2 }
 M.time = waveform(id)
 M.rand = waveform(timeToRand)
 M._irand = function(i)
@@ -852,15 +962,19 @@ local _chooseWith = function(pat, ...)
       return vals[key]
    end)
 end
+
 local chooseWith = function(pat, ...)
    return outerJoin(_chooseWith(pat, ...))
 end
+
 local chooseInWith = function(pat, ...)
    return innerJoin(_chooseWith(pat, ...))
 end
+
 local choose = function(...)
    return chooseInWith(M.rand, ...)
 end
+
 local chooseCycles = function(...)
    return M.segment(1, choose(...))
 end
@@ -910,7 +1024,7 @@ end)
 
 register("sometimesBy", function(by, func, pat)
    return innerJoin(fmap(reify(by), function()
-      return M.stack(U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)))
+      return M.stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
    end))
 end)
 
@@ -924,12 +1038,12 @@ function M.struct(boolpat, pat)
          return b and val or nil
       end
    end
-   local bools = M.fastcat(boolpat)
-   return removeNils(appLeft(fmap(bools, f), pat))
+   local bools = M.fastFromList(boolpat)
+   return appLeft(fmap(bools, f), pat):removeNils()
 end
 
 register("euclid", function(n, k, offset, pat)
-   return M.struct(bjork(n, k, offset), reify(pat))
+   return op["|?"](pat, bjork(n, k, offset))
 end)
 
 register("rev", function(pat)
@@ -947,7 +1061,7 @@ register("rev", function(pat)
          reflected._end = tmp
          return reflected
       end
-      local events = pat:query(state:setSpan(reflect(span)))
+      local events = pat:query(State(reflect(span)))
       return map(function(event)
          return event:withSpan(reflect)
       end, events)
@@ -956,23 +1070,23 @@ register("rev", function(pat)
 end)
 
 register("palindrome", function(pat)
-   return M.slowcat(pat, U.rev(pat))
+   return M.slowcat { pat, U.rev(pat) }
 end)
 
 register("iter", function(n, pat)
    local acc = {}
-   for i in fun.range(n) do
+   for i = 1, n do
       acc[i] = U.early(Fraction(i - 1, n), pat)
    end
-   return M.slowcat(acc)
+   return M.fromList(acc)
 end)
 
 register("reviter", function(n, pat)
    local acc = {}
-   for i in fun.range(n) do
+   for i = 1, n do
       acc[i] = U.late(Fraction(i - 1, n), pat)
    end
-   return M.slowcat(acc)
+   return M.fromList(acc)
 end)
 
 register("segment", function(n, pat)
@@ -980,18 +1094,15 @@ register("segment", function(n, pat)
 end)
 
 register("range", function(mi, ma, pat)
-   return fmap(pat, function(x)
-      return x * (ma - mi) + mi
-   end)
+   return pat * (ma - mi) + mi
 end)
 
 register("off", function(time_pat, f, pat)
-   return M.stack(pat, f(M.late(time_pat, pat)))
+   return M.stack { pat, f(M.late(time_pat, pat)) }
 end)
 
 register("echoWith", function(times, time, func, pat)
-   local f
-   f = function(index)
+   local f = function(index)
       return func(U.late(time * index, pat))
    end
    local ts
@@ -1016,7 +1127,7 @@ register("firstOf", function(n, f, pat)
    for i = 1, n do
       acc[i] = i == 1 and true or false
    end
-   return M.when(M.fastcat(acc), f, pat)
+   return M.when(M.fastFromList(acc), f, pat)
 end)
 
 M.every = M.firstOf
@@ -1026,7 +1137,7 @@ register("lastOf", function(n, f, pat)
    for i = 1, n do
       acc[i] = i == n and true or false
    end
-   return M.when(M.fastcat(acc), f, pat)
+   return M.when(M.fastFromList(acc), f, pat)
 end)
 
 register("scale", function(name, pat)
@@ -1037,114 +1148,20 @@ register("scale", function(name, pat)
 end)
 
 M.sl = string_lambda
-
-M.print = function(x)
-   if type(x) == "table" then
-      for k, v in pairs(x) do
-         print(k, v)
-      end
-   else
-      return print(x)
-   end
-end
-
 M.id = id
 M.T = T
 
 M.pipe = utils.pipe
+M.map = utils.map
+M.dump = dump
+M.u = U
+-- TODO:
+-- export function arrange(...sections) {
+--   const total = sections.reduce((sum, [cycles]) => sum + cycles, 0);
+--   sections = sections.map(([cycles, section]) => [cycles, section.fast(cycles)]);
+--   return timeCat(...sections).slow(total);
+-- }
 
-local _op = {}
-function _op.In(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appLeft(a, b):removeNils()
-   end
-end
-
-function _op.Out(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appRight(a, b):removeNils()
-   end
-end
-
-function _op.Mix(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appBoth(a, b):removeNils()
-   end
-end
-
-function _op.Squeeze(f)
-   return function(a, b)
-      return squeezeJoin(fmap(reify(a), function(c)
-         return fmap(reify(b), function(d)
-            return f(c, d)
-         end)
-      end)):removeNils()
-   end
-end
-
-function _op.SqueezeOut(f)
-   return function(a, b)
-      return squeezeJoin(fmap(reify(b), function(c)
-         return fmap(reify(a), function(d)
-            return f(d, c)
-         end)
-      end)):removeNils()
-   end
-end
-
--- stylua: ignore start
-local ops = {
-   add = function(a, b) return a + b end,
-   sub = function(a, b) return a - b end,
-   mul = function(a, b) return a * b end,
-   div = function(a, b) return a / b end,
-   mod = function(a, b) return a % b end,
-   pow = function(a, b) return a ^ b end,
-   concat = function (a, b) return a .. b end,
-   keepif = function (a, b) return b and a or nil end,
-   uni = function (a, b) return union(a, b) end,
-   funi = function (a, b) return flip(union)(a, b) end,
-}
--- stylua: ignore end
-
--- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
-local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
-local op_set = {
-   add = "+",
-   sub = "-",
-   mul = "*",
-   div = "/",
-   mod = "%",
-   pow = "^",
-   concat = "..", -- ?
-   uni = "<",
-   funi = ">",
-}
-
-local how_format = {
-   In = "|%s",
-   Out = "%s|",
-   Mix = "|%s|",
-   Squeeze = "||%s",
-   SqueezeOut = "%s||",
-}
-
-local op = {}
-for k, f in pairs(ops) do
-   op[k] = {}
-   for _, v in ipairs(hows) do
-      op[k][v] = _op[v](f)
-      if op_set[k] and how_format[v] then
-         local symb = string.format(how_format[v], op_set[k])
-         op[symb] = _op[v](f)
-      end
-   end
-end
-
-M.op = op
 -- _opTrig(other, func) {
 --   const otherPat = reify(other);
 --   return otherPat.fmap((b) => this.fmap((a) => func(a)(b))).trigJoin();
@@ -1153,4 +1170,5 @@ M.op = op
 --   const otherPat = reify(other);
 --   return otherPat.fmap((b) => this.fmap((a) => func(a)(b))).trigzeroJoin();
 -- }
+-- print(M.polymeter(2, pure(1), pure(2)))
 return M

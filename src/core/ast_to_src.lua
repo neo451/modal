@@ -289,6 +289,15 @@ end
 --
 --------------------------------------------------------------------------------
 
+
+function M:Chunk(node)
+   -- TODO: check ret last
+   for _, v in ipairs(node) do
+      self:node(v)
+      self:acc("; ")
+   end
+end
+
 function M:Do(node)
    self:acc("do")
    self:nlindent()

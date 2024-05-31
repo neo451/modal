@@ -1,13 +1,8 @@
-local Fraction, tofrac
-do
-   local _obj_0 = require("modal.fraction")
-   Fraction, tofrac = _obj_0.Fraction, _obj_0.tofrac
-end
-local compare, dump
-do
-   local _obj_0 = require("modal.utils")
-   compare, dump = _obj_0.compare, _obj_0.dump
-end
+local _obj_0 = require("modal.fraction")
+local Fraction, tofrac = _obj_0.Fraction, _obj_0.tofrac
+
+local utils = require("modal.utils")
+local compare, dump = utils.compare, utils.dump
 local Span
 do
    local _class_0
@@ -17,18 +12,20 @@ do
       end,
       spanCycles = function(self)
          local spans = {}
-         if self._begin == self._end then
-            local _ = {
-               Span(self._begin, self._end),
-            }
-         end
-         while self._end > self._begin do
-            if self._begin:sam() == self._end:sam() then
-               table.insert(spans, Span(self._begin, self._end))
+         local b, e = self._begin, self._end
+         local e_sam = e:sam()
+         -- TODO: zero width???
+         -- if b == e then
+         --    return { Span(b, e) }
+         -- end
+         while e > b do
+            if b:sam() == e_sam then
+               spans[#spans + 1] = Span(b, self._end)
                break
             end
-            table.insert(spans, Span(self._begin, self._begin:nextSam()))
-            self._begin = self._begin:nextSam()
+            local next_b = b:nextSam()
+            spans[#spans + 1] = Span(b, next_b)
+            b = next_b
          end
          return spans
       end,
@@ -272,7 +269,7 @@ do
          self.controls = controls
       end,
       __base = _base_0,
-      __name = "State",
+      __name = "state",
    }, {
       __index = _base_0,
       __call = function(cls, ...)

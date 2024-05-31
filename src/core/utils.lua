@@ -63,8 +63,8 @@ M.flatten = function(t)
    return flat
 end
 
-M.filter = function(func, table)
-   return fun.totable(fun.filter(func, table))
+M.filter = function(func, tab)
+   return fun.totable(fun.filter(func, tab))
 end
 
 M.map = function(func, table)
@@ -97,8 +97,8 @@ end
 
 M.zipWith = function(f, xs, ys)
    local acc = {}
-   for i, x, y in fun.zip(xs, ys) do
-      acc[i] = f(x, y)
+   for i = 1, #xs do
+      acc[i] = f(xs[i], ys[i])
    end
    return acc
 end
@@ -113,12 +113,21 @@ end
 
 M.splitAt = function(index, list)
    local fst, lst = {}, {}
-   local pred = function(a)
-      return a <= index
-   end
-   for _, k, v in fun.zip(fun.partition(pred, fun.iter(list))) do
-      fst[#fst + 1] = k
-      lst[#lst + 1] = v
+   -- local pred = function(a)
+   --    return a <= index
+   -- end
+   -- for _, k, v in fun.zip(fun.partition(pred, fun.iter(list))) do
+   --    fst[#fst + 1] = k
+   --    lst[#lst + 1] = v
+   -- end
+   -- require("moon.all")
+   -- p(index)
+   for k, v in pairs(list) do
+      if k <= index then
+         fst[#fst + 1] = v
+      else
+         lst[#lst + 1] = v
+      end
    end
    return fst, lst
 end
