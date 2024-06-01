@@ -431,7 +431,7 @@ end)
 
 describe("compress", function()
    it("should bring pattern closer together", function()
-      local pat = M.compress(1 / 4, 3 / 4, reify { "bd", "sd" })
+      local pat = M.compress(0.25, 0.75, M.fastFromList { "bd", "sd" })
       local expected = {
          Event(Span(1 / 4, 1 / 2), Span(1 / 4, 1 / 2), "bd"),
          Event(Span(1 / 2, 3 / 4), Span(1 / 2, 3 / 4), "sd"),

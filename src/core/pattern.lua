@@ -590,8 +590,6 @@ end
 
 M.pure = pure
 
--- TODO:
--- local env = union(M, _G)
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
@@ -607,59 +605,40 @@ reify = function(thing)
 end
 M.reify = reify
 
-local patternify = { id }
-
---- TODO: combine into one!!
-patternify[2] = function(func)
-   local patterned = function(apat, pat)
-      if pat == nil then
-         return curry(func, 2)(apat)
+local patternify = function (func, method)
+   local patterned = function (...)
+      local arity = nparams(func)
+      local pats = map(reify, {...})
+      local pat_idx = method and 1 or #pats
+      local pat = table.remove(pats, pat_idx)
+      if arity == 1 then
+         return func(pat)
       end
-      apat, pat = reify(apat), reify(pat)
-      local mapFn = function(a)
-         return func(a, pat)
+      local left = table.remove(pats, 1)
+      local mapFn = function(...)
+         local args = {...}
+         args[#args+1] = pat
+         return func(unpack(args))
       end
-      return innerJoin(fmap(apat, mapFn))
+      mapFn = curry(mapFn, arity - 1)
+      return utils.reduce(appLeft,fmap(left, mapFn), pats):innerJoin()
    end
    return patterned
 end
 
-patternify[3] = function(func)
-   local patterned = function(apat, bpat, pat)
-      if pat == nil then
-         return curry(func, 3)(apat)(bpat)
-      end
-      apat, bpat, pat = reify(apat), reify(bpat), reify(pat)
-      local mapFn = function(a, b)
-         return func(a, b, pat)
-      end
-      mapFn = curry(mapFn, 2)
-      local patOfPats = appLeft(fmap(apat, mapFn), bpat)
-      return innerJoin(patOfPats)
-   end
-   return patterned
-end
 
-patternify[4] = function(func)
-   local patterned = function(apat, bpat, cpat, pat)
-      if pat == nil then
-         return curry(func, 4)(apat)(bpat)(cpat)
-      end
-      apat, bpat, cpat, pat = reify(apat), reify(bpat), reify(cpat), reify(pat)
-      local mapFn = function(a, b, c)
-         return func(a, b, c, pat)
-      end
-      mapFn = curry(mapFn, 3)
-      local patOfPats = appLeft(appLeft(fmap(apat, mapFn), bpat), cpat)
-      return innerJoin(patOfPats)
+local function register(name, f, should_pat)
+   if type(should_pat) == "nil" then
+      should_pat = true
    end
-   return patterned
-end
-
-local function register(name, f)
-   local narg = nparams(f)
-   U[name] = f
-   M[name] = patternify[narg](f)
+   if should_pat then
+      U[name] = f
+      M[name] = patternify(f, false)
+      base[name] = patternify(f, true)
+   else
+      M[name] = f
+      base[name] = f
+   end
 end
 M.register = register
 --
@@ -683,7 +662,6 @@ end
 
 function M.stackFromList(list)
    return M.stack(map(pure, list))
-   
 end
 
 ---stack up pats in polymeter way
@@ -754,6 +732,21 @@ function M.timecat(args)
       accum = accum + time
    end
    return M.stack(pats)
+end
+
+function M.arrange(args)
+   local total = 0
+   for i, v in pairs(args) do
+      if i % 2 == 1 then
+         total = total + v
+      end
+   end
+   local cycles, pat
+   for i = 1, #args, 2 do
+      cycles, pat = args[i], args[i + 1]
+      args[i + 1] = U.fast(cycles, pat)
+   end
+   return U.slow(total, M.timecat(args))
 end
 
 function M.superimpose(f, pat)
@@ -839,6 +832,7 @@ end)
 -- TODO: wrong after span correction???
 register("compress", function(b, e, pat)
    b, e = tofrac(b), tofrac(e)
+   -- print(b,e)
    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
       return M.silence()
    end
@@ -875,17 +869,18 @@ register("zoom", function(s, e, pat)
 end)
 
 register("run", function(n)
-   local res = {}
-   for _, v in fun.range(0, n - 1) do
-      res[#res + 1] = v
-   end
-   return M.fastFromList(res)
-end)
+   -- local res = {}
+   -- for _, v in fun.range(0, n - 1) do
+   --    print(v)
+   --    res[#res + 1] = v
+   -- end
+   return M.fastFromList(fun.totable(fun.range(0, n - 1)))
+end, false)
 
 register("iota", function(b, e)
    local res = {}
    for _, v in fun.range(b, e) do
-      res[#res + 1] = pure(v)
+      res[#res + 1] = v
    end
    return M.fastFromList(res)
 end)
@@ -895,7 +890,7 @@ register("scan", function(n)
    for _, v in fun.map(fun.range(1, n)) do
       res[#res + 1] = U.run(v)
    end
-   return M.fromList(res)
+   return M.slowcat(res)
 end)
 
 local waveform = function(func)
@@ -1151,13 +1146,7 @@ M.maxi = maxi
 M.pipe = utils.pipe
 M.map = utils.map
 M.dump = dump
-M.u = U
 -- TODO:
--- export function arrange(...sections) {
---   const total = sections.reduce((sum, [cycles]) => sum + cycles, 0);
---   sections = sections.map(([cycles, section]) => [cycles, section.fast(cycles)]);
---   return timeCat(...sections).slow(total);
--- }
 
 -- _opTrig(other, func) {
 --   const otherPat = reify(other);

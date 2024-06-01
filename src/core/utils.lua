@@ -150,6 +150,25 @@ M.pipe = function(...)
    end, M.id, funcs)
 end
 
+M.rurry = function(func, num_args)
+   num_args = num_args or 2
+   if num_args <= 1 then
+      return func
+   end
+   local function curry_h(argtrace, n)
+      if 0 == n then
+         return func(argtrace())
+      else
+         return function(onearg)
+            return curry_h(function()
+               return onearg, argtrace()
+            end, n - 1)
+         end
+      end
+   end
+   return curry_h(function() end, num_args)
+end
+
 M.curry = function(func, num_args)
    num_args = num_args or 2
    if num_args <= 1 then
@@ -266,6 +285,24 @@ M.nparams = function(func)
       local info = debug.getinfo(func)
       return info.nparams, info.isvararg
    end
+end
+
+local bind_methods = function(obj)
+  return setmetatable({ }, {
+    __index = function(self, name)
+      local val = obj[name]
+      if val and type(val) == "function" then
+        local bound
+        bound = function(...)
+          return val(obj, ...)
+        end
+        self[name] = bound
+        return bound
+      else
+        return val
+      end
+    end
+  })
 end
 
 return M
