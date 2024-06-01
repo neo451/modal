@@ -1,9 +1,10 @@
 local M = require"modal"
-local eval = require("modal.maxi").eval(M)
+local maxi = require("modal.maxi").maxi
 local to_lua = require("modal.maxi").to_lua
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
+-- TODO: test toplevel func calls
 
 -- describe("symb", function()
 --    it("should parse steps to lua String or Id", function()
@@ -14,18 +15,22 @@ local assert = require("busted").assert
 --    end)
 -- end)
 --
--- describe("set", function()
---    it("should parse set to lua var set", function()
---       assert.same("a = 1", to_lua([[ (a = 1) ]]))
---    end)
---    it("should parse set a sexp to var", function()
---       assert.same("a = fast(2, 1)", to_lua([[a = (fast 2 1)]]))
---    end)
---    it("should parse set a mini-notation to var", function()
---       assert.same('a = fastcat("bd", "sd")', to_lua("a = [bd sd]"))
---    end)
--- end)
---
+-- local eval_top = maxi(M, true)
+local to_str = to_lua(M, true)
+describe("set", function()
+   it("should parse set to lua var set in only top level????", function()
+      assert.same("a = 1; ", to_str([[ a = 1 ]]))
+   end)
+   it("should parse set a sexp to var", function() 
+      assert.same("a = fast(2, 1); ", to_str(" a = (fast 2 1) "))
+   end)
+   it("should parse set a mini-notation to var", function()
+      assert.same([[a = fastcat({pure("bd"),pure("sd")}); ]], to_str("a = [bd sd]"))
+   end)
+end)
+
+local eval = maxi(M, false)
+
 describe("slice", function()
    it("should parse mini slice as a first class", function()
       assert.same(M.pure"bd", eval("bd"))

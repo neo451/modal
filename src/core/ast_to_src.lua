@@ -587,11 +587,11 @@ function M:Table(node)
       self:acc("{ }")
    else
       self:acc("{")
-      if #node > 1 then
-         self:nlindent()
-      else
-         self:acc(" ")
-      end
+      -- if #node > 1 then
+      --    self:nlindent()
+      -- else
+      --    self:acc(" ")
+      -- end
       for i, elem in ipairs(node) do
          if elem.tag == "Pair" then
             -- `Pair{ `String{ key }, value }
@@ -611,14 +611,14 @@ function M:Table(node)
          end
          if node[i + 1] then
             self:acc(",")
-            self:nl()
+            -- self:nl()
          end
       end
-      if #node > 1 then
-         self:nldedent()
-      else
-         self:acc(" ")
-      end
+      -- if #node > 1 then
+      --    self:nldedent()
+      -- else
+      --    self:acc(" ")
+      -- end
       self:acc("}")
    end
 end

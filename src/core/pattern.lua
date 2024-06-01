@@ -30,7 +30,7 @@ local withEventTime
 local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
-local maxi = require("modal.maxi")
+local maxi = require("modal.maxi").maxi
 local fun = require("modal.fun")
 local iter = fun.iter
 local sin = math.sin
@@ -44,9 +44,6 @@ local floor = math.floor
 
 local M = {}
 local U = {} -- Unpatternified versions
-M.eval = maxi.eval
-M.to_lua = maxi.to_lua
-
 local _op = {}
 function _op.In(f)
    return function(a, b)
@@ -598,7 +595,7 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = M.eval(M)(thing)
+      local res = maxi(M, false)(thing)
       return res
    elseif "table" == t then
       return M.fastFromList(thing)
@@ -1150,7 +1147,7 @@ end)
 M.sl = string_lambda
 M.id = id
 M.T = T
-
+M.maxi = maxi
 M.pipe = utils.pipe
 M.map = utils.map
 M.dump = dump

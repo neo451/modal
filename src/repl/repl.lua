@@ -1,11 +1,11 @@
 local socket = require("socket")
-local inspect = require"inspect"
 print("modal repl")
 local host = "localhost"
 -- local port = arg[1] or 9000
 local port = 9000
 local RL = require("readline")
 local M = require("modal")
+local maxi = require"modal.maxi".maxi
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -20,7 +20,7 @@ local ok, c = pcall(socket.connect, host, port)
 
 local eval = function(a)
    if a then
-      local res, ok = M.eval(M)(a)
+      local res, ok = maxi(M, true)(a)
       if ok then
          if res then
             io.write(M.dump(res))
