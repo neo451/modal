@@ -377,7 +377,6 @@ end
 
 local function pStat(...)
    local args = { ... }
-   mpp(args)
    local fname = args[1]
    fname.tag = "Id"
    table.remove(args, 1)

@@ -1,5 +1,5 @@
 local socket = require "socket"
-
+local maxi = require("modal.maxi").maxi
 local M = require "modal"
 
 local clock = M.DefaultClock
@@ -15,12 +15,13 @@ local c = assert(s:accept())
 c:settimeout(0)
 
 print "Connected"
-
 local eval = function(a)
    if a then
-      local res, ok = M.eval("(" .. a .. ")", M)
+      local res, ok = maxi(M, true)(a)
       if ok then
-         print(res)
+         if res then
+            io.write(M.dump(res))
+         end
       else
          print("Compilation error: " .. res)
       end

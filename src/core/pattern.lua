@@ -463,7 +463,6 @@ splitQueries = function(pat)
    local query = function(_, state)
       local cycles = state.span:spanCycles()
       local f = function(subspan)
-         -- return pat(span._begin, span._end)
          return pat:query(state:setSpan(subspan))
       end
       return flatten(map(f, cycles))
@@ -575,24 +574,6 @@ function silence()
    return Pattern()
 end
 M.silence = silence
-
-local bind_methods = function(obj)
-   return setmetatable({}, {
-      __index = function(self, name)
-         local val = obj[name]
-         if val and type(val) == "function" then
-            local bound
-            bound = function(...)
-               return val(obj, ...)
-            end
-            self[name] = bound
-            return bound
-         else
-            return val
-         end
-      end,
-   })
-end
 
 function pure(value)
    local query = function(_, state)
@@ -735,7 +716,7 @@ end
 ---@return Pattern<any>
 function M.timecat(args)
    local total = 0
-   for i, v in pairs(args) do
+   for i, v in iter(args) do
       if i % 2 == 1 then
          total = total + v
       end
@@ -754,7 +735,7 @@ end
 
 function M.arrange(args)
    local total = 0
-   for i, v in pairs(args) do
+   for i, v in iter(args) do
       if i % 2 == 1 then
          total = total + v
       end
