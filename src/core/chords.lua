@@ -1,6 +1,6 @@
 local concat, map
 do
-   local _obj_0 = require("xi.utils")
+   local _obj_0 = require "xi.utils"
    concat, map = _obj_0.concat, _obj_0.map
 end
 local major = { 0, 4, 7 }
@@ -188,43 +188,43 @@ local chordTable = {
 }
 local P, S, V, R, C, Ct, Cc
 do
-   local _obj_0 = require("lpeg")
+   local _obj_0 = require "lpeg"
    P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct, _obj_0.Cc
 end
 local token
 token = function(id)
    return Ct(Cc(id) * C(V(id)))
 end
-local note = token("note")
-local chord = token("chord")
-local chordname = token("chordname")
-local chordmods = token("chordmods")
-local notename = token("notename")
-local notemods = token("notemods")
-local range = token("range")
-local open = token("open")
-local drop = token("drop")
-local invert = token("invert")
-local offset = token("offset")
-local octave = token("octave")
-local number = token("number")
-local sep = V("sep")
+local note = token "note"
+local chord = token "chord"
+local chordname = token "chordname"
+local chordmods = token "chordmods"
+local notename = token "notename"
+local notemods = token "notemods"
+local range = token "range"
+local open = token "open"
+local drop = token "drop"
+local invert = token "invert"
+local offset = token "offset"
+local octave = token "octave"
+local number = token "number"
+local sep = V "sep"
 local grammar = {
    "chord",
    chord = note * sep ^ -1 * chordname ^ -1 * chordmods ^ -1,
    note = notename * notemods ^ -1,
    chordname = R("az", "09") ^ 1,
    chordmods = (sep * (range + open + drop + invert)) ^ 0,
-   notename = R("ag"),
+   notename = R "ag",
    notemods = offset ^ -1 * octave ^ -1,
-   offset = S("sfn"),
-   octave = R("05"),
+   offset = S "sfn",
+   octave = R "05",
    range = number,
-   open = P("o"),
-   drop = P("d") * number,
-   invert = P("i") * number,
-   number = R("09"),
-   sep = P("'"),
+   open = P "o",
+   drop = P "d" * number,
+   invert = P "i" * number,
+   number = R "09",
+   sep = P "'",
 }
 grammar = Ct(C(grammar))
 local notes = {

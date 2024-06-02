@@ -1,6 +1,6 @@
 local split
 split = require("pl.stringx").split
-require("moon.all")
+require "moon.all"
 local githubPath
 githubPath = function(base, subpath)
    if subpath == nil then
@@ -17,4 +17,4 @@ githubPath = function(base, subpath)
    return ("https://raw.githubusercontent.com/%s/%s"):format(path, subpath)
 end
 
-p(githubPath("github:yaxu/clean-breaks"))
+p(githubPath "github:yaxu/clean-breaks")

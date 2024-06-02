@@ -124,7 +124,7 @@ local rawiter = function(obj, param, state)
       end
       return string_gen, obj, 0
    end
-   require("moon.all")
+   require "moon.all"
    p(obj)
    p(type(obj))
    error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))
@@ -322,7 +322,7 @@ exports.nth = export1(nth)
 
 local head_call = function(state, ...)
    if state == nil then
-      error("head: iterator is empty")
+      error "head: iterator is empty"
    end
    return ...
 end
@@ -707,7 +707,7 @@ end
 local min = function(gen, param, state)
    local state, m = gen(param, state)
    if state == nil then
-      error("min: iterator is empty")
+      error "min: iterator is empty"
    end
 
    local cmp
@@ -731,7 +731,7 @@ exports.minimum = exports.min
 local min_by = function(cmp, gen_x, param_x, state_x)
    local state_x, m = gen_x(param_x, state_x)
    if state_x == nil then
-      error("min: iterator is empty")
+      error "min: iterator is empty"
    end
 
    for _, r in gen_x, param_x, state_x do
@@ -747,7 +747,7 @@ exports.minimum_by = exports.min_by
 local max = function(gen_x, param_x, state_x)
    local state_x, m = gen_x(param_x, state_x)
    if state_x == nil then
-      error("max: iterator is empty")
+      error "max: iterator is empty"
    end
 
    local cmp
@@ -771,7 +771,7 @@ exports.maximum = exports.max
 local max_by = function(cmp, gen_x, param_x, state_x)
    local state_x, m = gen_x(param_x, state_x)
    if state_x == nil then
-      error("max: iterator is empty")
+      error "max: iterator is empty"
    end
 
    for _, r in gen_x, param_x, state_x do

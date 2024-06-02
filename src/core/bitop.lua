@@ -43,7 +43,7 @@ end
 M.tobit = function(x)
    return x % 2 ^ 32
 end
-M.bxor = make_bitop({
+M.bxor = make_bitop {
    [0] = {
       [0] = 0,
       [1] = 1,
@@ -53,7 +53,7 @@ M.bxor = make_bitop({
       [1] = 0,
    },
    n = 4,
-})
+}
 M.bnot = function(a)
    return MODM - a
 end

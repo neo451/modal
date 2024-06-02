@@ -1,6 +1,6 @@
 local stack, slow, pure, fastcat, _patternify, _patternify_p_p, _patternify_p_p_p
 do
-   local _obj_0 = require("modal.pattern")
+   local _obj_0 = require "modal.pattern"
    stack, slow, pure, fastcat, _patternify, _patternify_p_p, _patternify_p_p_p =
       _obj_0.stack,
       _obj_0.slow,
@@ -12,12 +12,12 @@ do
 end
 local Fraction, tofrac, tofloat
 do
-   local _obj_0 = require("modal.fraction")
+   local _obj_0 = require "modal.fraction"
    Fraction, tofrac, tofloat = _obj_0.Fraction, _obj_0.tofrac, _obj_0.tofloat
 end
 local map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
 do
-   local _obj_0 = require("modal.utils")
+   local _obj_0 = require "modal.utils"
    map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type =
       _obj_0.map,
       _obj_0.filter,
@@ -36,7 +36,7 @@ do
 end
 local Event, Span, State
 do
-   local _obj_0 = require("modal.types")
+   local _obj_0 = require "modal.types"
    Event, Span, State = _obj_0.Event, _obj_0.Span, _obj_0.State
 end
 
@@ -44,7 +44,7 @@ local M = {}
 local U = {}
 local register = require("modal.pattern").register
 
-local P = require("modal.params")
+local P = require "modal.params"
 
 register("juxBy", function(by, f, pat)
    by = by / 2
@@ -173,7 +173,7 @@ register("splice", function(npat, ipat, opat)
 end)
 
 register("_loopAt", function(factor, pat)
-   pat = pat .. P.speed(1 / factor) .. P.unit("c")
+   pat = pat .. P.speed(1 / factor) .. P.unit "c"
    return slow(factor, pat)
 end)
 

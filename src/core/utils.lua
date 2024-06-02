@@ -1,5 +1,5 @@
-local fun = require("modal.fun")
-local bit = require("modal.bitop")
+local fun = require "modal.fun"
+local bit = require "modal.bitop"
 local M = {}
 local floor = math.floor
 local abs = math.abs
@@ -234,14 +234,14 @@ local _string_lambda = function(f)
    if type(f) == "function" then
       return f
    end
-   if (f:find("^|")) or (f:find("_")) then
-      local args, body = f:match("|([^|]*)|(.+)")
-      if f:find("_") then
+   if (f:find "^|") or (f:find "_") then
+      local args, body = f:match "|([^|]*)|(.+)"
+      if f:find "_" then
          args = "_"
          body = f
       else
          if not args then
-            return error("bad string lambda")
+            return error "bad string lambda"
          end
       end
       local fstr = "return function(" .. args .. ") return " .. body .. " end"
@@ -252,7 +252,7 @@ local _string_lambda = function(f)
       fn = fn()
       return fn
    else
-      return error("not a string lambda")
+      return error "not a string lambda"
    end
 end
 
@@ -288,21 +288,21 @@ M.nparams = function(func)
 end
 
 local bind_methods = function(obj)
-  return setmetatable({ }, {
-    __index = function(self, name)
-      local val = obj[name]
-      if val and type(val) == "function" then
-        local bound
-        bound = function(...)
-          return val(obj, ...)
-        end
-        self[name] = bound
-        return bound
-      else
-        return val
-      end
-    end
-  })
+   return setmetatable({}, {
+      __index = function(self, name)
+         local val = obj[name]
+         if val and type(val) == "function" then
+            local bound
+            bound = function(...)
+               return val(obj, ...)
+            end
+            self[name] = bound
+            return bound
+         else
+            return val
+         end
+      end,
+   })
 end
 
 return M

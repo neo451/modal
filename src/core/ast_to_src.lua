@@ -16,7 +16,7 @@
 --     Fabien Fleutot - API and implementation
 --
 -------------------------------------------------------------------------------
-pp = require("metalua.pprint")
+pp = require "metalua.pprint"
 local M = {}
 M.__index = M
 
@@ -62,7 +62,7 @@ end
 --------------------------------------------------------------------------------
 function M:nl()
    if self.current_indent == 0 then
-      self:acc("\n")
+      self:acc "\n"
    end
    self:acc("\n" .. self.indent_step:rep(self.current_indent))
 end
@@ -201,7 +201,7 @@ function M:node(node)
    -- end
    assert(self ~= M and self._acc)
    if node == nil then
-      self:acc("<<error>>")
+      self:acc "<<error>>"
       return
    end
    if not node.tag then -- tagless block.
@@ -214,9 +214,9 @@ function M:node(node)
          self:acc(f)
       else -- No appropriate method, fall back to splice dumping.
          -- This cannot happen in a plain Lua AST.
-         self:acc(" -{ ")
+         self:acc " -{ "
          self:acc(pp.tostring(node, { metalua_tag = 1, hide_hash = 1 }))
-         self:acc(" }")
+         self:acc " }"
       end
    end
    -- if node.lineinfo.last.comments then
@@ -258,7 +258,7 @@ function M:list(list, sep, start)
          elseif type(sep) == "string" then
             self:acc(sep)
          else
-            error("Invalid list separator")
+            error "Invalid list separator"
          end
       end
    end
@@ -289,21 +289,20 @@ end
 --
 --------------------------------------------------------------------------------
 
-
 function M:Chunk(node)
    -- TODO: check ret last
    for _, v in ipairs(node) do
       self:node(v)
-      self:acc("; ")
+      self:acc "; "
    end
 end
 
 function M:Do(node)
-   self:acc("do")
+   self:acc "do"
    self:nlindent()
    self:list(node, self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Set(node)
@@ -322,34 +321,34 @@ function M:Set(node)
       local body = rhs[1][2]
       -- TODO:
       -- local params = node[2]
-      self:acc("function ")
+      self:acc "function "
       self:node(lhs)
-      self:acc(":")
+      self:acc ":"
       self:acc(method)
-      self:acc("(")
+      self:acc "("
       self:list(params, ", ", 2)
-      self:acc(")")
+      self:acc ")"
       self:nlindent()
       self:list(body, self.nl)
       self:nldedent()
-      self:acc("end")
+      self:acc "end"
    elseif rhs[1].tag == "Function" and is_idx_stack(lhs) then
       -- | `Set{ { lhs }, { `Function{ params, body } } } if is_idx_stack (lhs) ->
       --    -- ``function foo(...) ... end'' --
       local params = rhs[1][1]
       local body = rhs[1][2]
-      self:acc("function ")
+      self:acc "function "
       self:node(lhs)
-      self:acc("(")
+      self:acc "("
       self:list(params, ", ")
-      self:acc(")")
+      self:acc ")"
       self:nlindent()
       self:list(body, self.nl)
       self:nldedent()
-      self:acc("end")
+      self:acc "end"
    else
       self:list(lhs, ", ")
-      self:acc(" = ")
+      self:acc " = "
       self:list(rhs, ", ")
 
       --
@@ -392,21 +391,21 @@ function M:Set(node)
 end
 
 function M:While(_, cond, body)
-   self:acc("while ")
+   self:acc "while "
    self:node(cond)
-   self:acc(" do")
+   self:acc " do"
    self:nlindent()
    self:list(body, self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Repeat(_, body, cond)
-   self:acc("repeat")
+   self:acc "repeat"
    self:nlindent()
    self:list(body, self.nl)
    self:nldedent()
-   self:acc("until ")
+   self:acc "until "
    self:node(cond)
 end
 
@@ -416,73 +415,73 @@ function M:If(node)
       local cond, body = node[i], node[i + 1]
       self:acc(i == 1 and "if " or "elseif ")
       self:node(cond)
-      self:acc(" then")
+      self:acc " then"
       self:nlindent()
       self:list(body, self.nl)
       self:nldedent()
    end
    -- odd number of children --> last one is an `else' clause --
    if #node % 2 == 1 then
-      self:acc("else")
+      self:acc "else"
       self:nlindent()
       self:list(node[#node], self.nl)
       self:nldedent()
    end
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Fornum(node, var, first, last)
    local body = node[#node]
-   self:acc("for ")
+   self:acc "for "
    self:node(var)
-   self:acc(" = ")
+   self:acc " = "
    self:node(first)
-   self:acc(", ")
+   self:acc ", "
    self:node(last)
    if #node == 5 then -- 5 children --> child #4 is a step increment.
-      self:acc(", ")
+      self:acc ", "
       self:node(node[4])
    end
-   self:acc(" do")
+   self:acc " do"
    self:nlindent()
    self:list(body, self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Forin(_, vars, generators, body)
-   self:acc("for ")
+   self:acc "for "
    self:list(vars, ", ")
-   self:acc(" in ")
+   self:acc " in "
    self:list(generators, ", ")
-   self:acc(" do")
+   self:acc " do"
    self:nlindent()
    self:list(body, self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Local(node, lhs, rhs, annots)
    if next(lhs) then
-      self:acc("local ")
+      self:acc "local "
       if annots then
          local n = #lhs
          for i = 1, n do
             self:node(lhs)
             local a = annots[i]
             if a then
-               self:acc(" #")
+               self:acc " #"
                self:node(a)
             end
             if i ~= n then
-               self:acc(", ")
+               self:acc ", "
             end
          end
       else
          self:list(lhs, ", ")
       end
       if rhs[1] then
-         self:acc(" = ")
+         self:acc " = "
          self:list(rhs, ", ")
       end
    else -- Can't create a local statement with 0 variables in plain Lua
@@ -492,15 +491,15 @@ end
 
 function M:Localrec(_, lhs, rhs)
    -- ``local function name() ... end'' --
-   self:acc("local function ")
+   self:acc "local function "
    self:acc(lhs[1][1])
-   self:acc("(")
+   self:acc "("
    self:list(rhs[1][1], ", ")
-   self:acc(")")
+   self:acc ")"
    self:nlindent()
    self:list(rhs[1][2], self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
    --
    -- | _ ->
    --    -- Other localrec are unprintable ==> splice them --
@@ -513,9 +512,9 @@ end
 
 function M:Call(node, f)
    self:node(f)
-   self:acc("(")
+   self:acc "("
    self:list(node, ", ", 2) -- skip `f'.
-   self:acc(")")
+   self:acc ")"
 end
 
 function M:Invoke(node, f, method)
@@ -527,17 +526,17 @@ function M:Invoke(node, f, method)
    --    parens = true
    -- end
    self:node(f)
-   self:acc(":")
+   self:acc ":"
    self:acc(method[1])
-   self:acc("(")
+   self:acc "("
    -- self:acc(parens and "(" or " ")
    self:list(node, ", ", 3) -- Skip args #1 and #2, object and method name.
    -- self:acc(parens and ")")
-   self:acc(")")
+   self:acc ")"
 end
 
 function M:Return(node)
-   self:acc("return ")
+   self:acc "return "
    self:list(node, ", ")
 end
 
@@ -558,35 +557,35 @@ function M:String(_, str)
 end
 
 function M:Function(_, params, body, annots)
-   self:acc("function(")
+   self:acc "function("
    if annots then
       local n = #params
       for i = 1, n do
          local p, a = params[i], annots[i]
          self:node(p)
          if annots then
-            self:acc(" #")
+            self:acc " #"
             self:node(a)
          end
          if i ~= n then
-            self:acc(", ")
+            self:acc ", "
          end
       end
    else
       self:list(params, ", ")
    end
-   self:acc(")")
+   self:acc ")"
    self:nlindent()
    self:list(body, self.nl)
    self:nldedent()
-   self:acc("end")
+   self:acc "end"
 end
 
 function M:Table(node)
    if not node[1] then
-      self:acc("{ }")
+      self:acc "{ }"
    else
-      self:acc("{")
+      self:acc "{"
       -- if #node > 1 then
       --    self:nlindent()
       -- else
@@ -597,20 +596,20 @@ function M:Table(node)
             -- `Pair{ `String{ key }, value }
             if elem[1].tag == "String" and is_ident(elem[1][1]) then
                self:acc(elem[1][1])
-               self:acc(" = ")
+               self:acc " = "
                self:node(elem[2])
                -- `Pair{ key, value }
             else
-               self:acc("[")
+               self:acc "["
                self:node(elem[1])
-               self:acc("] = ")
+               self:acc "] = "
                self:node(elem[2])
             end
          else
             self:node(elem)
          end
          if node[i + 1] then
-            self:acc(",")
+            self:acc ","
             -- self:nl()
          end
       end
@@ -619,7 +618,7 @@ function M:Table(node)
       -- else
       --    self:acc(" ")
       -- end
-      self:acc("}")
+      self:acc "}"
    end
 end
 
@@ -664,9 +663,9 @@ function M:Op(node, op, a, b)
 end
 
 function M:Paren(_, content)
-   self:acc("(")
+   self:acc "("
    self:node(content)
-   self:acc(")")
+   self:acc ")"
 end
 
 function M:Index(_, table, key)
@@ -683,12 +682,12 @@ function M:Index(_, table, key)
 
    -- ``table [key]''
    if key.tag == "String" and is_ident(key[1]) then
-      self:acc(".")
+      self:acc "."
       self:acc(key[1])
    else
-      self:acc("[")
+      self:acc "["
       self:node(key)
-      self:acc("]")
+      self:acc "]"
       -- ``table.key''
    end
 end
@@ -698,14 +697,14 @@ function M:Id(node, name)
       self:acc(name)
    else -- Unprintable identifier, fall back to splice representation.
       -- This cannot happen in a plain Lua AST.
-      self:acc("-{`Id ")
+      self:acc "-{`Id "
       self:String(node, name)
-      self:acc("}")
+      self:acc "}"
    end
 end
 
 function M:Goto(node, name)
-   self:acc("goto ")
+   self:acc "goto "
    if type(name) == "string" then
       self:Id(node, name)
    else
@@ -714,13 +713,13 @@ function M:Goto(node, name)
 end
 
 function M:Label(node, name)
-   self:acc("::")
+   self:acc "::"
    if type(name) == "string" then
       self:Id(node, name)
    else
       self:Id(node[1], node[1][1])
    end
-   self:acc("::")
+   self:acc "::"
 end
 
 return function(x)

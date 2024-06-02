@@ -1,5 +1,5 @@
-tl = require("tl")
-require("moon.all")
+tl = require "tl"
+require "moon.all"
 -- p(tl)
 
 a = [[

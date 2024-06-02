@@ -1,11 +1,11 @@
-local socket = require("socket")
-print("modal repl")
+local socket = require "socket"
+print "modal repl"
 local host = "localhost"
 -- local port = arg[1] or 9000
 local port = 9000
-local RL = require("readline")
-local M = require("modal")
-local maxi = require"modal.maxi".maxi
+local RL = require "readline"
+local M = require "modal"
+local maxi = require("modal.maxi").maxi
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -45,7 +45,7 @@ end
 
 while true do
    -- c = assert(socket.connect(host, port))
-   line = RL.readline("modal> ")
+   line = RL.readline "modal> "
    if not line then
       break
    end

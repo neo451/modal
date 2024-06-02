@@ -209,7 +209,7 @@ do
             n, d = decimaltofraction(n)
          end
          if d == 0 then
-            error("Fraction: divide by zero")
+            error "Fraction: divide by zero"
          end
          if normalize and (n ~= 0) then
             local g = floor(gcd(n, d))

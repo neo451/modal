@@ -641,11 +641,11 @@ local aliasParams = {
 }
 local reify, stack, fastcat
 do
-   local _obj_0 = require("modal.pattern")
+   local _obj_0 = require "modal.pattern"
    reify, stack, fastcat = _obj_0.reify, _obj_0.stack, _obj_0.fastcat
 end
 
-local pat = require("modal.pattern")
+local pat = require "modal.pattern"
 local fmap, outerJoin = pat.fmap, pat.outerJoin
 
 local parseChord = require("modal.chords").parseChord

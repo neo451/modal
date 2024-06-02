@@ -1,16 +1,16 @@
 local filter, reduce, flatten, dump
 do
-   local _obj_0 = require("modal.utils")
+   local _obj_0 = require "modal.utils"
    filter, reduce, flatten, dump = _obj_0.filter, _obj_0.reduce, _obj_0.flatten, _obj_0.dump
 end
 local Fraction, gcd_reduce
 do
-   local _obj_0 = require("modal.fraction")
+   local _obj_0 = require "modal.fraction"
    Fraction, gcd_reduce = _obj_0.Fraction, _obj_0.gcd_reduce
 end
 local Pattern, reify
 do
-   local _obj_0 = require("modal.pattern")
+   local _obj_0 = require "modal.pattern"
    Pattern, reify = _obj_0.Pattern, _obj_0.reify
 end
 local map

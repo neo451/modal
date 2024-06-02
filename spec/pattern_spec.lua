@@ -1,18 +1,18 @@
 local describe = require("busted").describe
-local M = require("modal")
+local M = require "modal"
 local it = require("busted").it
 local assert = require("busted").assert
 
-local _obj_0 = require("modal.types")
+local _obj_0 = require "modal.types"
 local Span, State, Event = _obj_0.Span, _obj_0.State, _obj_0.Event
-local P = require("modal.pattern")
+local P = require "modal.pattern"
 local Pattern, reify, pure = P.Pattern, P.reify, P.pure
 
 do
-   local _obj_0 = require("modal.ui")
+   local _obj_0 = require "modal.ui"
    striate, chop, slice, splice = _obj_0.striate, _obj_0.chop, _obj_0.slice, _obj_0.splice
 end
-local C = require("modal.params")
+local C = require "modal.params"
 
 -- local reify = require("modal.pattern").modal
 
@@ -73,7 +73,7 @@ describe("onsetsOnly", function()
       }, actual)
    end)
    return it("pure patterns should not behave like continuous signals... they should have discrete onsets", function()
-      local p = pure("bd")
+      local p = pure "bd"
       local patternWithOnsetsOnly = p:onsetsOnly()
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
@@ -356,7 +356,7 @@ end)
 
 describe("timecat", function()
    it("should return a pattern based one the time-pat 'tuples' passed in", function()
-      local pat = M.timecat { 3, M.fast(4, pure("bd")), 1, M.fast(8, pure("hh")) }
+      local pat = M.timecat { 3, M.fast(4, pure "bd"), 1, M.fast(8, pure "hh") }
       local expected = {
          Event(Span(0, 3 / 16), Span(0, 3 / 16), "bd"),
          Event(Span(3 / 16, 3 / 8), Span(3 / 16, 3 / 8), "bd"),
@@ -387,7 +387,7 @@ end)
 
 describe("fast", function()
    it("should return a pattern whose Events are closer together in time", function()
-      local pat = M.fast(2, pure("bd"))
+      local pat = M.fast(2, pure "bd")
       local expected = {
          Event(Span(0, 0.5), Span(0, 0.5), "bd"),
          Event(Span(0.5, 1), Span(0.5, 1), "bd"),
@@ -488,14 +488,14 @@ describe("run", function()
    end)
 end)
 
--- describe("euclid", function()
---    it("shoudl gen euclid pats", function()
---       local pat = M.euclid(3, 8, 1, "bd")
---       -- local expected = {
---       --    Event(Span(0, 1 / 3), Span(0, 1 / 3), 0),
---       --    Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 1),
---       --    Event(Span(2 / 3, 1), Span(2 / 3, 1), 2),
---       -- }
---       -- assert.are.same(expected, pat(0, 1))
---    end)
--- end)
+describe("euclid", function()
+   it("shoudl gen euclid pats", function()
+      local pat = M.euclid(3, 8, 1, "bd")
+      local expected = {
+         Event(Span(0, 1), Span(1 / 4, 3 / 8), "bd"),
+         Event(Span(0, 1), Span(5 / 8, 3 / 4), "bd"),
+         Event(Span(0, 1), Span(7 / 8, 1), "bd"),
+      }
+      assert.are.same(expected, pat(0, 1))
+   end)
+end)

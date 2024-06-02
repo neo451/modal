@@ -1,35 +1,35 @@
-local lpeg = require("lpeg")
+local lpeg = require "lpeg"
 P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
 local map = require("modal.utils").map
 
-local ast_to_src = require("modal.ast_to_src")
+local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
 
-local sequence = V("sequence")
-local slice = V("slice")
-local sub_cycle = V("sub_cycle")
-local polymeter = V("polymeter")
-local slow_sequence = V("slow_sequence")
-local polymeter_steps = V("polymeter_steps")
-local stack = V("stack")
-local mini = V("mini")
-local op = V("op")
-local fast = V("fast")
-local slow = V("slow")
-local replicate = V("replicate")
-local degrade = V("degrade")
-local weight = V("weight")
-local euclid = V("euclid")
-local tail = V("tail")
-local range = V("range")
-local list = V("list")
-local apply = V("apply")
-local tailop = V("tailop")
-local expr = V("expr")
-local ret = V("ret")
-local set = V("set")
+local sequence = V "sequence"
+local slice = V "slice"
+local sub_cycle = V "sub_cycle"
+local polymeter = V "polymeter"
+local slow_sequence = V "slow_sequence"
+local polymeter_steps = V "polymeter_steps"
+local stack = V "stack"
+local mini = V "mini"
+local op = V "op"
+local fast = V "fast"
+local slow = V "slow"
+local replicate = V "replicate"
+local degrade = V "degrade"
+local weight = V "weight"
+local euclid = V "euclid"
+local tail = V "tail"
+local range = V "range"
+local list = V "list"
+local apply = V "apply"
+local tailop = V "tailop"
+local expr = V "expr"
+local ret = V "ret"
+local set = V "set"
 -- TODO:
 -- M.fonf = reify("bd sd bd sd")
 -- bd = '808bd
@@ -52,7 +52,7 @@ Num = function(a)
 end
 
 Pure = function(a)
-   return { tag = "Call", Id("pure"), a }
+   return { tag = "Call", Id "pure", a }
 end
 
 String = function(a)
@@ -71,8 +71,8 @@ local string2id = function(v)
 end
 
 local seed = -1
-local ws = S(" \n\r\t") ^ 0
-local comma = ws * P(",") * ws
+local ws = S " \n\r\t" ^ 0
+local comma = ws * P "," * ws
 -- pipe = ws * P("|") * ws
 -- dot = ws * P(".") * ws
 
@@ -89,18 +89,18 @@ local parseStep = function(chars)
    end
    return String(chars)
 end
-local tidalop = S("|+-*/^%><") ^ 1 / id
+local tidalop = S "|+-*/^%><" ^ 1 / id
 -- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
-local step_char = R("09", "AZ", "az") + P("'") + P("-") + P(".") + P("^") + P("_") + P("~") + P("=") / id
+local step_char = R("09", "AZ", "az") + P "'" + P "-" + P "." + P "^" + P "_" + P "~" + P "=" / id
 -- local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
-local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws
-local minus = P("-")
-local plus = P("+")
-local zero = P("0")
-local digit = R("09")
-local decimal_point = P(".")
-local digit1_9 = R("19")
-local e = S("eE")
+local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
+local minus = P "-"
+local plus = P "+"
+local zero = P "0"
+local digit = R "09"
+local decimal_point = P "."
+local digit1_9 = R "19"
+local e = S "eE"
 local int = zero + (digit1_9 * digit ^ 0)
 local exp = e * (minus + plus) ^ -1 * digit ^ 1
 local frac = decimal_point * digit ^ 1
@@ -108,13 +108,13 @@ local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
 
 local pFast = function(a)
    return function(x)
-      return { tag = "Call", Id("fast"), a, x }
+      return { tag = "Call", Id "fast", a, x }
    end
 end
 
 local pSlow = function(a)
    return function(x)
-      return { tag = "Call", Id("slow"), a, x }
+      return { tag = "Call", Id "slow", a, x }
    end
 end
 local pDegrade = function(a)
@@ -123,7 +123,7 @@ local pDegrade = function(a)
    end
    return function(x)
       seed = seed + 1
-      return { tag = "Call", Id("degradeBy"), a, x }
+      return { tag = "Call", Id "degradeBy", a, x }
    end
 end
 
@@ -139,14 +139,14 @@ end
 
 local pRange = function(s)
    return function(x)
-      return { tag = "Call", Id("iota"), x, s }
+      return { tag = "Call", Id "iota", x, s }
    end
 end
 
 local pEuclid = function(p, s, r)
    r = r and r or Num(0)
    return function(x)
-      return { tag = "Call", Id("euclid"), p, s, r, x }
+      return { tag = "Call", Id "euclid", p, s, r, x }
    end
 end
 
@@ -211,7 +211,7 @@ local pTailop = function(...)
    mpp(opsymb)
    args[1].tag = "Id"
    return function(x)
-      return { tag = "Call", { tag = "Index", Id("op"), String(opsymb) }, x, args }
+      return { tag = "Call", { tag = "Index", Id "op", String(opsymb) }, x, args }
    end
 end
 
@@ -249,21 +249,21 @@ local resolveweight = function(args)
    local weightSum = reduce(addWeight, 0, args)
    local acc = {}
    for i, v in pairs(args) do
-      acc[i] = Table({ Num(v.weight) or Num(1), purify_one(args[i]) })
+      acc[i] = Table { Num(v.weight) or Num(1), purify_one(args[i]) }
    end
-   return { tag = "Call", Id("timecat"), Table(acc) }, weightSum
+   return { tag = "Call", Id "timecat", Table(acc) }, weightSum
 end
 
 local pSubCycle = function(args, isStack)
    if isStack then
-      return { tag = "Call", Id("stack"), unpack(purify(args)) }
+      return { tag = "Call", Id "stack", unpack(purify(args)) }
    else
       if use_timecat(args) then
          -- pp(args)
          local res = resolveweight(args)
          return res
       else
-         return { tag = "Call", Id("fastcat"), unpack(purify(args)) }
+         return { tag = "Call", Id "fastcat", unpack(purify(args)) }
       end
    end
 end
@@ -280,18 +280,18 @@ local pPolymeter = function(...)
    end
    -- TODO: into stack, proper stack with sequence
    local function f(s)
-      return { tag = "Call", Id("fastcat"), unpack(purify(s)) }
+      return { tag = "Call", Id "fastcat", unpack(purify(s)) }
    end
    args = map(f, args)
-   return { tag = "Call", Id("polymeter"), steps, unpack(args) }
+   return { tag = "Call", Id "polymeter", steps, unpack(args) }
 end
 
 local pSlowSeq = function(args, _)
    if use_timecat(args) then
       local tab, weightSum = resolveweight(args)
-      return { tag = "Call", Id("slow"), Num(weightSum), tab }
+      return { tag = "Call", Id "slow", Num(weightSum), tab }
    else
-      return { tag = "Call", Id("slowcat"), unpack(purify(args)) }
+      return { tag = "Call", Id "slowcat", unpack(purify(args)) }
    end
 end
 
@@ -354,7 +354,7 @@ end
 -- TODO: weight in polymeter
 -- TODO: to fraction ?
 -- TODO:  code blocks
-local semi = P(";")
+local semi = P ";"
 local grammar = {
    "root",
    -- root = ((set + ret) * semi ^ -1) ^ 1,
@@ -362,8 +362,8 @@ local grammar = {
    -- set = list / id,
    ret = list + mini + apply / pRet,
    expr = ws * (step + list + apply + mini + tailop) * ws,
-   list = P("(") * ws * expr ^ 1 * ws * P(")") / pApply,
-   apply = P("$") * ws * expr ^ 1 * ws / pApply,
+   list = P "(" * ws * expr ^ 1 * ws * P ")" / pApply,
+   apply = P "$" * ws * expr ^ 1 * ws / pApply,
    sequence = (mini ^ 1) / pSeq,
    stack = mini * (comma * mini) ^ 1 / pStack,
    -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
@@ -372,21 +372,21 @@ local grammar = {
    tailop = tidalop * ws * step * ws * mini * ws / pTailop,
    mini = (slice * op ^ 0) / pSlices,
    slice = step + sub_cycle + polymeter + slow_sequence,
-   sub_cycle = P("[") * ws * (stack + sequence) * ws * P("]") / pSubCycle,
-   slow_sequence = P("<") * ws * sequence * ws * P(">") / pSlowSeq,
-   polymeter = P("{") * ws * sequence * (comma * sequence) ^ 0 * ws * P("}") * polymeter_steps * ws / pPolymeter,
-   polymeter_steps = (P("%") * slice) ^ -1 / function(s)
+   sub_cycle = P "[" * ws * (stack + sequence) * ws * P "]" / pSubCycle,
+   slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
+   polymeter = P "{" * ws * sequence * (comma * sequence) ^ 0 * ws * P "}" * polymeter_steps * ws / pPolymeter,
+   polymeter_steps = (P "%" * slice) ^ -1 / function(s)
       return (s ~= "") and s or -1
    end,
    op = fast + slow + tail + range + replicate + degrade + weight + euclid,
-   fast = P("*") * slice / pFast,
-   slow = P("/") * slice / pSlow,
-   tail = P(":") * slice / pTail,
-   range = P("..") * ws * slice / pRange,
-   degrade = P("?") * (number ^ -1) / pDegrade,
-   replicate = ws * P("!") * (number ^ -1) / pReplicate,
-   weight = ws * (P("@") + P("_")) * (number ^ -1) / pWeight,
-   euclid = P("(") * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P(")") / pEuclid,
+   fast = P "*" * slice / pFast,
+   slow = P "/" * slice / pSlow,
+   tail = P ":" * slice / pTail,
+   range = P ".." * ws * slice / pRange,
+   degrade = P "?" * (number ^ -1) / pDegrade,
+   replicate = ws * P "!" * (number ^ -1) / pReplicate,
+   weight = ws * (P "@" + P "_") * (number ^ -1) / pWeight,
+   euclid = P "(" * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P ")" / pEuclid,
 }
 
 grammar = Ct(C(grammar))

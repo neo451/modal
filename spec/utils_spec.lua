@@ -1,4 +1,4 @@
-local M = require("modal.utils")
+local M = require "modal.utils"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
@@ -50,7 +50,7 @@ end)
 
 describe("flatten", function()
    it("should flatten 2 lists", function()
-      local res = M.flatten({ { { 1 }, 2, 3 }, 4 })
+      local res = M.flatten { { { 1 }, 2, 3 }, 4 }
       assert.same({ 1, 2, 3, 4 }, res)
    end)
 end)

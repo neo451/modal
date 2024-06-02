@@ -1,7 +1,7 @@
-local _obj_0 = require("modal.fraction")
+local _obj_0 = require "modal.fraction"
 local Fraction, tofrac = _obj_0.Fraction, _obj_0.tofrac
 
-local utils = require("modal.utils")
+local utils = require "modal.utils"
 local compare, dump = utils.compare, utils.dump
 local Span
 do
@@ -84,7 +84,7 @@ do
       sect_e = function(self, other)
          local result = self:sect(other)
          if not result then
-            error("Span: spans do not intersect")
+            error "Span: spans do not intersect"
          end
          return result
       end,
@@ -160,14 +160,13 @@ do
          return self:__tostring()
       end,
       __tostring = function(self)
-         local partString = string.format("p: (%s)", self.part:__tostring())
-         local wholeString
+         local part = self.part:__tostring()
+         local h, t = "", ""
          if self:hasWhole() then
-            wholeString = string.format("w: (%s)", self.whole:__tostring())
-         else
-            wholeString = ""
+            h = (self.whole._begin ~= self.part._begin) and self.whole._begin:show() .. "-" or ""
+            t = (self.whole._end ~= self.part._end) and "-" .. self.whole._end:show() or ""
          end
-         return "[" .. partString .. " | " .. wholeString .. " | " .. dump(self.value) .. "]"
+         return string.format("%s(%s)%s | %s", h, part, t, dump(self.value))
       end,
 
       spanEquals = function(self, other)
@@ -216,7 +215,7 @@ do
             stateful = false
          end
          if stateful and type(value) ~= "function" then
-            error("Event: stateful event values must be of type function")
+            error "Event: stateful event values must be of type function"
          end
          self.whole, self.part, self.value, self.context, self.stateful = whole, part, value, context, stateful
       end,

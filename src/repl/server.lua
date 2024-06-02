@@ -1,6 +1,6 @@
-local socket = require("socket")
+local socket = require "socket"
 
-local M = require("modal")
+local M = require "modal"
 
 local clock = M.DefaultClock
 clock:start()
@@ -14,7 +14,7 @@ print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
 local c = assert(s:accept())
 c:settimeout(0)
 
-print("Connected")
+print "Connected"
 
 local eval = function(a)
    if a then

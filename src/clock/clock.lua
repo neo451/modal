@@ -1,8 +1,8 @@
-local socket = require("socket")
-local link = require("abletonlink")
-local losc = require("losc")
-local plugin = require("losc.plugins.udp-socket")
-local bundle = require("losc.bundle")
+local socket = require "socket"
+local link = require "abletonlink"
+local losc = require "losc"
+local plugin = require "losc.plugins.udp-socket"
+local bundle = require "losc.bundle"
 
 local sleep = function(sec)
    return socket.sleep(sec)
@@ -31,12 +31,12 @@ typesString = function(msg)
    return types
 end
 
-local osc = losc.new({
-   plugin = plugin.new({
+local osc = losc.new {
+   plugin = plugin.new {
       sendPort = target.port,
       sendAddr = target.address,
-   }),
-})
+   },
+}
 
 local sendOSC = function(_, value, ts)
    local msg = {}
@@ -65,7 +65,7 @@ do
       end,
       stop = function(self)
          self.running = false
-         return print("clock stopped")
+         return print "clock stopped"
       end,
       subscribe = function(self, subscriber)
          return table.insert(self.subscribers, subscriber)

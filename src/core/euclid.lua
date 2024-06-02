@@ -1,6 +1,6 @@
 local flatten, zipWith, concat, splitAt, rotate
 do
-   local _obj_0 = require("modal.utils")
+   local _obj_0 = require "modal.utils"
    flatten, zipWith, concat, splitAt, rotate =
       _obj_0.flatten, _obj_0.zipWith, _obj_0.concat, _obj_0.splitAt, _obj_0.rotate
 end

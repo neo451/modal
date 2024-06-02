@@ -1,4 +1,4 @@
-local utils = require("modal.utils")
+local utils = require "modal.utils"
 local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip =
    utils.map,
    utils.filter,
@@ -16,10 +16,10 @@ local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand,
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
 local Fraction, tofrac, tofloat
-local frac = require("modal.fraction")
+local frac = require "modal.fraction"
 Fraction, tofrac, tofloat = frac.Fraction, frac.tofrac, frac.tofloat
 local Event, Span, State
-local types = require("modal.types")
+local types = require "modal.types"
 Event, Span, State = types.Event, types.Span, types.State
 
 local Pattern
@@ -31,7 +31,7 @@ local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
 local maxi = require("modal.maxi").maxi
-local fun = require("modal.fun")
+local fun = require "modal.fun"
 local iter = fun.iter
 local sin = math.sin
 local min = math.min
@@ -576,6 +576,24 @@ function silence()
 end
 M.silence = silence
 
+local bind_methods = function(obj)
+   return setmetatable({}, {
+      __index = function(self, name)
+         local val = obj[name]
+         if val and type(val) == "function" then
+            local bound
+            bound = function(...)
+               return val(obj, ...)
+            end
+            self[name] = bound
+            return bound
+         else
+            return val
+         end
+      end,
+   })
+end
+
 function pure(value)
    local query = function(_, state)
       local cycles = state.span:spanCycles()
@@ -605,10 +623,10 @@ reify = function(thing)
 end
 M.reify = reify
 
-local patternify = function (func, method)
-   local patterned = function (...)
+local patternify = function(func, method)
+   local patterned = function(...)
       local arity = nparams(func)
-      local pats = map(reify, {...})
+      local pats = map(reify, { ... })
       local pat_idx = method and 1 or #pats
       local pat = table.remove(pats, pat_idx)
       if arity == 1 then
@@ -616,16 +634,15 @@ local patternify = function (func, method)
       end
       local left = table.remove(pats, 1)
       local mapFn = function(...)
-         local args = {...}
-         args[#args+1] = pat
+         local args = { ... }
+         args[#args + 1] = pat
          return func(unpack(args))
       end
       mapFn = curry(mapFn, arity - 1)
-      return utils.reduce(appLeft,fmap(left, mapFn), pats):innerJoin()
+      return utils.reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
    end
    return patterned
 end
-
 
 local function register(name, f, should_pat)
    if type(should_pat) == "nil" then
@@ -679,21 +696,22 @@ end
 
 function M.slowcat(pats)
    local query = function(_, state)
-      local span = state.span
-      local len = #pats
-      local index = state.span._begin:sam():asFloat() % len + 1
-      local pat = pats[index]
+      local a = state.span
+      local cyc = a._begin:sam():asFloat()
+      local n = #pats
+      local i = cyc % n
+      local pat = pats[i + 1]
       if not pat then
          return {}
       end
-      local offset = span._begin:floor() - (span._begin / len):floor()
+      local offset = cyc - (cyc - i) / n
       return withEventTime(pat, function(t)
          return t + offset
-      end):query(State(span:withTime(function(t)
+      end):query(State(a:withTime(function(t)
          return t - offset
       end)))
    end
-   return splitQueries(Pattern(query))
+   return Pattern(query):splitQueries()
 end
 
 function M.fromList(list)
