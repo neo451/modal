@@ -1,20 +1,9 @@
-local filter, reduce, flatten, dump
-do
-   local _obj_0 = require "modal.utils"
-   filter, reduce, flatten, dump = _obj_0.filter, _obj_0.reduce, _obj_0.flatten, _obj_0.dump
-end
-local Fraction, gcd_reduce
-do
-   local _obj_0 = require "modal.fraction"
-   Fraction, gcd_reduce = _obj_0.Fraction, _obj_0.gcd_reduce
-end
-local Pattern, reify
-do
-   local _obj_0 = require "modal.pattern"
-   Pattern, reify = _obj_0.Pattern, _obj_0.reify
-end
-local map
-map = function(func, items)
+local F = require "modal.fraction"
+local Fraction, gcd_reduce = F.Fraction, F.gcd_reduce
+local P = require "modal.pattern"
+local ut = require "modal.utils"
+
+local map = function(func, items)
    local _accum_0 = {}
    local _len_0 = 1
    for i, v in ipairs(items) do
@@ -23,25 +12,20 @@ map = function(func, items)
    end
    return _accum_0
 end
-local drawline
-drawline = function(pat, chars)
-   pat = reify(pat)
+
+local drawline = function(pat, chars)
    chars = chars or 60
    local cycle = 0
    local pos = Fraction(0)
-   local lines = {
-      "",
-   }
+   local lines = { "" }
    local emptyLine = ""
    while #lines[1] < chars do
-      local events = pat:querySpan(cycle, cycle + 1)
-      local filterfunc
-      filterfunc = function(event)
+      local events = P.querySpan(cycle, cycle + 1, pat)
+      local filterfunc = function(event)
          return event:hasOnset()
       end
-      local events_with_onset = filter(filterfunc, events)
-      local mapfunc
-      mapfunc = function(event)
+      local events_with_onset = ut.filter(filterfunc, events)
+      local mapfunc = function(event)
          return event:duration()
       end
       local durations = map(mapfunc, events_with_onset)
@@ -56,10 +40,10 @@ drawline = function(pat, chars)
          filterfunc = function(event)
             return event.whole._begin <= _begin and event.whole._end >= _end
          end
-         local matches = filter(filterfunc, events)
+         local matches = ut.filter(filterfunc, events)
          local missingLines = #matches - #lines
          if missingLines > 0 then
-            for i = 1, missingLines do
+            for _ = 1, missingLines do
                lines = lines .. missingLines
             end
          end
@@ -85,4 +69,5 @@ drawline = function(pat, chars)
    end
    return table.concat(lines)
 end
-return { drawline = drawline }
+
+return drawline

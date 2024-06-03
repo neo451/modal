@@ -144,7 +144,7 @@ function base:type()
 end
 
 function base:__call(b, e)
-   return querySpan(self, b, e)
+   return querySpan(b, e, self)
 end
 
 function base:__tostring()
@@ -219,11 +219,12 @@ end
 base.fmap = fmap
 M.fmap = fmap
 
-function querySpan(pat, b, e)
+function querySpan(b, e, pat)
    local span = Span(b, e)
    local state = State(span)
    return pat:query(state)
 end
+M.querySpan = querySpan
 
 function firstCycle(pat)
    return pat(0, 1)
@@ -597,7 +598,7 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = maxi(M, false)(thing)
+      local res = maxi(M, false)("[" .. thing .. "]")
       return res
    elseif "table" == t then
       return M.fastFromList(thing)
@@ -1156,7 +1157,7 @@ M.T = T
 M.maxi = maxi
 M.pipe = utils.pipe
 M.map = utils.map
-M.dump = dump
+M.dump = utils.dump2
 M.print = print
 
 return M

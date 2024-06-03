@@ -3,7 +3,7 @@ local params = require "modal.params"
 local pattern_factory = require "modal.pattern_factory"
 local ui = require "modal.ui"
 local P = require "modal.params"
-local drawline = require("modal.drawline").drawline
+local drawline = require "modal.drawline"
 local lib = require "modal.lib"
 
 local modal = {

@@ -52,8 +52,8 @@ Num = function(a)
    return { tag = "Number", a }
 end
 
-Pure = function(a)
-   return { tag = "Call", Id "pure", a }
+Call = function(name, ...)
+   return { tag = "Call", Id(name), ... }
 end
 
 local id = function(x)
@@ -65,7 +65,7 @@ local purify = function(v)
       return v
    end
    if v.tag ~= "Call" and v.tag ~= "Id" then
-      return Pure(v)
+      return Call("pure", v)
    end
    return v
 end
@@ -79,7 +79,6 @@ end
 
 local seed = -1
 local ws = S " \n\r\t" ^ 0
-local rws = S " \n\r\t" ^ 1
 local comma = ws * P "," * ws
 -- pipe = ws * P("|") * ws
 -- dot = ws * P(".") * ws
@@ -131,13 +130,13 @@ local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
 
 local pFast = function(a)
    return function(x)
-      return { tag = "Call", Id "fast", a, x }
+      return Call("fast", a, x)
    end
 end
 
 local pSlow = function(a)
    return function(x)
-      return { tag = "Call", Id "slow", a, x }
+      return Call("slow", a, x)
    end
 end
 
@@ -147,7 +146,7 @@ local pDegrade = function(a)
    end
    return function(x)
       seed = seed + 1
-      return { tag = "Call", Id "degradeBy", a, x }
+      return Call("degradeBy", a, x)
    end
 end
 
@@ -162,17 +161,15 @@ local pTail = function(s)
 end
 
 local pRange = function(s)
-   mpp(s)
    return function(x)
-      mpp(x)
-      return { tag = "Call", Id "iota", x, s }
+      return Call("iota", x, s)
    end
 end
 
 local pEuclid = function(p, s, r)
    r = r and r or Num(0)
    return function(x)
-      return { tag = "Call", Id "euclid", p, s, r, x }
+      return Call("euclid", p, s, r, x)
    end
 end
 
@@ -267,7 +264,8 @@ local function pList(...)
          if is_native then
             return { tag = "Op", opname, unpack(args) }
          else
-            return { tag = "Call", Id(opname), unpack(map(string2id, args)) }
+            -- return { tag = "Call", Id(opname), unpack(map(string2id, args)) }
+            return Call(opname, unpack(map(string2id, args)))
          end
       elseif is_op(args[1][1]) then
          local opname = opsymb[args[1][1]]
@@ -312,18 +310,21 @@ local resolveweight = function(args)
       -- acc[#acc+1] = purify(v)
       acc[#acc + 1] = v
    end
-   return { tag = "Call", Id "timecat", Table(acc) }, weightSum
+   -- return { tag = "Call", Id "timecat", Table(acc) }, weightSum
+   return Call("timecat", Table(acc)), weightSum
 end
 
 local pSubCycle = function(args, isStack)
    if isStack then
-      return { tag = "Call", Id "stack", Table(args) }
+      -- return { tag = "Call", Id "stack", Table(args) }
+      return Call("stack", Table(args))
    else
       if use_timecat(args) then
          local res = resolveweight(args)
          return res
       else
-         return { tag = "Call", Id "fastcat", Table(args) }
+         -- return { tag = "Call", Id "fastcat", Table(args) }
+         return Call("fastcat", Table(args))
       end
    end
 end
@@ -336,22 +337,22 @@ local pPolymeter = function(...)
    end, args)
    local steps = table.remove(args, #args)
    if steps == -1 then
-      steps = Num(#args)
+      steps = Num(#args[1])
    end
    -- TODO: into stack, proper stack with sequence
    local function f(s)
-      return { tag = "Call", Id "fastcat", Table(s) }
+      return Call("fastcat", Table(s))
    end
    args = map(f, args)
-   return { tag = "Call", Id "polymeter", steps, Table(args) }
+   return Call("polymeter", steps, Table(args))
 end
 
 local pSlowSeq = function(args, _)
    if use_timecat(args) then
       local tab, weightSum = resolveweight(args)
-      return { tag = "Call", Id "slow", Num(weightSum), tab }
+      return Call("slow", Num(weightSum), tab)
    else
-      return { tag = "Call", Id "slowcat", Table(args) }
+      return Call("slowcat", Table(args))
    end
 end
 
