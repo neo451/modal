@@ -114,7 +114,7 @@ end
 
 -- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
 local step_char = R("09", "AZ", "az") + P "'" + P "-" + P "." + P "^" + P "_" + P "~" / id
-local tidalop = S "|+-*/^%><" ^ 1 / id
+local tidalop = S "|+-*/^%><" ^ 2 / id
 -- local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
 local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
 local minus = P "-"
@@ -162,7 +162,9 @@ local pTail = function(s)
 end
 
 local pRange = function(s)
+   mpp(s)
    return function(x)
+      mpp(x)
       return { tag = "Call", Id "iota", x, s }
    end
 end
@@ -170,7 +172,6 @@ end
 local pEuclid = function(p, s, r)
    r = r and r or Num(0)
    return function(x)
-      -- return { tag = "Call", Id("euclid"), p, s, r, x }
       return { tag = "Call", Id "euclid", p, s, r, x }
    end
 end
@@ -222,6 +223,7 @@ local pSeq = function(...)
    args = resolvereps(args)
    return args, false
 end
+
 local pStack = function(...)
    local args = { ... }
    args = resolvereps(args)
@@ -380,7 +382,6 @@ local function pStat(...)
    local fname = args[1]
    fname.tag = "Id"
    table.remove(args, 1)
-   args = map(purify, args)
    return pRet(resolvetails(args, fname))
 end
 
@@ -391,7 +392,7 @@ local grammar = {
    set = step * P "=" * expr / pSet,
    ret = (list + mini + dollar) / pRet,
    list = P "(" * ws * expr ^ 0 * ws * P ")" / pList,
-   dollar = P "$" * ws * expr ^ 0 * ws / pDollar,
+   dollar = S "$>" * ws * expr ^ 0 * ws / pDollar,
    expr = ws * (step + list + mini + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pSeq,
    stack = mini * (comma * mini) ^ 1 / pStack,

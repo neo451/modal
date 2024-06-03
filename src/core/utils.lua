@@ -85,14 +85,16 @@ M.dump = function(o)
    end
 end
 
-M.totable = function(...)
-   local pats = ...
-   if type(pats) == "table" then
-      pats = ...
+M.dump2 = function(o)
+   if M.type(o) == "table" then
+      local s = ""
+      for _, v in pairs(o) do
+         s = s .. M.dump(v) .. "\n"
+      end
+      return s
    else
-      pats = { ... }
+      return tostring(o)
    end
-   return pats
 end
 
 M.zipWith = function(f, xs, ys)

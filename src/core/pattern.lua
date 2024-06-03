@@ -24,7 +24,7 @@ Event, Span, State = types.Event, types.Span, types.State
 
 local Pattern
 local reify, pure, silence, overlay
-local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin
+local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
 local fmap, firstCycle, querySpan
 local withEventTime
 local appLeft, appRight, appBoth
@@ -148,7 +148,7 @@ function base:__call(b, e)
 end
 
 function base:__tostring()
-   return dump(firstCycle(self))
+   return utils.dump2(firstCycle(self))
 end
 
 function base:__concat(other)
@@ -361,6 +361,11 @@ bind = function(pat, func)
    return bindWhole(pat, whole_func, func)
 end
 base.bind = bind
+
+join = function(pat)
+   return bind(pat, id)
+end
+base.join = join
 
 outerBind = function(pat, func)
    return bindWhole(pat, function(a)
@@ -688,7 +693,7 @@ function M.slowcat(pats)
       local offset = cyc - (cyc - i) / n
       return withEventTime(pat, function(t)
          return t + offset
-      end):query(State(a:withTime(function(t)
+      end):query(state:setSpan(a:withTime(function(t)
          return t - offset
       end)))
    end
@@ -867,30 +872,36 @@ register("zoom", function(s, e, pat)
    return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
 end)
 
-register("run", function(n)
-   -- local res = {}
-   -- for _, v in fun.range(0, n - 1) do
-   --    print(v)
-   --    res[#res + 1] = v
-   -- end
-   return M.fastFromList(fun.totable(fun.range(0, n - 1)))
-end, false)
+local _run = function(n)
+   local list = fun.totable(fun.range(0, n - 1))
+   return M.fastFromList(list)
+end
 
-register("iota", function(b, e)
-   local res = {}
-   for _, v in fun.range(b, e) do
-      res[#res + 1] = v
-   end
-   return M.fastFromList(res)
-end)
+M.run = function(n)
+   return fmap(reify(n), _run):join()
+end
 
-register("scan", function(n)
+local _iota = function(b, e)
+   local list = fun.totable(fun.range(b, e))
+   return M.fastFromList(list)
+end
+
+M.iota = function(b, e)
+   _iota = curry(_iota, 2)
+   return appLeft(fmap(reify(b), _iota), reify(e)):join()
+end
+
+local _scan = function(n)
    local res = {}
-   for _, v in fun.map(fun.range(1, n)) do
-      res[#res + 1] = U.run(v)
+   for _, v in fun.range(1, n) do
+      res[#res + 1] = M.run(v)
    end
-   return M.slowcat(res)
-end)
+   return M.fromList(res)
+end
+
+M.scan = function(n)
+   return fmap(reify(n), _scan):join()
+end
 
 local waveform = function(func)
    local query = function(_, state)
@@ -943,8 +954,9 @@ end
 M.irand = function(ipat)
    return innerJoin(fmap(reify(ipat), M._irand))
 end
+
 local _chooseWith = function(pat, ...)
-   local vals = map(reify, totable(...))
+   local vals = map(reify, { ... })
    if #vals == 0 then
       return M.silence()
    end
@@ -1052,7 +1064,7 @@ register("rev", function(pat)
          reflected._end = tmp
          return reflected
       end
-      local events = pat:query(State(reflect(span)))
+      local events = pat:query(state:setSpan(reflect(span)))
       return map(function(event)
          return event:withSpan(reflect)
       end, events)
@@ -1145,15 +1157,6 @@ M.maxi = maxi
 M.pipe = utils.pipe
 M.map = utils.map
 M.dump = dump
--- TODO:
+M.print = print
 
--- _opTrig(other, func) {
---   const otherPat = reify(other);
---   return otherPat.fmap((b) => this.fmap((a) => func(a)(b))).trigJoin();
--- }
--- _opTrigzero(other, func) {
---   const otherPat = reify(other);
---   return otherPat.fmap((b) => this.fmap((a) => func(a)(b))).trigzeroJoin();
--- }
--- print(M.polymeter(2, pure(1), pure(2)))
 return M
