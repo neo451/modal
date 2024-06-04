@@ -1,6 +1,5 @@
 local M = require "modal"
-local maxi = require("modal.maxi").maxi
-local to_lua = require("modal.maxi").to_lua
+local maxi = require "modal.maxi"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
@@ -16,7 +15,7 @@ local assert = require("busted").assert
 -- end)
 --
 -- local eval_top = maxi(M, true)
-local to_str = to_lua(M, true)
+local _, to_str = maxi(M, true)
 describe("set", function()
    it("should parse set to lua var set in only top level????", function()
       assert.same("a = 1; ", to_str [[ a = 1 ]])
@@ -31,7 +30,7 @@ describe("set", function()
    --    assert.same([[a = fastcat({pure("bd"),pure("sd")}); ]], to_str "a = [bd sd]")
    -- end)
 end)
-
+--
 local eval = maxi(M, false)
 
 describe("slice", function()

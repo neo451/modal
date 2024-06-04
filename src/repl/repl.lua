@@ -1,10 +1,10 @@
 local socket = require "socket"
-print "modal repl"
+print "modal repl   :? for help"
 local host = "localhost"
 local port = 9000
 local RL = require "readline"
 local M = require "modal"
-local maxi = require("modal.maxi").maxi
+local maxi = require "modal.maxi"
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -14,6 +14,41 @@ end
 RL.set_complete_list(keywords)
 
 local line
+
+local gen_T = function(t)
+   local format = function(a, ret)
+      -- TODO: pass in the Type consturctor??? Event[a]
+      local mat = "Pattern %s -> "
+      if ret then
+         mat = "Pattern %s"
+      end
+
+      return string.format(mat, a)
+   end
+   local s = ""
+   for i = 1, #t do
+      s = s .. format(t[i], false)
+   end
+   return s .. format(t.ret, true)
+end
+
+local optf = {
+   ["?"] = function()
+      return [[
+:v  show _VERSION
+:t  get type for lib func (TODO: for expression)
+:q  quit repl ]]
+   end,
+   t = function(a)
+      return gen_T(M.t[a])
+   end,
+   v = function()
+      return M._VERSION
+   end,
+   q = function()
+      os.exit()
+   end,
+}
 
 local ok, c = pcall(socket.connect, host, port)
 
@@ -28,6 +63,14 @@ local eval = function(a)
    --    evalf = maxi(M, true)
    -- end
    if a then
+      if a:sub(1, 1) == ":" then
+         -- print(a:sub(1, #a))
+         local name, param = string.match(a, "(%a+)%s(%a*)")
+         name = name and name or a:sub(2, #a)
+         param = param and param or nil
+         print(optf[name](param))
+         return
+      end
       local res, ok = evalf(a)
       if ok then
          if res then

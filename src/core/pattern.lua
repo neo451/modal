@@ -30,7 +30,7 @@ local withEventTime
 local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
-local maxi = require("modal.maxi").maxi
+local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 local iter = fun.iter
 local sin = math.sin
@@ -44,6 +44,7 @@ local floor = math.floor
 
 local M = {}
 local U = {} -- Unpatternified versions
+local TYPES = {}
 local _op = {}
 function _op.In(f)
    return function(a, b)
@@ -631,11 +632,13 @@ local patternify = function(func, method)
    return patterned
 end
 
-local function register(name, f, should_pat)
+local function register(name, f, should_pat, type_sig)
+   -- TODO: need this???
    if type(should_pat) == "nil" then
       should_pat = true
    end
    if should_pat then
+      TYPES[name] = type_sig
       U[name] = f
       M[name] = patternify(f, false)
       base[name] = patternify(f, true)
@@ -772,7 +775,7 @@ register("fast", function(factor, pat)
    end, function(t)
       return t / factor
    end)
-end)
+end, true, { "Time", "a", ret = "a" })
 
 register("slow", function(factor, pat)
    return U.fast(1 / factor, pat)
@@ -1083,7 +1086,7 @@ register("iter", function(n, pat)
       acc[i] = U.early(Fraction(i - 1, n), pat)
    end
    return M.fromList(acc)
-end)
+end, true, { "Int", "a", ret = "a" })
 
 register("reviter", function(n, pat)
    local acc = {}
@@ -1171,5 +1174,7 @@ M.pipe = utils.pipe
 M.map = utils.map
 M.dump = utils.dump2
 M.print = print
+M.u = U
+M.t = TYPES
 
 return M
