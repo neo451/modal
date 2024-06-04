@@ -36,23 +36,23 @@ local stat = V "stat"
 -- bd = '808bd
 -- then fonf = 808bd sd 808 bd
 
-Id = function(a)
+local Id = function(a)
    return { tag = "Id", a }
 end
 
-Table = function(a)
+local Table = function(a)
    return { tag = "Table", unpack(a) }
 end
 
-Str = function(a)
+local Str = function(a)
    return { tag = "String", a }
 end
 
-Num = function(a)
+local Num = function(a)
    return { tag = "Number", a }
 end
 
-Call = function(name, ...)
+local Call = function(name, ...)
    return { tag = "Call", Id(name), ... }
 end
 
@@ -83,7 +83,7 @@ local comma = ws * P "," * ws
 -- pipe = ws * P("|") * ws
 -- dot = ws * P(".") * ws
 
-local parseNumber = function(num)
+local pNumber = function(num)
    return { tag = "Number", tonumber(num) }
 end
 
@@ -97,14 +97,16 @@ local parseStep = function(chars)
    return { tag = "String", chars }
 end
 
-local resolvetails = function(args, fname)
+local resolvetails = function(args)
+   local fname = table.remove(args, 1)[1]
    local params = filter(function(a)
       return type(a) ~= "function"
    end, args)
    local tails = filter(function(a)
       return type(a) == "function"
    end, args)
-   local main = { tag = "Call", fname, unpack(params) }
+   -- local main = { tag = "Call", fname, unpack(params) }
+   local main = Call(fname, unpack(params))
    for i = 1, #tails do
       main = tails[i](main)
    end
@@ -126,7 +128,7 @@ local e = S "eE"
 local int = zero + (digit1_9 * digit ^ 0)
 local exp = e * (minus + plus) ^ -1 * digit ^ 1
 local frac = decimal_point * digit ^ 1
-local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / parseNumber
+local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / pNumber
 
 local pFast = function(a)
    return function(x)
@@ -151,13 +153,10 @@ local pDegrade = function(a)
 end
 
 -- TODO:
-local pTail = function(s)
-   -- return function(x)
-   --    return tinsert(x.options.ops, {
-   --       type = "tail",
-   --       arguments = { element = s },
-   --    })
-   -- end
+local pTail = function(b)
+   return function(a)
+      return Call("concat", a, purify(b))
+   end
 end
 
 local pRange = function(s)
@@ -247,10 +246,7 @@ local function pDollar(...)
    if #args == 1 then
       return args
    end
-   local fname = args[1]
-   fname.tag = "Id"
-   table.remove(args, 1)
-   return resolvetails(args, fname)
+   return resolvetails(args)
 end
 
 local function pList(...)
@@ -273,10 +269,10 @@ local function pList(...)
          return { tag = "Op", opname, unpack(args) }
       end
    end
-   local fname = args[1]
-   fname.tag = "Id"
-   table.remove(args, 1)
-   return resolvetails(args, fname)
+   -- local fname = args[1]
+   -- fname.tag = "Id"
+   -- table.remove(args, 1)
+   return resolvetails(args)
 end
 
 local pTailop = function(...)
@@ -380,10 +376,8 @@ end
 
 local function pStat(...)
    local args = { ... }
-   local fname = args[1]
-   fname.tag = "Id"
-   table.remove(args, 1)
-   return pRet(resolvetails(args, fname))
+   -- local fname = table.remove(args, 1)
+   return pRet(resolvetails(args))
 end
 
 local semi = P ";" ^ -1
@@ -394,6 +388,7 @@ local grammar = {
    ret = (list + mini + dollar) / pRet,
    list = P "(" * ws * expr ^ 0 * ws * P ")" / pList,
    dollar = S "$>" * ws * expr ^ 0 * ws / pDollar,
+   --- HACK:::::::::::::::::::
    expr = ws * (step + list + mini + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pSeq,
    stack = mini * (comma * mini) ^ 1 / pStack,
@@ -438,7 +433,7 @@ local function eval(env, top_level)
       if not ok then
          return ast, false
       end
-
+      -- mpp(ast)
       local lua_src = ast_to_src(ast)
       ok, f = pcall(loadstring, lua_src)
       if not ok then
@@ -454,6 +449,7 @@ local function to_lua(env, top_level)
    if top_level then
       grammar.root = ((stat + set + ret) * semi) ^ 1 / pRoot
       grammar.stat = ws * expr * (expr - P "=") * expr ^ 0 * ws / pStat
+      -- grammar.expr = ws * (step + list + mini + dollar + tailop + stat) * ws
    end
    local rules = Ct(C(grammar))
    local read = function(str)

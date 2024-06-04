@@ -1151,6 +1151,18 @@ register("scale", function(name, pat)
    return fmap(pat, toScale)
 end)
 
+M.concat = function(pat, other)
+   return fmap(pat, function(a)
+      return function(b)
+         if type(a) == "table" then
+            a[#a + 1] = b
+            return a
+         end
+         return { a, b }
+      end
+   end):appLeft(other)
+end
+
 M.sl = string_lambda
 M.id = id
 M.T = T

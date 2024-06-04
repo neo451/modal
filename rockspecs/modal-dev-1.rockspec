@@ -15,7 +15,6 @@ This project follows the footsteps of [vortex](https://github.com/tidalcycles/vo
 dependencies = {
    "lua >= 5.1",
    "losc >= 1.0.1-1",
-   -- TODO: dump this after clock with uv
    "luasocket >= 3.1.0-1",
    "abletonlink >= 1.0.0-1",
    "lpeg >= 1.1.0-1",
@@ -29,11 +28,10 @@ build = {
       ["modal.utils"] = "src/core/utils.lua",
       ["modal.fraction"] = "src/core/fraction.lua",
       ["modal.bitop"] = "src/core/bitop.lua",
-      ["modal.drawline"] = "src/core/drawline.lua",
       ["modal.fun"] = "src/core/fun.lua",
 
       ["modal.stream"] = "src/core/stream.lua",
-
+      ["modal.drawline"] = "src/core/drawline.lua",
       ["modal.types"] = "src/core/types.lua",
       ["modal.pattern"] = "src/core/pattern.lua",
       ["modal.pattern_factory"] = "src/core/pattern_factory.lua",
