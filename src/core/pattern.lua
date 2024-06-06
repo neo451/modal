@@ -1,5 +1,5 @@
 local utils = require "modal.utils"
-local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip =
+local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip, method_wrap =
    utils.map,
    utils.filter,
    utils.string_lambda,
@@ -12,7 +12,9 @@ local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand,
    utils.curry,
    utils.type,
    utils.nparams,
-   utils.flip
+   utils.flip,
+   utils.method_wrap
+
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
 local Fraction, tofrac, tofloat
@@ -652,15 +654,6 @@ local function auto_curry(arity, f)
    end
 end
 
-local function method_wrap(f)
-   return function(...)
-      local args = { ... }
-      local pat = table.remove(args, 1)
-      table.insert(args, pat)
-      return f(unpack(args))
-   end
-end
-
 local function register(name, f, type_sig, should_pat)
    if type(should_pat) == "nil" then
       should_pat = true
@@ -1227,6 +1220,7 @@ M.pipe = utils.pipe
 M.dump = utils.dump2
 M.u = U
 M.t = TYPES
+M.base = base
 
 M.pp = function(a)
    print(M.dump(a))

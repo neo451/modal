@@ -1,5 +1,5 @@
 local socket = require "socket"
-local maxi = require("modal.maxi").maxi
+local maxi = require "modal.maxi"
 local M = require "modal"
 
 local clock = M.DefaultClock

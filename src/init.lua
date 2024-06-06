@@ -1,4 +1,5 @@
 local pattern = require "modal.pattern"
+local ut = require "modal.utils"
 local params = require "modal.params"
 local pattern_factory = require "modal.pattern_factory"
 local ui = require "modal.ui"
@@ -35,9 +36,26 @@ for name, func in pairs(params) do
    modal[name] = func
 end
 
+local base = pattern.base
+local Pattern = pattern.Pattern
+
 for name, func in pairs(P) do
    modal[name] = func
+   base[name] = function(self, ...)
+      return self .. func(...)
+   end
 end
+
+setmetatable(Pattern, {
+   __index = base,
+   __call = function(cls, ...)
+      local _self_0 = setmetatable({}, base)
+      cls.__init(_self_0, ...)
+      return _self_0
+   end,
+})
+
+base.__class = Pattern
 
 if jit then
    local reify = modal.reify

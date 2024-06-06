@@ -308,4 +308,13 @@ local bind_methods = function(obj)
    })
 end
 
+function M.method_wrap(f)
+   return function(...)
+      local args = { ... }
+      local pat = table.remove(args, 1)
+      table.insert(args, pat)
+      return f(unpack(args))
+   end
+end
+
 return M
