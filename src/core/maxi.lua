@@ -3,6 +3,7 @@ local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
 local map = require("modal.utils").map
+local log = require "modal.log"
 
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
@@ -31,10 +32,7 @@ local expr = V "expr"
 local ret = V "ret"
 local set = V "set"
 local stat = V "stat"
--- TODO:
--- M.fonf = reify("bd sd bd sd")
--- bd = '808bd
--- then fonf = 808bd sd 808 bd
+
 return function(M, top_level)
    local Id = function(a)
       return { tag = "Id", a }
@@ -52,18 +50,49 @@ return function(M, top_level)
       return { tag = "Number", a }
    end
 
-   -- TODO:
-   local typecheck = function(name, args)
-      local types = M.t[name]
-      -- mpp(types)
-      for i = 1, #args do
-         -- assert(types[i] == M.T "args")
+   local function check_one(elem, T)
+      if T[1] == "Int" then
+         if not tonumber(elem[1]) then
+            log.warn(string.format("Can not match type %s to Int", type(elem[1])))
+            return false
+         end
+      end
+      return true
+   end
+
+   local function convert_one(elem, T)
+      if T.constructor == "Pattern" then
+         return { tag = "Call", Id "pure", elem }
+      else
+         return elem
       end
    end
 
+   local typecheck = function(name, args)
+      local types = M.t[name] -- infer types maybe
+      if not types then
+         return true, args
+      end
+      for i = 1, #args do
+         if not check_one(args[i], types.T[i]) then
+            return false, {}
+         end
+         args[i] = convert_one(args[i], types.T[i])
+      end
+      return true, args
+   end
+
    local Call = function(name, ...)
-      typecheck(name, { ... })
       return { tag = "Call", Id(name), ... }
+   end
+
+   local tCall = function(name, ...)
+      local ok, args = typecheck(name, { ... })
+      if ok then
+         return { tag = "Call", Id(name), unpack(args) }
+      else
+         error()
+      end
    end
 
    local id = function(x)
@@ -116,17 +145,15 @@ return function(M, top_level)
          return type(a) == "function"
       end, args)
       -- local main = { tag = "Call", fname, unpack(params) }
-      local main = Call(fname, unpack(params))
+      local main = tCall(fname, unpack(params))
       for i = 1, #tails do
          main = tails[i](main)
       end
       return main
    end
 
-   -- local step_char = R("09", "AZ", "az") + P("'") + P("-") + P("#") + P(".") + P("^") + P("_") + P("~") / id
    local step_char = R("09", "AZ", "az") + P "'" + P "-" + P "." + P "^" + P "_" + P "~" / id
    local tidalop = S "|+-*/^%><" ^ 2 / id
-   -- local step = ws * (((step_char ^ 1) + P("+") + P("-") + P("*") + P("/") + P("%")) / parseStep) * ws - P(".")
    local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
    local minus = P "-"
    local plus = P "+"
@@ -162,7 +189,6 @@ return function(M, top_level)
       end
    end
 
-   -- TODO:
    local pTail = function(b)
       return function(a)
          return Call("concat", a, purify(b))
@@ -243,8 +269,7 @@ return function(M, top_level)
       ["/"] = { "div", true },
       ["^"] = { "pow", true },
       ["%"] = { "mod", true },
-      ["."] = { "pipe", false },
-      -- TODO: tidal ops!!
+      ["."] = { "pipe", false }, -- TODO: proper expr and application
    }
 
    local function is_op(a)
@@ -270,7 +295,7 @@ return function(M, top_level)
             if is_native then
                return { tag = "Op", opname, unpack(args) }
             else
-               -- return { tag = "Call", Id(opname), unpack(map(string2id, args)) }
+               -- TODO: check??
                return Call(opname, unpack(map(string2id, args)))
             end
          elseif is_op(args[1][1]) then
@@ -279,9 +304,6 @@ return function(M, top_level)
             return { tag = "Op", opname, unpack(args) }
          end
       end
-      -- local fname = args[1]
-      -- fname.tag = "Id"
-      -- table.remove(args, 1)
       return resolvetails(args)
    end
 

@@ -26,6 +26,7 @@ build = {
       ["modal.init"] = "src/init.lua",
 
       ["modal.utils"] = "src/core/utils.lua",
+      ["modal.log"] = "src/core/log.lua",
       ["modal.fraction"] = "src/core/fraction.lua",
       ["modal.bitop"] = "src/core/bitop.lua",
       ["modal.fun"] = "src/core/fun.lua",

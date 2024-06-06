@@ -616,12 +616,12 @@ reify = function(thing)
 end
 M.reify = reify
 
-local patternify = function(func, method)
+local patternify = function(func)
    local patterned = function(...)
       local arity = nparams(func)
       local pats = map(reify, { ... })
-      local pat_idx = method and 1 or #pats
-      local pat = table.remove(pats, pat_idx)
+      -- local pats = { ... }
+      local pat = table.remove(pats, #pats)
       if arity == 1 then
          return func(pat)
       end
@@ -652,6 +652,15 @@ local function auto_curry(arity, f)
    end
 end
 
+local function method_wrap(f)
+   return function(...)
+      local args = { ... }
+      local pat = table.remove(args, 1)
+      table.insert(args, pat)
+      return f(unpack(args))
+   end
+end
+
 local function register(name, f, type_sig, should_pat)
    if type(should_pat) == "nil" then
       should_pat = true
@@ -661,19 +670,14 @@ local function register(name, f, type_sig, should_pat)
          TYPES[name] = TDef:new(type_sig) -- HACK
       end
       U[name] = f
-      M[name] = auto_curry(nparams(U[name]), patternify(f, false))
-      base[name] = patternify(f, true)
+      M[name] = auto_curry(nparams(f), patternify(f))
+      base[name] = method_wrap(patternify(f))
    else
       if type(type_sig) == "string" then
          TYPES[name] = TDef:new(type_sig) -- HACK
       end
       M[name] = auto_curry(nparams(f), f)
-      base[name] = function(...)
-         local args = { ... }
-         local pat = table.remove(args, 1)
-         table.insert(args, pat)
-         return f(unpack(args))
-      end
+      base[name] = method_wrap(f)
    end
 end
 M.register = register
@@ -765,7 +769,7 @@ function M.timecat(args)
    for i = 1, #args, 2 do
       time, pat = args[i], args[i + 1]
       b, e = accum / total, (accum + time) / total
-      pats[#pats + 1] = U.compress(b, e, pat)
+      pats[#pats + 1] = M.compress(b, e, pat)
       accum = accum + time
    end
    return M.stack(pats)
@@ -808,32 +812,40 @@ end, "Pattern Time -> Pattern a -> Pattern a")
 
 register("slow", function(factor, pat)
    return U.fast(1 / factor, pat)
-end)
+end, "Pattern Time -> Pattern a -> Pattern a")
 
+-- rotL
 register("early", function(offset, pat)
    return withTime(pat, function(t)
       return t + offset
    end, function(t)
       return t - offset
    end)
-end)
+end, "Time -> Pattern a -> Pattern a", false) -- HACK: why not patternify TIME??
 
+-- rotR
 register("late", function(offset, pat)
-   return U.early(-offset, pat)
-end)
+   return M.early(-offset, pat)
+end, "Time -> Pattern a -> Pattern a", false)
 
-register("inside", function(factor, f, pat)
-   return U.fast(factor, f(U.slow(factor, pat)))
-end)
+-- TODO: test
+register("inside", function(np, f, pat)
+   local function _inside(n)
+      return U.fast(n, f(U.slow(n, pat)))
+   end
+   return fmap(np, _inside):innerJoin()
+end, "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", false)
 
 register("outside", function(factor, f, pat)
-   return U.inside(1 / factor, f, pat)
-end)
+   return M.inside(1 / factor, f, pat)
+end, "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", false)
 
-register("ply", function(factor, pat)
-   pat = pure(U.fast(factor, pat))
+register("ply", function(n, pat)
+   pat = fmap(pat, function(x)
+      return U.fast(n, pure(x))
+   end)
    return squeezeJoin(pat)
-end)
+end, "Pattern Time -> Pattern a -> Pattern a")
 
 register("fastgap", function(factor, pat)
    factor = tofrac(factor)
@@ -864,27 +876,26 @@ register("fastgap", function(factor, pat)
       return map(f, events)
    end
    return Pattern(query):splitQueries()
-end)
+end, "Pattern Time -> Pattern a -> Pattern a")
 
--- TODO: wrong after span correction???
 register("compress", function(b, e, pat)
    b, e = tofrac(b), tofrac(e)
    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
       return M.silence()
    end
    local fasted = U.fastgap((Fraction(1) / (e - b)), pat)
-   return U.late(b, fasted)
-end)
+   return M.late(b, fasted)
+end, "Time -> Time -> Pattern a -> Pattern a", false)
 
 register("focus", function(b, e, pat)
    b, e = tofrac(b), tofrac(e)
    local fasted = U.fast((Fraction(1) / (e - b)), pat)
-   return U.late(Span:cyclePos(b), fasted)
-end)
+   return M.late(Span:cyclePos(b), fasted)
+end, "Time -> Time -> Pattern a -> Pattern a", false)
 
 -- TODO: replace
 M.focusSpan = function(span, pat)
-   return U.focus(span._begin, span._end, reify(pat))
+   return M.focus(span._begin, span._end, reify(pat))
 end
 
 register("zoom", function(s, e, pat)
@@ -902,7 +913,7 @@ register("zoom", function(s, e, pat)
    end
    -- HACK:
    return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
-end)
+end, "Time -> Time -> Pattern a -> Pattern a", false)
 
 local _run = function(n)
    local list = fun.totable(fun.range(0, n - 1))
@@ -912,6 +923,7 @@ end
 M.run = function(n)
    return fmap(reify(n), _run):join()
 end
+TYPES["run"] = TDef:new "Pattern Int -> Pattern Int"
 
 local _iota = function(b, e)
    local list = fun.totable(fun.range(b, e))
@@ -922,7 +934,7 @@ M.iota = function(b, e)
    _iota = curry(_iota, 2)
    return appLeft(fmap(reify(b), _iota), reify(e)):join()
 end
-
+TYPES["iota"] = "Pattern Int -> Pattern Int -> Pattern Int"
 local _scan = function(n)
    local res = {}
    for _, v in fun.range(1, n) do
@@ -934,6 +946,7 @@ end
 M.scan = function(n)
    return fmap(reify(n), _scan):join()
 end
+TYPES["scan"] = "Pattern Int -> Pattern Int"
 
 local waveform = function(func)
    local query = function(_, state)
@@ -947,7 +960,6 @@ M.steady = function(value)
       return { Event(nil, state.span, value) }
    end)
 end
-
 local toBipolar = function(pat)
    return pat * 2 - 1
 end
@@ -960,7 +972,7 @@ M.sine2 = waveform(function(t)
    return sin(t:asFloat() * pi * 2)
 end)
 M.sine = fromBipolar(M.sine2)
-M.cosine2 = U.late(1 / 4, M.sine2)
+M.cosine2 = M.late(1 / 4, M.sine2)
 M.cosine = fromBipolar(M.cosine2)
 M.square = waveform(function(t)
    return floor((t * 2) % 2)
@@ -1102,11 +1114,11 @@ register("rev", function(pat)
       end, events)
    end
    return Pattern(query)
-end)
+end, "Pattern a -> Pattern a")
 
 register("palindrome", function(pat)
    return M.slowcat { pat, U.rev(pat) }
-end)
+end, "Pattern a -> Pattern a")
 
 register("iter", function(n, pat)
    local acc = {}
@@ -1119,10 +1131,10 @@ end, "Pattern Int -> Pattern a -> Pattern a")
 register("reviter", function(n, pat)
    local acc = {}
    for i = 1, n do
-      acc[i] = U.late(Fraction(i - 1, n), pat)
+      acc[i] = M.late(Fraction(i - 1, n), pat)
    end
    return M.fromList(acc)
-end)
+end, "Pattern Int -> Pattern a -> Pattern a")
 
 register("segment", function(n, pat)
    return appLeft(M.fast(n, pure(id)), pat)
@@ -1135,14 +1147,14 @@ end)
 register("off", function(tp, f, pat)
    tp, f, pat = reify(tp), M.sl(f, M), reify(pat)
    local _off = function(t)
-      return M.stack { pat, f(pat):late(t) }
+      return M.stack { pat, M.late(t, f(pat)) }
    end
    return fmap(tp, _off):innerJoin()
 end, "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
 
 register("echoWith", function(times, time, func, pat)
    local f = function(index)
-      return func(U.late(time * index, pat))
+      return func(M.late(time * index, pat))
    end
    local ts
    do
