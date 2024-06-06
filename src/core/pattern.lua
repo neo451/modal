@@ -21,6 +21,7 @@ Fraction, tofrac, tofloat = frac.Fraction, frac.tofrac, frac.tofloat
 local Event, Span, State
 local types = require "modal.types"
 Event, Span, State = types.Event, types.Span, types.State
+local TDef = require "modal.type_def"
 
 local Pattern
 local reify, pure, silence, overlay
@@ -583,6 +584,10 @@ end
 M.silence = silence
 
 function pure(value)
+   -- HACK: ??
+   if value == "~" then
+      return silence()
+   end
    local query = function(_, state)
       local cycles = state.span:spanCycles()
       local f = function(span)
@@ -632,19 +637,43 @@ local patternify = function(func, method)
    return patterned
 end
 
-local function register(name, f, should_pat, type_sig)
-   -- TODO: need this???
+local function auto_curry(arity, f)
+   return function(...)
+      local args = { ... }
+      if #args < arity then
+         f = curry(f, arity)
+         for _, v in ipairs(args) do
+            f = f(v)
+         end
+         return f
+      else
+         return f(...)
+      end
+   end
+end
+
+local function register(name, f, type_sig, should_pat)
    if type(should_pat) == "nil" then
       should_pat = true
    end
    if should_pat then
-      TYPES[name] = type_sig
+      if type(type_sig) == "string" then
+         TYPES[name] = TDef:new(type_sig) -- HACK
+      end
       U[name] = f
-      M[name] = patternify(f, false)
+      M[name] = auto_curry(nparams(U[name]), patternify(f, false))
       base[name] = patternify(f, true)
    else
-      M[name] = f
-      base[name] = f
+      if type(type_sig) == "string" then
+         TYPES[name] = TDef:new(type_sig) -- HACK
+      end
+      M[name] = auto_curry(nparams(f), f)
+      base[name] = function(...)
+         local args = { ... }
+         local pat = table.remove(args, 1)
+         table.insert(args, pat)
+         return f(unpack(args))
+      end
    end
 end
 M.register = register
@@ -775,7 +804,7 @@ register("fast", function(factor, pat)
    end, function(t)
       return t / factor
    end)
-end, true, { "Time", "a", ret = "a" })
+end, "Pattern Time -> Pattern a -> Pattern a")
 
 register("slow", function(factor, pat)
    return U.fast(1 / factor, pat)
@@ -840,7 +869,6 @@ end)
 -- TODO: wrong after span correction???
 register("compress", function(b, e, pat)
    b, e = tofrac(b), tofrac(e)
-   -- print(b,e)
    if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
       return M.silence()
    end
@@ -1086,7 +1114,7 @@ register("iter", function(n, pat)
       acc[i] = U.early(Fraction(i - 1, n), pat)
    end
    return M.fromList(acc)
-end, true, { "Int", "a", ret = "a" })
+end, "Pattern Int -> Pattern a -> Pattern a")
 
 register("reviter", function(n, pat)
    local acc = {}
@@ -1104,9 +1132,13 @@ register("range", function(mi, ma, pat)
    return pat * (ma - mi) + mi
 end)
 
-register("off", function(time_pat, f, pat)
-   return M.stack { pat, f(M.late(time_pat, pat)) }
-end)
+register("off", function(tp, f, pat)
+   tp, f, pat = reify(tp), M.sl(f, M), reify(pat)
+   local _off = function(t)
+      return M.stack { pat, f(pat):late(t) }
+   end
+   return fmap(tp, _off):innerJoin()
+end, "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
 
 register("echoWith", function(times, time, func, pat)
    local f = function(index)
@@ -1125,27 +1157,34 @@ register("echoWith", function(times, time, func, pat)
    return M.stack(map(f, ts))
 end)
 
-register("when", function(bool, f, pat)
-   return bool and f(pat) or pat
-end)
-
-register("firstOf", function(n, f, pat)
-   local acc = {}
-   for i = 1, n do
-      acc[i] = i == 1 and true or false
+register("when", function(test, f, pat)
+   f = M.sl(f, M)
+   local query = function(_, state)
+      local cycle_idx = state.span._begin:sam():asFloat()
+      if test(cycle_idx) then
+         return f(pat):query(state)
+      else
+         return pat:query(state)
+      end
    end
-   return M.when(M.fastFromList(acc), f, pat)
-end)
+   return Pattern(query):splitQueries()
+end, "(Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", false)
 
-M.every = M.firstOf
-
-register("lastOf", function(n, f, pat)
-   local acc = {}
-   for i = 1, n do
-      acc[i] = i == n and true or false
+register("every", function(tp, f, pat)
+   f = M.sl(f, M)
+   tp, pat = reify(tp), reify(pat)
+   local _every = function(t)
+      local test = function(i)
+         return i % t == 0
+      end
+      return M.when(test, f, pat)
    end
-   return M.when(M.fastFromList(acc), f, pat)
-end)
+   return fmap(tp, _every):innerJoin()
+end, "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
+
+M.firstOf = M.every
+
+-- TODO: lastOf, every'
 
 register("scale", function(name, pat)
    local toScale = function(v)
@@ -1172,9 +1211,13 @@ M.T = T
 M.maxi = maxi
 M.pipe = utils.pipe
 M.map = utils.map
+M.pipe = utils.pipe
 M.dump = utils.dump2
-M.print = print
 M.u = U
 M.t = TYPES
+
+M.pp = function(a)
+   print(M.dump(a))
+end
 
 return M

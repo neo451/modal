@@ -232,7 +232,7 @@ M.timeToRand = function(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
 
-local _string_lambda = function(f)
+M.string_lambda = function(f, env)
    if type(f) == "function" then
       return f
    end
@@ -252,6 +252,7 @@ local _string_lambda = function(f)
          return error(err)
       end
       fn = fn()
+      setfenv(fn, env)
       return fn
    else
       return error "not a string lambda"
@@ -269,8 +270,8 @@ M.memoize = function(func)
       return res
    end
 end
-
-M.string_lambda = M.memoize(_string_lambda)
+-- TODO:
+-- M.string_lambda = M.memoize(_string_lambda)
 
 ---returns num_param, is_vararg
 ---@param func function

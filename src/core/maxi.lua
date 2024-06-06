@@ -1,5 +1,5 @@
 local lpeg = require "lpeg"
-P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
+local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
 local map = require("modal.utils").map

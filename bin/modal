@@ -1,4 +1,4 @@
 #!/usr/bin/luajit
-require("modal.repl")
+require "modal.repl"
 
 -- -- vi: ft=lua ts=3 sw=3

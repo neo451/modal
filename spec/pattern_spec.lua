@@ -14,6 +14,7 @@ do
 end
 local C = require "modal.params"
 
+local s = M.silence
 -- local reify = require("modal.pattern").modal
 
 describe("new", function()
@@ -23,14 +24,10 @@ describe("new", function()
    end)
    it("should create with specified query", function()
       local pat = Pattern(function()
-         return {
-            Event(),
-         }
+         return { Event() }
       end)
       local Events = pat:query(State())
-      assert.are.same({
-         Event(),
-      }, Events)
+      assert.are.same({ Event() }, Events)
    end)
 end)
 
@@ -42,9 +39,7 @@ describe("withValue", function()
          return v + 5
       end
       local newPat = pat:withValue(func)
-      local expected = {
-         Event(Span(0, 1), Span(0, 1), 10),
-      }
+      local expected = { Event(Span(0, 1), Span(0, 1), 10) }
       return assert.are.same(expected, newPat(0, 1))
    end)
 end)
@@ -410,57 +405,40 @@ end)
 describe("early", function()
    it("should return a pattern whose Events are moved backword in time", function()
       local pat = M.early(0.5, reify { "bd", "sd" })
-      local expected = {
-         Event(Span(0, 1 / 2), Span(0, 1 / 2), "sd"),
-         Event(Span(1 / 2, 1), Span(1 / 2, 1), "bd"),
-      }
-      assert.are.same(expected, pat(0, 1))
+      local expected = M.reify { "sd", "bd" }
+      assert.are.same(expected, pat)
    end)
 end)
 
 describe("fastgap", function()
    it("should bring pattern closer together", function()
       local pat = M.fastgap(4, reify { "bd", "sd" })
-      local expected = {
-         Event(Span(0, 1 / 8), Span(0, 1 / 8), "bd"),
-         Event(Span(1 / 8, 1 / 4), Span(1 / 8, 1 / 4), "sd"),
-      }
-      assert.are.same(expected, pat(0, 1))
+      local expected = M.fastFromList { "bd", "sd", "~", "~", "~", "~", "~", "~" }
+      assert.are.same(expected, pat)
    end)
 end)
 
 describe("compress", function()
    it("should bring pattern closer together", function()
       local pat = M.compress(0.25, 0.75, M.fastFromList { "bd", "sd" })
-      local expected = {
-         Event(Span(1 / 4, 1 / 2), Span(1 / 4, 1 / 2), "bd"),
-         Event(Span(1 / 2, 3 / 4), Span(1 / 2, 3 / 4), "sd"),
-      }
-      assert.are.same(expected, pat(0, 1))
+      local expected = M.fastFromList { "~", "bd", "sd", "~" }
+      assert.are.same(expected, pat)
    end)
 end)
 
 describe("focus", function()
    it("should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", function()
       local pat = M.focus(1 / 4, 3 / 4, reify { "bd", "sd" })
-      local expected = {
-         Event(Span(0, 1 / 4), Span(0, 1 / 4), "sd"),
-         Event(Span(1 / 4, 1 / 2), Span(1 / 4, 1 / 2), "bd"),
-         Event(Span(1 / 2, 3 / 4), Span(1 / 2, 3 / 4), "sd"),
-         Event(Span(3 / 4, 1), Span(3 / 4, 1), "bd"),
-      }
-      assert.are.same(expected, pat(0, 1))
+      local expected = M.fastFromList { "sd", "bd", "sd", "bd" }
+      assert.are.same(expected, pat)
    end)
 end)
 
 describe("zoom", function()
    it("should play a portion of a pattern", function()
       local pat = M.zoom(1 / 4, 3 / 4, reify { "x", "bd", "sd", "x" })
-      local expected = {
-         Event(Span(0, 1 / 2), Span(0, 1 / 2), "bd"),
-         Event(Span(1 / 2, 1), Span(1 / 2, 1), "sd"),
-      }
-      assert.are.same(expected, pat(0, 1))
+      local expected = M.fastFromList { "bd", "sd" }
+      assert.are.same(expected, pat)
    end)
 end)
 
@@ -496,6 +474,49 @@ describe("euclid", function()
          Event(Span(0, 1), Span(5 / 8, 3 / 4), "bd"),
          Event(Span(0, 1), Span(7 / 8, 1), "bd"),
       }
+      assert.are.same(expected, pat(0, 1))
+   end)
+end)
+
+describe("every", function()
+   it("should apply f every n cycles", function()
+      local inc1 = function(a)
+         return a + 1
+      end
+      local pat = M.every(3, inc1, 1)
+      local expected = M.fromList { 2, 1, 1 }
+      assert.are.same(expected, pat)
+   end)
+
+   it("should take string lambda that gets lib funcs env", function()
+      local pat = M.every(3, "|x| x:fast(2)", 1)
+      local expected = M.slowcat { M.fast(2, 1), 1, 1 }
+      assert.are.same(expected, pat)
+   end)
+end)
+
+describe("off", function()
+   it("should offset applying f", function()
+      local inc1 = function(a)
+         return a + 1
+      end
+      local pat = M.off(0.5, inc1, 1)
+      local expected = {
+         Event(Span(0, 1), Span(0, 1), 1),
+         Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
+         Event(Span(0.5, 1.5), Span(0.5, 1), 2),
+      }
+      assert.are.same(expected, pat(0, 1))
+   end)
+
+   it("should take string lambda that gets lib funcs env", function()
+      local pat = M.off(0.5, "|x| x + 1", 1)
+      local expected = {
+         Event(Span(0, 1), Span(0, 1), 1),
+         Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
+         Event(Span(0.5, 1.5), Span(0.5, 1), 2),
+      }
+
       assert.are.same(expected, pat(0, 1))
    end)
 end)

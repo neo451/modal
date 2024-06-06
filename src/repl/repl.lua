@@ -15,23 +15,6 @@ RL.set_complete_list(keywords)
 
 local line
 
-local gen_T = function(t)
-   local format = function(a, ret)
-      -- TODO: pass in the Type consturctor??? Event[a]
-      local mat = "Pattern %s -> "
-      if ret then
-         mat = "Pattern %s"
-      end
-
-      return string.format(mat, a)
-   end
-   local s = ""
-   for i = 1, #t do
-      s = s .. format(t[i], false)
-   end
-   return s .. format(t.ret, true)
-end
-
 local optf = {
    ["?"] = function()
       return [[
@@ -40,7 +23,7 @@ local optf = {
 :q  quit repl ]]
    end,
    t = function(a)
-      return gen_T(M.t[a])
+      return M.t[a]
    end,
    v = function()
       return M._VERSION
