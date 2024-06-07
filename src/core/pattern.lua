@@ -602,11 +602,24 @@ function pure(value)
 end
 
 M.pure = pure
+--
+-- TODO: temp
+M.pure2 = function(a)
+   if T(a) == "Pattern" then
+      return a
+   else
+      return M.pure(a)
+   end
+end
 
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = maxi(union(_G, M), false)("[" .. thing .. "]")
+      -- TODO: think about this?
+      for i, v in pairs(M) do
+         _G[i] = v
+      end
+      local res = maxi(_G, false)("[" .. thing .. "]")
       return res
    elseif "table" == t then
       return M.fastFromList(thing)

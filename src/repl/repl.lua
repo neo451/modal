@@ -36,8 +36,10 @@ local optf = {
 
 local ok, c = pcall(socket.connect, host, port)
 
+M()
+
 local eval = function(a)
-   local evalf = maxi(M, true)
+   local evalf = maxi(_G, true)
    -- if a == ">>lua" then
    --    evalf = function(a)
    --       return pcall(loadstring, "return " .. a)()

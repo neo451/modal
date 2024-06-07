@@ -1,5 +1,4 @@
 local lpeg = require "lpeg"
--- TODO: weight in polymeter
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
@@ -64,7 +63,7 @@ return function(M, top_level)
 
    local function convert_one(elem, T)
       if T.constructor == "Pattern" then
-         return { tag = "Call", Id "pure", elem }
+         return { tag = "Call", Id "pure2", elem }
       else
          return elem
       end
@@ -105,8 +104,8 @@ return function(M, top_level)
       if type(v) ~= "table" then
          return v
       end
-      if v.tag ~= "Call" and v.tag ~= "Id" then
-         return Call("pure", v)
+      if v.tag ~= "Call" then
+         return Call("pure2", v)
       end
       return v
    end
@@ -125,18 +124,19 @@ return function(M, top_level)
    -- dot = ws * P(".") * ws
 
    local pNumber = function(num)
-      return { tag = "Number", tonumber(num) }
+      return Num(tonumber(num))
    end
 
    local parseStep = function(chars)
       if tonumber(chars) then
-         return { tag = "Number", tonumber(chars) }
+         return Num(tonumber(chars))
       end
       if string.sub(chars, 0, 1) == "^" then
          id = chars:sub(2, #chars)
-         return { tag = "String", M[id] }
+         -- return Str(M[id])
+         return Id(id)
       end
-      return { tag = "String", chars }
+      return Str(chars)
    end
 
    local rTails = function(args)
@@ -379,6 +379,7 @@ return function(M, top_level)
    end
 
    local function pSet(lhs, rhs)
+      -- M[lhs[1]] = rhs[1]
       lhs.tag = "Id"
       return { tag = "Set", { lhs }, { rhs } }
    end
