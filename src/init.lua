@@ -24,9 +24,9 @@ for name, func in pairs(pattern_factory) do
    modal[name] = func
 end
 
-for name, pat in pairs(lib) do
-   modal[name] = modal.reify(pat)
-end
+-- for name, pat in pairs(lib) do
+--    modal[name] = modal.reify(pat)
+-- end
 
 for name, func in pairs(ui) do
    modal[name] = func

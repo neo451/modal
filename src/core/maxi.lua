@@ -1,4 +1,5 @@
 local lpeg = require "lpeg"
+-- TODO: weight in polymeter
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
 local filter = require("modal.utils").filter
@@ -32,6 +33,7 @@ local expr = V "expr"
 local ret = V "ret"
 local set = V "set"
 local stat = V "stat"
+local choose = V "choose"
 
 return function(M, top_level)
    local Id = function(a)
@@ -119,7 +121,7 @@ return function(M, top_level)
    local seed = -1
    local ws = S " \n\r\t" ^ 0
    local comma = ws * P "," * ws
-   -- pipe = ws * P("|") * ws
+   local pipe = ws * P "|" * ws
    -- dot = ws * P(".") * ws
 
    local pNumber = function(num)
@@ -130,13 +132,14 @@ return function(M, top_level)
       if tonumber(chars) then
          return { tag = "Number", tonumber(chars) }
       end
-      if string.sub(chars, 0, 1) == "'" then
-         return { tag = "Id", chars:sub(2, #chars) }
+      if string.sub(chars, 0, 1) == "^" then
+         id = chars:sub(2, #chars)
+         return { tag = "String", M[id] }
       end
       return { tag = "String", chars }
    end
 
-   local resolvetails = function(args)
+   local rTails = function(args)
       local fname = table.remove(args, 1)[1]
       local params = filter(function(a)
          return type(a) ~= "function"
@@ -222,7 +225,7 @@ return function(M, top_level)
       end
    end
 
-   local function resolvereps(ast)
+   local function rReps(ast)
       local res = {}
       for _, node in pairs(ast) do
          if node.reps then
@@ -250,16 +253,38 @@ return function(M, top_level)
       return sli
    end
 
-   local pSeq = function(...)
-      local args = { ... }
-      args = resolvereps(args)
-      return args, false
+   local addWeight = function(a, b)
+      b = b.weight and b.weight or 1
+      return a + b
+   end
+
+   local rWeight = function(args)
+      local acc = {}
+      for _, v in ipairs(args) do
+         acc[#acc + 1] = Num(v.weight) or Num(1)
+         acc[#acc + 1] = v
+      end
+      return acc
+   end
+
+   local pSeq = function(isSlow)
+      return function(args)
+         local weightSum = reduce(addWeight, 0, args)
+         if weightSum > #args then
+            return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
+         else
+            return Call(isSlow and "slowcat" or "fastcat", Table(args))
+         end
+      end
    end
 
    local pStack = function(...)
-      local args = { ... }
-      args = resolvereps(args)
-      return args, true
+      local args = map(rReps, { ... })
+      return rReps(args), "Stack"
+   end
+
+   local pChoose = function(...)
+      return rReps { ... }, "Choose"
    end
 
    local opsymb = {
@@ -281,7 +306,7 @@ return function(M, top_level)
       if #args == 1 then
          return args
       end
-      return resolvetails(args)
+      return rTails(args)
    end
 
    local function pList(...)
@@ -304,89 +329,41 @@ return function(M, top_level)
             return { tag = "Op", opname, unpack(args) }
          end
       end
-      return resolvetails(args)
+      return rTails(args)
    end
 
    local pTailop = function(...)
       local args = { ... }
-      local opsymb = table.remove(args, 1)
+      local symb = table.remove(args, 1)
       args = pDollar(unpack(args))
       return function(x)
-         return { tag = "Call", { tag = "Index", Id "op", Str(opsymb) }, x, args }
+         return { tag = "Call", { tag = "Index", Id "op", Str(symb) }, x, args }
       end
    end
 
-   local use_timecat = function(args)
-      local addWeight = function(a, b)
-         b = b.weight and b.weight or 1
-         return a + b
-      end
-      local weightSum = reduce(addWeight, 0, args)
-      if weightSum > #args then
-         return true
-      end
-   end
-
-   local resolveweight = function(args)
-      local addWeight = function(a, b)
-         return a + (b.weight and b.weight or 1)
-      end
-      local weightSum = reduce(addWeight, 0, args)
-      local acc = {}
-      for _, v in ipairs(args) do
-         acc[#acc + 1] = Num(v.weight) or Num(1)
-         -- acc[#acc+1] = purify(v)
-         acc[#acc + 1] = v
-      end
-      -- return { tag = "Call", Id "timecat", Table(acc) }, weightSum
-      return Call("timecat", Table(acc)), weightSum
-   end
-
-   local pSubCycle = function(args, isStack)
-      if isStack then
-         -- return { tag = "Call", Id "stack", Table(args) }
+   local pSubCycle = function(args, tag)
+      if tag == "Stack" then
+         args = map(pSeq(false), args)
          return Call("stack", Table(args))
-      else
-         if use_timecat(args) then
-            local res = resolveweight(args)
-            return res
-         else
-            -- return { tag = "Call", Id "fastcat", Table(args) }
-            return Call("fastcat", Table(args))
-         end
+      elseif tag == "Choose" then
+         args = map(pSeq(false), args)
+         return Call("randcat", unpack(args))
       end
    end
 
-   local pPolymeter = function(...)
-      local args = { ... }
-      -- HACK: where bools form?????
-      args = filter(function(s)
-         return type(s) ~= "boolean"
-      end, args)
-      local steps = table.remove(args, #args)
-      if steps == -1 then
-         steps = Num(#args[1])
-      end
-      -- TODO: into stack, proper stack with sequence
-      local function f(s)
-         return Call("fastcat", Table(s))
-      end
-      args = map(f, args)
+   local pPolymeterSteps = function(s)
+      return (s ~= "") and s or -1
+   end
+
+   local pPolymeter = function(args, _, steps) -- TODO: what about choose?
+      steps = (steps == -1) and Num(#args[1]) or steps
+      args = map(pSeq(false), args)
       return Call("polymeter", steps, Table(args))
    end
 
    local pSlowSeq = function(args, _)
-      if use_timecat(args) then
-         local tab, weightSum = resolveweight(args)
-         return Call("slow", Num(weightSum), tab)
-      else
-         return Call("slowcat", Table(args))
-      end
+      return pSeq(true)(args)
    end
-
-   -- TODO: weight in polymeter
-   -- TODO: to fraction ?
-   -- TODO:  code blocks
 
    local function pRoot(...)
       local stats = { ... }
@@ -407,8 +384,11 @@ return function(M, top_level)
    end
 
    local function pStat(...)
-      local args = { ... }
-      return pRet(resolvetails(args))
+      return pRet(rTails { ... })
+   end
+
+   local function pDot(...)
+      return { ... }
    end
 
    local semi = P ";" ^ -1
@@ -417,24 +397,20 @@ return function(M, top_level)
       root = ((set + ret) * semi) ^ 1 / pRoot,
       set = step * P "=" * expr / pSet,
       ret = (list + mini + dollar) / pRet,
-      list = P "(" * ws * expr ^ 0 * ws * P ")" / pList,
+      list = ws * P "(" * ws * expr ^ 0 * ws * P ")" * ws / pList,
       dollar = S "$>" * ws * expr ^ 0 * ws / pDollar,
-      --- HACK:::::::::::::::::::
       expr = ws * (step + list + mini + dollar + tailop) * ws,
-      sequence = (mini ^ 1) / pSeq,
-      stack = mini * (comma * mini) ^ 1 / pStack,
-      -- choose = sequence * (pipe * sequence) ^ 1 / parseChoose,
+      sequence = (mini ^ 1) / pDot,
+      stack = sequence * (comma * sequence) ^ 0 / pStack,
+      choose = sequence * (pipe * sequence) ^ 1 / pChoose,
       -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
-      -- tailop = P("#") * ws * step * ws * mini * ws / pTailop,
       tailop = tidalop * ws * step * ws * mini * ws / pTailop,
       mini = (slice * op ^ 0) / pSlices,
-      slice = step + sub_cycle + polymeter + slow_sequence,
-      sub_cycle = P "[" * ws * (stack + sequence) * ws * P "]" / pSubCycle,
+      slice = step + sub_cycle + polymeter + slow_sequence + list,
+      sub_cycle = P "[" * ws * (choose + stack) * ws * P "]" / pSubCycle,
       slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
-      polymeter = P "{" * ws * sequence * (comma * sequence) ^ 0 * ws * P "}" * polymeter_steps * ws / pPolymeter,
-      polymeter_steps = (P "%" * slice) ^ -1 / function(s)
-         return (s ~= "") and s or -1
-      end,
+      polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
+      polymeter_steps = (P "%" * slice) ^ -1 / pPolymeterSteps,
       op = fast + slow + tail + range + replicate + degrade + weight + euclid,
       fast = P "*" * slice / pFast,
       slow = P "/" * slice / pSlow,
@@ -467,6 +443,7 @@ return function(M, top_level)
       end
       -- mpp(ast)
       local lua_src = ast_to_src(ast)
+      -- print(lua_src)
       ok, f = pcall(loadstring, lua_src)
       if not ok then
          return f, false

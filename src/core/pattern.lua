@@ -606,7 +606,7 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = maxi(M, false)("[" .. thing .. "]")
+      local res = maxi(union(_G, M), false)("[" .. thing .. "]")
       return res
    elseif "table" == t then
       return M.fastFromList(thing)
@@ -993,7 +993,8 @@ M.irand = function(ipat)
 end
 
 local _chooseWith = function(pat, ...)
-   local vals = map(reify, { ... })
+   -- local vals = map(reify, { ... })
+   local vals = { ... }
    if #vals == 0 then
       return M.silence()
    end
