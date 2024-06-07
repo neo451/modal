@@ -57,6 +57,9 @@ setmetatable(Pattern, {
 
 base.__class = Pattern
 
+-- TODO: update env??
+modal.sl = ut.string_lambda(modal)
+
 if jit then
    local reify = modal.reify
    getmetatable("").__add = function(a, b)

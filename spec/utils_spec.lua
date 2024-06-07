@@ -58,15 +58,15 @@ end)
 
 describe("string lambda", function()
    it("should parse lambdas", function()
-      local res = M.string_lambda(" x -> x + 1", _G)(2)
+      local res = M.string_lambda(_G) " x -> x + 1"(2)
       assert.same(3, res)
    end)
    it("should do tidal funcs", function()
-      local res = M.string_lambda(" x -> x:fast(2)", pat)(pat.pure(2))
+      local res = M.string_lambda(pat) " x -> x:fast(2)"(pat.pure(2))
       assert.same(pat.pure(2):fast(2), res)
    end)
    it("should parse tidal ops", function()
-      local f = M.string_lambda("|+ n 1", pat)
+      local f = M.string_lambda(pat) "|+ n 1"
       -- TODO:
    end)
 end)

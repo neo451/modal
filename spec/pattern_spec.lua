@@ -339,7 +339,7 @@ end)
 
 describe("stack", function()
    it("should stack up the pats to be played together", function()
-      local pat = M.stack(M.map(pure, { "bd", "sd", "hh" }))
+      local pat = M.stack { pure "bd", pure "sd", pure "hh" }
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
          Event(Span(0, 1), Span(0, 1), "sd"),

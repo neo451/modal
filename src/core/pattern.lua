@@ -1,29 +1,16 @@
-local utils = require "modal.utils"
-local map, filter, string_lambda, id, flatten, totable, dump, union, timeToRand, curry, T, nparams, flip, method_wrap =
-   utils.map,
-   utils.filter,
-   utils.string_lambda,
-   utils.id,
-   utils.flatten,
-   utils.totable,
-   utils.dump,
-   utils.union,
-   utils.timeToRand,
-   utils.curry,
-   utils.type,
-   utils.nparams,
-   utils.flip,
-   utils.method_wrap
+local ut = require "modal.utils"
+local map, filter, id, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap =
+   ut.map, ut.filter, ut.id, ut.flatten, ut.union, ut.timeToRand, ut.curry, ut.type, ut.nparams, ut.flip, ut.method_wrap
 
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
-local Fraction, tofrac, tofloat
 local frac = require "modal.fraction"
-Fraction, tofrac, tofloat = frac.Fraction, frac.tofrac, frac.tofloat
-local Event, Span, State
+local Fraction, tofrac = frac.Fraction, frac.tofrac
 local types = require "modal.types"
-Event, Span, State = types.Event, types.Span, types.State
+local Event, Span, State = types.Event, types.Span, types.State
 local TDef = require "modal.type_def"
+local maxi = require "modal.maxi"
+local fun = require "modal.fun"
 
 local Pattern
 local reify, pure, silence, overlay
@@ -33,8 +20,6 @@ local withEventTime
 local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
-local maxi = require "modal.maxi"
-local fun = require "modal.fun"
 local iter = fun.iter
 local sin = math.sin
 local min = math.min
@@ -48,6 +33,9 @@ local floor = math.floor
 local M = {}
 local U = {} -- Unpatternified versions
 local TYPES = {}
+
+M.sl = ut.string_lambda(M)
+
 local _op = {}
 function _op.In(f)
    return function(a, b)
@@ -152,7 +140,7 @@ function base:__call(b, e)
 end
 
 function base:__tostring()
-   return utils.dump2(firstCycle(self))
+   return ut.dump2(firstCycle(self))
 end
 
 function base:__concat(other)
@@ -236,7 +224,7 @@ end
 
 function overlay(a, b)
    local query = function(_, st)
-      return utils.concat(a:query(st), b:query(st))
+      return ut.concat(a:query(st), b:query(st))
    end
    return Pattern(query)
 end
@@ -645,7 +633,7 @@ local patternify = function(func)
          return func(unpack(args))
       end
       mapFn = curry(mapFn, arity - 1)
-      return utils.reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
+      return ut.reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
    end
    return patterned
 end
@@ -1222,14 +1210,11 @@ M.concat = function(pat, other)
    end):appLeft(other)
 end
 
-M.sl = string_lambda
 M.id = id
 M.T = T
 M.maxi = maxi
-M.pipe = utils.pipe
-M.map = utils.map
-M.pipe = utils.pipe
-M.dump = utils.dump2
+M.pipe = ut.pipe
+M.dump = ut.dump2
 M.u = U
 M.t = TYPES
 M.base = base
