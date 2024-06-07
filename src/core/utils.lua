@@ -236,17 +236,9 @@ M.string_lambda = function(f, env)
    if type(f) == "function" then
       return f
    end
-   if (f:find "^|") or (f:find "_") then
-      local args, body = f:match "|([^|]*)|(.+)"
-      if f:find "_" then
-         args = "_"
-         body = f
-      else
-         if not args then
-            return error "bad string lambda"
-         end
-      end
-      local fstr = "return function(" .. args .. ") return " .. body .. " end"
+   if f:find "->" then
+      local arg, body = f:match "%s*(%S+)%s*%-%>%s*(.+)"
+      local fstr = "return function(" .. arg .. ") return " .. body .. " end"
       local fn, err = loadstring(fstr)
       if not fn then
          return error(err)
@@ -255,7 +247,21 @@ M.string_lambda = function(f, env)
       setfenv(fn, env)
       return fn
    else
-      return error "not a string lambda"
+      local op, param, arg = string.match(f, "([%+%-%*|]*)%s*(%S+)%s*(%S+)")
+      -- print(op, param, arg)
+      if not (op or param or arg) then
+         return error "not a string lambda"
+      end
+      local body = string.format("op['%s'](x, %s(%s))", op, param, arg)
+      local fstr = "return function(x) return " .. body .. " end"
+      -- print(fstr)
+      local fn, err = loadstring(fstr)
+      if not fn then
+         return error(err)
+      end
+      fn = fn()
+      setfenv(fn, env)
+      -- return fn
    end
 end
 

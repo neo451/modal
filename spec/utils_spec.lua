@@ -1,4 +1,5 @@
 local M = require "modal.utils"
+local pat = require "modal.pattern"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
@@ -52,5 +53,20 @@ describe("flatten", function()
    it("should flatten 2 lists", function()
       local res = M.flatten { { { 1 }, 2, 3 }, 4 }
       assert.same({ 1, 2, 3, 4 }, res)
+   end)
+end)
+
+describe("string lambda", function()
+   it("should parse lambdas", function()
+      local res = M.string_lambda(" x -> x + 1", _G)(2)
+      assert.same(3, res)
+   end)
+   it("should do tidal funcs", function()
+      local res = M.string_lambda(" x -> x:fast(2)", pat)(pat.pure(2))
+      assert.same(pat.pure(2):fast(2), res)
+   end)
+   it("should parse tidal ops", function()
+      local f = M.string_lambda("|+ n 1", pat)
+      -- TODO:
    end)
 end)

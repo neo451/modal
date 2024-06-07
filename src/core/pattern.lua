@@ -289,7 +289,7 @@ appLeft = function(pat, pat_val)
       local event_funcs = pat:query(state)
       for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
-         local event_vals = pat_val:query(State(whole))
+         local event_vals = pat_val:query(state:setSpan(whole))
          -- local event_vals = pat_val(whole._begin, whole._end)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
@@ -314,9 +314,7 @@ appRight = function(pat, pat_val)
       local event_vals = pat_val:query(state)
       for _, event_val in ipairs(event_vals) do
          local whole = event_val:wholeOrPart()
-         -- local event_funcs = pat(whole._begin, whole._end)
-         -- TODO:
-         local event_funcs = pat:query(State(whole))
+         local event_funcs = pat:query(state:setSpan(whole))
          for _, event_func in ipairs(event_funcs) do
             local new_whole = event_val.whole
             local new_part = event_func.part:sect(event_val.part)

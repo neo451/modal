@@ -489,7 +489,7 @@ describe("every", function()
    end)
 
    it("should take string lambda that gets lib funcs env", function()
-      local pat = M.every(3, "|x| x:fast(2)", 1)
+      local pat = M.every(3, "x -> x:fast(2)", 1)
       local expected = M.slowcat { M.fast(2, 1), 1, 1 }
       assert.are.same(expected, pat)
    end)
@@ -510,7 +510,7 @@ describe("off", function()
    end)
 
    it("should take string lambda that gets lib funcs env", function()
-      local pat = M.off(0.5, "|x| x + 1", 1)
+      local pat = M.off(0.5, "x -> x + 1", 1)
       local expected = {
          Event(Span(0, 1), Span(0, 1), 1),
          Event(Span(-0.5, 0.5), Span(0, 0.5), 2),

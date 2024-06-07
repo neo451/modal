@@ -698,7 +698,6 @@ local notemt = {
 }
 
 P.note = function(args)
-   args = reify(args)
    local chordToStack = function(thing)
       return stack(parseChord(thing))
    end
@@ -707,7 +706,8 @@ P.note = function(args)
          note = v,
       }, notemt)
    end
-   return fmap(outerJoin(fmap(reify(args), chordToStack)), withVal)
+   -- return fmap((fmap(reify(args), chordToStack)):outerJoin(), withVal)
+   return fmap(reify(args), withVal)
 end
 
 return P

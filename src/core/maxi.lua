@@ -157,7 +157,9 @@ return function(M, top_level)
 
    local step_char = R("09", "AZ", "az") + P "'" + P "-" + P "." + P "^" + P "_" + P "~" / id
    local tidalop = S "|+-*/^%><" ^ 2 / id
-   local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
+   -- TODO: proper arithemtic
+   -- local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
+   local step = ws * ((step_char ^ 1) / parseStep) * ws
    local minus = P "-"
    local plus = P "+"
    local zero = P "0"
@@ -335,6 +337,7 @@ return function(M, top_level)
    local pTailop = function(...)
       local args = { ... }
       local symb = table.remove(args, 1)
+      print(symb)
       args = pDollar(unpack(args))
       return function(x)
          return { tag = "Call", { tag = "Index", Id "op", Str(symb) }, x, args }
