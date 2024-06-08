@@ -591,7 +591,7 @@ M.pure = pure
 --
 -- TODO: temp
 M.pure2 = function(a)
-   if T(a) == "Pattern" then
+   if T(a) == "pattern" then
       return a
    else
       return M.pure(a)

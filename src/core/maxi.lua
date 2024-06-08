@@ -1,3 +1,17 @@
+-- TODO: not working
+--d1 $ fast <1 1.25 1 2> $ s [bd _ can? 808sd _] ~ -> nil is going to sc, timecat gets wrong weight
+--d1 $ fast <1 1.25 1 2> $ n (run 8) |> s [bd _ can? 808sd _] run not working??
+-- TODO: should everything just be default mini?? quote to get literal???
+-- d3 $ n (scan 8) |> s alphabet |> vowel [a e]
+--d4 $ s [cp(3,8)] \\\ this as well s cp(3,8)
+--d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
+-- d1 $ note <0 .. 7> |> s superpiano
+-- [bd!4]
+-- --TODO: negative numbers
+--d2 $ note {0 7 3 9 -12 5, 3 5 12}%5 |> s supermandolin
+-- d2 $ note {[0|5] [3|4] 9 12 _ _}%5 |> s supermandolin only one [] works
+--TODO: repl with persistant history
+
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local reduce = require("modal.utils").reduce
@@ -145,8 +159,8 @@ return function(M, top_level)
       local tails = filter(function(a)
          return type(a) == "function"
       end, args)
-      -- local main = { tag = "Call", fname, unpack(params) }
       local main = tCall(fname, unpack(params))
+      -- mpp(main)
       for i = 1, #tails do
          main = tails[i](main)
       end
@@ -385,6 +399,9 @@ return function(M, top_level)
    end
 
    local function pStat(...)
+      -- local args = { ... }
+      -- args[1].tag = "Id"
+      -- mpp(args)
       return pRet(rTails { ... })
    end
 
@@ -398,9 +415,9 @@ return function(M, top_level)
       root = ((set + ret) * semi) ^ 1 / pRoot,
       set = step * P "=" * expr / pSet,
       ret = (list + mini + dollar) / pRet,
-      list = ws * P "(" * ws * expr ^ 0 * ws * P ")" * ws / pList,
-      dollar = S "$>" * ws * expr ^ 0 * ws / pDollar,
-      expr = ws * (step + list + mini + dollar + tailop) * ws,
+      list = ws * P "(" * ws * step * expr ^ 0 * ws * P ")" * ws / pList,
+      dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
+      expr = ws * (mini + step + list + dollar + tailop) * ws,
       sequence = (mini ^ 1) / pDot,
       stack = sequence * (comma * sequence) ^ 0 / pStack,
       choose = sequence * (pipe * sequence) ^ 1 / pChoose,
@@ -424,7 +441,7 @@ return function(M, top_level)
    }
 
    if top_level then
-      stat = ws * expr * (expr - S "=") * expr ^ 0 * ws / pStat
+      stat = ws * step * (expr - S "=") * expr ^ 0 * ws / pStat
       grammar.root = ((stat + set + ret) * semi) ^ 1 / pRoot
    else
       grammar.root = ((set + ret) * semi) ^ 1 / pRoot
@@ -443,7 +460,6 @@ return function(M, top_level)
          return ast, false
       end
       local lua_src = ast_to_src(ast)
-      -- print(lua_src)
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
          return fstr, false
