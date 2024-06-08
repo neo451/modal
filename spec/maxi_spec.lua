@@ -37,7 +37,8 @@ end)
 --       assert.has_error(eval_top "run sd")
 --    end)
 -- end)
-local eval = maxi(M, false)
+-- local eval = maxi(M, false)
+local eval = M.mini
 
 describe("slice", function()
    it("should parse mini slice as a first class", function()
@@ -91,6 +92,15 @@ describe("ops", function()
       assert.same(M.timecat { 2, M.pure "bd", 1, M.pure "sd" }, eval "[bd@2 sd]")
       assert.same(M.arrange { 2, M.pure "bd", 1, M.pure "sd" }, eval "<bd@2 sd>")
       assert.same(M.pure { 0.3, 0.5, 2 }, eval "0.3:0.5:2")
+   end)
+end)
+
+describe("tidal ops", function()
+   it("should parse tidal ops as a first class", function()
+      assert.same(M.note(3), eval_top [[note 2 +| note 1]])
+      assert.same(M.pure { s = "bd", room = "0.2" }, eval_top [[s bd |> room 0.2]])
+      -- TODO:
+      -- assert.same(M.pure { s = "bd", room = "0.2" }, eval_top [[s bd >|| room 0.2]])
    end)
 end)
 

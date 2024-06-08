@@ -33,7 +33,7 @@ local floor = math.floor
 local M = {}
 local U = {} -- Unpatternified versions
 local TYPES = {}
-
+M.mini = maxi(M, false)
 M.sl = ut.string_lambda(M)
 
 local _op = {}
@@ -602,10 +602,10 @@ reify = function(thing)
    local t = T(thing)
    if "string" == t then
       -- TODO: think about this?
-      for i, v in pairs(M) do
-         _G[i] = v
-      end
-      local res = maxi(_G, false)("[" .. thing .. "]")
+      -- for i, v in pairs(M) do
+      --    _G[i] = v
+      -- end
+      local res = M.mini("[" .. thing .. "]")
       return res
    elseif "table" == t then
       return M.fastFromList(thing)
@@ -621,7 +621,6 @@ local patternify = function(func)
    local patterned = function(...)
       local arity = nparams(func)
       local pats = map(reify, { ... })
-      -- local pats = { ... }
       local pat = table.remove(pats, #pats)
       if arity == 1 then
          return func(pat)
@@ -782,17 +781,17 @@ function M.arrange(args)
    return U.slow(total, M.timecat(args))
 end
 
-function M.superimpose(f, pat)
+register("superimpose", function(f, pat)
    return M.stack { pat, M.sl(f)(pat) }
-end
+end, "(Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
 
-function M.layer(tf, pat)
+register("layer", function(tf, pat)
    local acc = {}
    for i, f in iter(tf) do
       acc[i] = M.sl(f)(pat)
    end
    return M.stack(acc)
-end
+end, nil, false) -- diff with tidal -- TODO: "[Pattern a -> Pattern b] -> Pattern a -> Pattern b"
 
 register("fast", function(factor, pat)
    return withTime(pat, function(t)
@@ -1138,7 +1137,7 @@ register("range", function(mi, ma, pat)
 end)
 
 register("off", function(tp, f, pat)
-   tp, f, pat = reify(tp), M.sl(f, M), reify(pat)
+   tp, f, pat = reify(tp), M.sl(f), reify(pat)
    local _off = function(t)
       return M.stack { pat, M.late(t, f(pat)) }
    end
@@ -1163,7 +1162,6 @@ register("echoWith", function(times, time, func, pat)
 end)
 
 register("when", function(test, f, pat)
-   f = M.sl(f, M)
    local query = function(_, state)
       local cycle_idx = state.span._begin:sam():asFloat()
       if test(cycle_idx) then
@@ -1176,13 +1174,11 @@ register("when", function(test, f, pat)
 end, "(Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", false)
 
 register("every", function(tp, f, pat)
-   f = M.sl(f, M)
-   tp, pat = reify(tp), reify(pat)
+   tp, pat, f = reify(tp), reify(pat), M.sl(f)
    local _every = function(t)
-      local test = function(i)
-         return i % t == 0
-      end
-      return M.when(test, f, pat)
+      -- stylua: ignore start
+      return M.when(function(i) return i % t == 0 end, f, pat)
+      -- stylua: ignore end
    end
    return fmap(tp, _every):innerJoin()
 end, "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)

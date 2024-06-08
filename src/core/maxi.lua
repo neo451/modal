@@ -35,7 +35,7 @@ local stat = V "stat"
 local choose = V "choose"
 
 return function(M, top_level)
-   local Id = function(a)
+   local function Id(a)
       return { tag = "Id", a }
    end
 
@@ -43,11 +43,11 @@ return function(M, top_level)
       return { tag = "Table", unpack(a) }
    end
 
-   local Str = function(a)
+   local function Str(a)
       return { tag = "String", a }
    end
 
-   local Num = function(a)
+   local function Num(a)
       return { tag = "Number", a }
    end
 
@@ -69,7 +69,7 @@ return function(M, top_level)
       end
    end
 
-   local typecheck = function(name, args)
+   local function typecheck(name, args)
       local types = M.t[name] -- infer types maybe
       if not types then
          return true, args
@@ -83,11 +83,11 @@ return function(M, top_level)
       return true, args
    end
 
-   local Call = function(name, ...)
+   local function Call(name, ...)
       return { tag = "Call", Id(name), ... }
    end
 
-   local tCall = function(name, ...)
+   local function tCall(name, ...)
       local ok, args = typecheck(name, { ... })
       if ok then
          return { tag = "Call", Id(name), unpack(args) }
@@ -96,11 +96,11 @@ return function(M, top_level)
       end
    end
 
-   local id = function(x)
+   local function id(x)
       return x
    end
 
-   local purify = function(v)
+   local function purify(v)
       if type(v) ~= "table" then
          return v
       end
@@ -110,7 +110,7 @@ return function(M, top_level)
       return v
    end
 
-   local string2id = function(v)
+   local function string2id(v)
       if v.tag == "String" then
          v.tag = "Id"
       end
@@ -123,23 +123,21 @@ return function(M, top_level)
    local pipe = ws * P "|" * ws
    -- dot = ws * P(".") * ws
 
-   local pNumber = function(num)
+   local function pNumber(num)
       return Num(tonumber(num))
    end
 
-   local parseStep = function(chars)
+   local function pStep(chars)
       if tonumber(chars) then
          return Num(tonumber(chars))
       end
-      if string.sub(chars, 0, 1) == "^" then
-         id = chars:sub(2, #chars)
-         -- return Str(M[id])
-         return Id(id)
+      if chars:sub(0, 1) == "^" then
+         return Id(chars:sub(2, #chars))
       end
       return Str(chars)
    end
 
-   local rTails = function(args)
+   local function rTails(args)
       local fname = table.remove(args, 1)[1]
       local params = filter(function(a)
          return type(a) ~= "function"
@@ -155,11 +153,11 @@ return function(M, top_level)
       return main
    end
 
-   local step_char = R("09", "AZ", "az") + P "'" + P "-" + P "." + P "^" + P "_" + P "~" / id
+   local step_char = R("09", "AZ", "az") + S [[~^'.]]
    local tidalop = S "|+-*/^%><" ^ 2 / id
    -- TODO: proper arithemtic
    -- local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
-   local step = ws * ((step_char ^ 1) / parseStep) * ws
+   local step = ws * (step_char ^ 1 / pStep) * ws
    local minus = P "-"
    local plus = P "+"
    local zero = P "0"
@@ -172,19 +170,19 @@ return function(M, top_level)
    local frac = decimal_point * digit ^ 1
    local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / pNumber
 
-   local pFast = function(a)
+   local function pFast(a)
       return function(x)
          return Call("fast", a, x)
       end
    end
 
-   local pSlow = function(a)
+   local function pSlow(a)
       return function(x)
          return Call("slow", a, x)
       end
    end
 
-   local pDegrade = function(a)
+   local function pDegrade(a)
       if a == "?" then
          a = Num(0.5)
       end
@@ -194,33 +192,33 @@ return function(M, top_level)
       end
    end
 
-   local pTail = function(b)
+   local function pTail(b)
       return function(a)
          return Call("concat", a, purify(b))
       end
    end
 
-   local pRange = function(s)
+   local function pRange(s)
       return function(x)
          return Call("iota", x, s)
       end
    end
 
-   local pEuclid = function(p, s, r)
+   local function pEuclid(p, s, r)
       r = r and r or Num(0)
       return function(x)
          return Call("euclid", p, s, r, x)
       end
    end
 
-   local pWeight = function(a)
+   local function pWeight(a)
       return function(x)
          x.weight = (x.weight or 1) + (tonumber(a) or 2) - 1
          return x
       end
    end
 
-   local pReplicate = function(a)
+   local function pReplicate(a)
       return function(x)
          x.reps = (x.reps or 1) + (tonumber(a) or 2) - 1
          return x
@@ -243,7 +241,7 @@ return function(M, top_level)
       return res
    end
 
-   local pSlices = function(sli, ...)
+   local function pSlices(sli, ...)
       sli = purify(sli)
       local ops = { ... }
       sli.reps = 1
@@ -255,12 +253,12 @@ return function(M, top_level)
       return sli
    end
 
-   local addWeight = function(a, b)
+   local function addWeight(a, b)
       b = b.weight and b.weight or 1
       return a + b
    end
 
-   local rWeight = function(args)
+   local function rWeight(args)
       local acc = {}
       for _, v in ipairs(args) do
          acc[#acc + 1] = Num(v.weight) or Num(1)
@@ -269,7 +267,7 @@ return function(M, top_level)
       return acc
    end
 
-   local pSeq = function(isSlow)
+   local function pSeq(isSlow)
       return function(args)
          local weightSum = reduce(addWeight, 0, args)
          if weightSum > #args then
@@ -280,12 +278,12 @@ return function(M, top_level)
       end
    end
 
-   local pStack = function(...)
+   local function pStack(...)
       local args = map(rReps, { ... })
       return rReps(args), "Stack"
    end
 
-   local pChoose = function(...)
+   local function pChoose(...)
       return rReps { ... }, "Choose"
    end
 
@@ -334,17 +332,16 @@ return function(M, top_level)
       return rTails(args)
    end
 
-   local pTailop = function(...)
+   local function pTailop(...)
       local args = { ... }
       local symb = table.remove(args, 1)
-      print(symb)
       args = pDollar(unpack(args))
       return function(x)
          return { tag = "Call", { tag = "Index", Id "op", Str(symb) }, x, args }
       end
    end
 
-   local pSubCycle = function(args, tag)
+   local function pSubCycle(args, tag)
       if tag == "Stack" then
          args = map(pSeq(false), args)
          return Call("stack", Table(args))
@@ -354,17 +351,17 @@ return function(M, top_level)
       end
    end
 
-   local pPolymeterSteps = function(s)
+   local function pPolymeterSteps(s)
       return (s ~= "") and s or -1
    end
 
-   local pPolymeter = function(args, _, steps) -- TODO: what about choose?
+   local function pPolymeter(args, _, steps) -- TODO: what about choose?
       steps = (steps == -1) and Num(#args[1]) or steps
       args = map(pSeq(false), args)
       return Call("polymeter", steps, Table(args))
    end
 
-   local pSlowSeq = function(args, _)
+   local function pSlowSeq(args, _)
       return pSeq(true)(args)
    end
 
@@ -373,6 +370,7 @@ return function(M, top_level)
       for i, a in ipairs(stats) do
          stats[i] = a
       end
+      ---@diagnostic disable-next-line: inject-field
       stats.tag = "Chunk"
       return stats
    end
@@ -382,7 +380,6 @@ return function(M, top_level)
    end
 
    local function pSet(lhs, rhs)
-      -- M[lhs[1]] = rhs[1]
       lhs.tag = "Id"
       return { tag = "Set", { lhs }, { rhs } }
    end
@@ -435,25 +432,27 @@ return function(M, top_level)
 
    local rules = Ct(C(grammar))
 
-   local read = function(str)
+   local function read(str)
       return rules:match(str)[2]
    end
 
    return function(src)
-      local ok, res, ast, f
+      local ok, res, ast, fstr, fn
       ok, ast = pcall(read, src)
       if not ok then
          return ast, false
       end
-      -- mpp(ast)
       local lua_src = ast_to_src(ast)
       -- print(lua_src)
-      ok, f = pcall(loadstring, lua_src)
+      ok, fstr = pcall(loadstring, lua_src)
       if not ok then
-         return f, false
+         return fstr, false
       end
-      f = setfenv(f, M)
-      ok, res = pcall(f)
+      fn = setfenv(fstr and fstr or function()
+         print "not a valid maxi notation"
+         -- TODO: traceback?
+      end, M)
+      ok, res = pcall(fn)
       return res, ok
    end, function(src)
       local ok, ast
@@ -461,8 +460,6 @@ return function(M, top_level)
       if not ok then
          return ast, false
       end
-
-      local lua_src = ast_to_src(ast)
-      return lua_src, ok
+      return ast_to_src(ast), ok
    end
 end

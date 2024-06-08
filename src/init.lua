@@ -6,6 +6,9 @@ local ui = require "modal.ui"
 local P = require "modal.params"
 local drawline = require "modal.drawline"
 local lib = require "modal.lib"
+local base = pattern.base
+local Pattern = pattern.Pattern
+local maxi = require "modal.maxi"
 
 local modal = {
    _VERSION = "modal dev-1",
@@ -22,11 +25,12 @@ end
 
 for name, func in pairs(pattern_factory) do
    modal[name] = func
+   base[name] = func
 end
 
--- for name, pat in pairs(lib) do
---    modal[name] = modal.reify(pat)
--- end
+for name, pat in pairs(lib) do
+   modal[name] = modal.reify(pat)
+end
 
 for name, func in pairs(ui) do
    modal[name] = func
@@ -35,9 +39,6 @@ end
 for name, func in pairs(params) do
    modal[name] = func
 end
-
-local base = pattern.base
-local Pattern = pattern.Pattern
 
 for name, func in pairs(P) do
    modal[name] = func
@@ -58,7 +59,11 @@ setmetatable(Pattern, {
 base.__class = Pattern
 
 -- TODO: update env??
-modal.sl = ut.string_lambda(modal)
+pattern.sl = ut.string_lambda(modal)
+
+modal.sl = pattern.sl
+pattern.mini = maxi(modal, false)
+modal.mini = pattern.mini
 
 if jit then
    local reify = modal.reify

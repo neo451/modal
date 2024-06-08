@@ -4,7 +4,7 @@ local P = require "modal.params"
 local Streams = {}
 local DefaultClock = Clock()
 
-local p = function(key, pattern)
+local p = function(pattern, key)
    if not Streams[key] then
       local stream = Stream(Clock.sendf)
       DefaultClock:subscribe(stream)
@@ -22,31 +22,17 @@ local hush = function()
    Streams = {}
 end
 
-local d1 = function(a)
-   return p(1, a .. P.orbit "1")
-end
-local d2 = function(a)
-   return p(2, a .. P.orbit "2")
-end
-local d3 = function(a)
-   return p(3, a .. P.orbit "3")
-end
-local d4 = function(a)
-   return p(4, a .. P.orbit "4")
-end
-local d5 = function(a)
-   return p(5, a .. P.orbit "5")
-end
-local d6 = function(a)
-   return p(6, a .. P.orbit "6")
-end
-local d7 = function(a)
-   return p(7, a .. P.orbit "7")
-end
-local d8 = function(a)
-   return p(8, a .. P.orbit "8")
-end
+-- stylua: ignore start
+local d1 = function(a) return p(a .. P.orbit "1", 1) end
+local d2 = function(a) return p(a .. P.orbit "2", 2) end
+local d3 = function(a) return p(a .. P.orbit "3", 3) end
+local d4 = function(a) return p(a .. P.orbit "4", 4) end
+local d5 = function(a) return p(a .. P.orbit "5", 5) end
+local d6 = function(a) return p(a .. P.orbit "6", 6) end
+local d7 = function(a) return p(a .. P.orbit "7", 7) end
+local d8 = function(a) return p(a .. P.orbit "8", 8) end
 
+-- stylua: ignore end
 return {
    p = p,
    hush = hush,

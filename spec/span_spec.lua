@@ -2,6 +2,7 @@ local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 local Fraction = require("modal.fraction").Fraction
+
 local Span = require("modal.types").Span
 
 describe("wholeCycle", function()

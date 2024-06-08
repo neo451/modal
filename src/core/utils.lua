@@ -234,7 +234,7 @@ end
 
 M.string_lambda = function(env)
    return function(f)
-      if type(f) == "function" then
+      if type(f) == "function" or M.type(f) == "pattern" then
          return f
       end
       if f:find "->" then
