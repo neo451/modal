@@ -152,6 +152,16 @@ do
       __lte = function(self, rhs)
          return self.numerator / self.denominator <= rhs.numerator / rhs.denominator
       end,
+      -- TODO: for convenience, add __gt and __gte
+      eq = function(self, rhs)
+         return self == (tofrac(rhs))
+      end,
+      lt = function(self, rhs)
+         return self < tofrac(rhs)
+      end,
+      reverse = function(self)
+         return Fraction(1) / self
+      end,
       floor = function(self)
          return floor(self.numerator / self.denominator)
       end,

@@ -326,16 +326,14 @@ bindWhole = function(pat, choose_whole, func)
          return Event(new_whole, b.part, b.value)
       end
       local match = function(a)
-         local events = func(a.value)(a.part._begin, a.part._end)
+         local events = func(a.value):query(state:setSpan(a.part))
          local f = function(b)
             return withWhole(a, b)
          end
          return map(f, events)
       end
       local events = pat:query(state)
-      return flatten((map(function(a)
-         return match(a)
-      end, events)))
+      return flatten((map(match, events)))
    end
    return Pattern(query)
 end
@@ -519,29 +517,23 @@ end
 base.withEvent = withEvent
 
 withEventSpan = function(pat, func)
-   local query
-   query = function(_, state)
+   local query = function(_, state)
       local events = pat:query(state)
-      local f
-      f = function(event)
-         return event:withSpan(func)
-      end
-      return map(f, events)
+      return map(function(ev)
+         return ev:withSpan(func)
+      end, events)
    end
    return Pattern(query)
 end
 base.withEventSpan = withEventSpan
 
 withEventTime = function(pat, func)
-   local query
-   query = function(_, state)
+   local query = function(_, state)
       local events = pat:query(state)
-      local time_func
-      time_func = function(span)
+      local time_func = function(span)
          return span:withTime(func)
       end
-      local event_func
-      event_func = function(event)
+      local event_func = function(event)
          return event:withSpan(time_func)
       end
       return map(event_func, events)
@@ -588,7 +580,7 @@ function pure(value)
 end
 
 M.pure = pure
---
+
 -- TODO: temp
 M.pure2 = function(a)
    if T(a) == "pattern" then
@@ -794,15 +786,27 @@ register("layer", function(tf, pat)
 end, nil, false) -- diff with tidal -- TODO: "[Pattern a -> Pattern b] -> Pattern a -> Pattern b"
 
 register("fast", function(factor, pat)
-   return withTime(pat, function(t)
-      return t * factor
-   end, function(t)
-      return t / factor
-   end)
+   factor = tofrac(factor)
+   if factor:eq(0) then
+      return silence()
+   elseif factor:lt(0) then
+      return M.rev(U.fast(-factor, pat))
+   else
+      return withTime(pat, function(t)
+         return t * factor
+      end, function(t)
+         return t / factor
+      end)
+   end
 end, "Pattern Time -> Pattern a -> Pattern a")
 
 register("slow", function(factor, pat)
-   return U.fast(1 / factor, pat)
+   factor = tofrac(factor)
+   if factor:eq(0) then
+      return silence()
+   else
+      return M.fast(factor:reverse(), pat)
+   end
 end, "Pattern Time -> Pattern a -> Pattern a")
 
 -- rotL
@@ -911,21 +915,10 @@ local _run = function(n)
    return M.fastFromList(list)
 end
 
-M.run = function(n)
+register("run", function(n)
    return fmap(reify(n), _run):join()
-end
-TYPES["run"] = TDef:new "Pattern Int -> Pattern Int"
+end, "Pattern Int -> Pattern Int", false)
 
-local _iota = function(b, e)
-   local list = fun.totable(fun.range(b, e))
-   return M.fastFromList(list)
-end
-
-M.iota = function(b, e)
-   _iota = curry(_iota, 2)
-   return appLeft(fmap(reify(b), _iota), reify(e)):join()
-end
-TYPES["iota"] = "Pattern Int -> Pattern Int -> Pattern Int"
 local _scan = function(n)
    local res = {}
    for _, v in fun.range(1, n) do
@@ -934,10 +927,9 @@ local _scan = function(n)
    return M.fromList(res)
 end
 
-M.scan = function(n)
+register("scan", function(n)
    return fmap(reify(n), _scan):join()
-end
-TYPES["scan"] = "Pattern Int -> Pattern Int"
+end, "Pattern Int -> Pattern Int")
 
 local waveform = function(func)
    local query = function(_, state)

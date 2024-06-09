@@ -1,14 +1,8 @@
--- TODO: not working
 --d1 $ fast <1 1.25 1 2> $ s [bd _ can? 808sd _] ~ -> nil is going to sc, timecat gets wrong weight
---d1 $ fast <1 1.25 1 2> $ n (run 8) |> s [bd _ can? 808sd _] run not working??
--- TODO: should everything just be default mini?? quote to get literal???
+-- should everything just be default mini?? quote to get literal???
 -- d3 $ n (scan 8) |> s alphabet |> vowel [a e]
---d4 $ s [cp(3,8)] \\\ this as well s cp(3,8)
 --d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
--- d1 $ note <0 .. 7> |> s superpiano
--- [bd!4]
--- --TODO: negative numbers
---d2 $ note {0 7 3 9 -12 5, 3 5 12}%5 |> s supermandolin
+-- d2 $ note {0 7 3 9 -12 5, 3 5 12}%5 |> s supermandolin
 -- d2 $ note {[0|5] [3|4] 9 12 _ _}%5 |> s supermandolin only one [] works
 --TODO: repl with persistant history
 
@@ -212,16 +206,20 @@ return function(M, top_level)
       end
    end
 
-   local function pRange(s)
-      return function(x)
-         return Call("iota", x, s)
-      end
-   end
-
    local function pEuclid(p, s, r)
       r = r and r or Num(0)
       return function(x)
          return Call("euclid", p, s, r, x)
+      end
+   end
+
+   -- TODO: proper range, just rep
+   -- mutually recursive with replicate??
+   local function pRange(s)
+      return function(x)
+         x.range = s[1]
+         x.reps = nil
+         return x
       end
    end
 
@@ -241,12 +239,16 @@ return function(M, top_level)
 
    local function rReps(ast)
       local res = {}
-      for _, node in pairs(ast) do
+      for _, node in ipairs(ast) do
          if node.reps then
             local reps = node.reps
             for _ = 1, reps do
                node.reps = nil
                res[#res + 1] = node
+            end
+         elseif node.range then
+            for i = node[2][1], node.range do -- HACK:
+               res[#res + 1] = Call("pure", Num(i))
             end
          else
             res[#res + 1] = node
@@ -283,6 +285,7 @@ return function(M, top_level)
 
    local function pSeq(isSlow)
       return function(args)
+         -- mpp(args)
          local weightSum = reduce(addWeight, 0, args)
          if weightSum > #args then
             return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
@@ -376,6 +379,7 @@ return function(M, top_level)
    end
 
    local function pSlowSeq(args, _)
+      args = rReps(args)
       return pSeq(true)(args)
    end
 
