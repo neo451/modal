@@ -1,16 +1,12 @@
 --d1 $ fast <1 1.25 1 2> $ s [bd _ can? 808sd _] ~ -> nil is going to sc, timecat gets wrong weight
--- should everything just be default mini?? quote to get literal???
 -- d3 $ n (scan 8) |> s alphabet |> vowel [a e]
 --d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
--- d2 $ note {0 7 3 9 -12 5, 3 5 12}%5 |> s supermandolin
 -- d2 $ note {[0|5] [3|4] 9 12 _ _}%5 |> s supermandolin only one [] works
 --TODO: repl with persistant history
 
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-local reduce = require("modal.utils").reduce
-local filter = require("modal.utils").filter
-local map = require("modal.utils").map
+local ut = require "modal.utils"
 local log = require "modal.log"
 
 local ast_to_src = require "modal.ast_to_src"
@@ -95,15 +91,15 @@ return function(M, top_level)
       return { tag = "Call", Id(name), ... }
    end
 
-   local function tCall(name, ...)
-      local ok, args = typecheck(name, { ... })
-      if ok then
-         return { tag = "Call", Id(name), unpack(args) }
-      else
-         error()
-      end
-   end
-
+   -- local function tCall(name, ...)
+   --    local ok, args = typecheck(name, { ... })
+   --    if ok then
+   --       return { tag = "Call", Id(name), unpack(args) }
+   --    else
+   --       error()
+   --    end
+   -- end
+   --
    local function id(x)
       return x
    end
@@ -147,21 +143,21 @@ return function(M, top_level)
 
    local function rTails(args)
       local fname = table.remove(args, 1)[1]
-      local params = filter(function(a)
+      local params = ut.filter(function(a)
          return type(a) ~= "function"
       end, args)
-      local tails = filter(function(a)
+      local tails = ut.filter(function(a)
          return type(a) == "function"
       end, args)
-      local main = tCall(fname, unpack(params))
-      -- mpp(main)
+      -- tCall
+      local main = Call(fname, unpack(params))
       for i = 1, #tails do
          main = tails[i](main)
       end
       return main
    end
 
-   local step_char = R("09", "AZ", "az") + S [[~^'.]]
+   local step_char = R("09", "AZ", "az") + S [[-~^'.]]
    local tidalop = S "|+-*/^%><" ^ 2 / id
    -- TODO: proper arithemtic
    -- local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
@@ -225,14 +221,14 @@ return function(M, top_level)
 
    local function pWeight(a)
       return function(x)
-         x.weight = (x.weight or 1) + (tonumber(a) or 2) - 1
+         x.weight = (x.weight or 1) + (tonumber(a[1]) or 2) - 1
          return x
       end
    end
 
    local function pReplicate(a)
       return function(x)
-         x.reps = (x.reps or 1) + (tonumber(a) or 2) - 1
+         x.reps = (x.reps or 1) + (tonumber(a[1]) or 2) - 1
          return x
       end
    end
@@ -277,7 +273,7 @@ return function(M, top_level)
    local function rWeight(args)
       local acc = {}
       for _, v in ipairs(args) do
-         acc[#acc + 1] = Num(v.weight) or Num(1)
+         acc[#acc + 1] = v.weight and Num(v.weight) or Num(1)
          acc[#acc + 1] = v
       end
       return acc
@@ -285,8 +281,7 @@ return function(M, top_level)
 
    local function pSeq(isSlow)
       return function(args)
-         -- mpp(args)
-         local weightSum = reduce(addWeight, 0, args)
+         local weightSum = ut.reduce(addWeight, 0, args)
          if weightSum > #args then
             return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
          else
@@ -296,12 +291,13 @@ return function(M, top_level)
    end
 
    local function pStack(...)
-      local args = map(rReps, { ... })
+      local args = ut.map(rReps, { ... })
       return rReps(args), "Stack"
    end
 
    local function pChoose(...)
-      return rReps { ... }, "Choose"
+      local args = ut.map(rReps, { ... })
+      return rReps(args), "Choose"
    end
 
    local opsymb = {
@@ -338,7 +334,7 @@ return function(M, top_level)
                return { tag = "Op", opname, unpack(args) }
             else
                -- TODO: check??
-               return Call(opname, unpack(map(string2id, args)))
+               return Call(opname, unpack(ut.map(string2id, args)))
             end
          elseif is_op(args[1][1]) then
             local opname = opsymb[args[1][1]]
@@ -360,10 +356,10 @@ return function(M, top_level)
 
    local function pSubCycle(args, tag)
       if tag == "Stack" then
-         args = map(pSeq(false), args)
+         args = ut.map(pSeq(false), args)
          return Call("stack", Table(args))
       elseif tag == "Choose" then
-         args = map(pSeq(false), args)
+         args = ut.map(pSeq(false), args)
          return Call("randcat", unpack(args))
       end
    end
@@ -374,7 +370,7 @@ return function(M, top_level)
 
    local function pPolymeter(args, _, steps) -- TODO: what about choose?
       steps = (steps == -1) and Num(#args[1]) or steps
-      args = map(pSeq(false), args)
+      args = ut.map(pSeq(false), args)
       return Call("polymeter", steps, Table(args))
    end
 
@@ -403,9 +399,6 @@ return function(M, top_level)
    end
 
    local function pStat(...)
-      -- local args = { ... }
-      -- args[1].tag = "Id"
-      -- mpp(args)
       return pRet(rTails { ... })
    end
 

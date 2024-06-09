@@ -41,6 +41,12 @@ end)
 -- local eval = maxi(M, false)
 local eval = M.mini
 
+describe("step", function()
+   it("numbers", function()
+      assert.same(M.pure(-1), eval "-1")
+   end)
+end)
+
 describe("slice", function()
    it("should parse mini slice as a first class", function()
       assert.same(M.pure "bd", eval "bd")
@@ -65,6 +71,7 @@ describe("slow_seq", function()
    it("should parse mini slow_seq as a first class", function()
       assert.same(M.fromList { "bd" }, eval "<bd>")
       assert.same(M.fromList { "bd", "sd" }, eval "<bd sd>")
+      assert.same(M.fromList { 0, 1, 2, 3, 4 }, eval "<0 .. 4>")
    end)
 end)
 

@@ -203,12 +203,9 @@ setmetatable(Pattern, {
 
 base.__class = Pattern
 
--- M.mini = require("modal.mini")(M)
-
 function fmap(pat, func)
    return withValue(pat, func)
 end
-base.fmap = fmap
 M.fmap = fmap
 
 function querySpan(b, e, pat)
@@ -216,20 +213,12 @@ function querySpan(b, e, pat)
    local state = State(span)
    return pat:query(state)
 end
+base.fmap = fmap
 M.querySpan = querySpan
 
 function firstCycle(pat)
    return pat(0, 1)
 end
-
-function overlay(a, b)
-   local query = function(_, st)
-      return ut.concat(a:query(st), b:query(st))
-   end
-   return Pattern(query)
-end
-M.overlay = overlay
-base.overlay = overlay
 
 local appWhole = function(pat, whole_func, pat_val)
    local query = function(_, state)
@@ -278,7 +267,6 @@ appLeft = function(pat, pat_val)
       for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
          local event_vals = pat_val:query(state:setSpan(whole))
-         -- local event_vals = pat_val(whole._begin, whole._end)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
@@ -664,23 +652,9 @@ local function register(name, f, type_sig, should_pat)
    end
 end
 M.register = register
---
--- function M.stack(pats)
---    local query = function(_, state)
---       local res = {}
---       for _, pat in iter(pats) do
---          local events = pat:query(state)
---          for _, ev in iter(events) do
---             res[#res + 1] = ev
---          end
---       end
---       return res
---    end
---    return Pattern(query)
--- end
---
+
 function M.stack(pats)
-   return fun.reduce(overlay, silence(), iter(pats))
+   return fun.reduce(M.overlay, silence(), iter(pats))
 end
 
 function M.stackFromList(list)
@@ -772,6 +746,13 @@ function M.arrange(args)
    end
    return U.slow(total, M.timecat(args))
 end
+
+register("overlay", function(a, b)
+   local query = function(_, st)
+      return ut.concat(a:query(st), b:query(st))
+   end
+   return Pattern(query)
+end, "Pattern a -> Pattern a -> Pattern a", false)
 
 register("superimpose", function(f, pat)
    return M.stack { pat, M.sl(f)(pat) }
