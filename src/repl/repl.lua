@@ -38,16 +38,8 @@ local ok, c = pcall(socket.connect, host, port)
 
 M()
 
+local evalf = maxi(_G, true)
 local eval = function(a)
-   local evalf = maxi(_G, true)
-   -- if a == ">>lua" then
-   --    evalf = function(a)
-   --       return pcall(loadstring, "return " .. a)()
-   --    end
-   --    return
-   -- elseif a == ">>modal" then
-   --    evalf = maxi(M, true)
-   -- end
    if a then
       if a:sub(1, 1) == ":" then
          -- print(a:sub(1, #a))
@@ -68,31 +60,33 @@ local eval = function(a)
    end
 end
 
--- if arg[1] == "og" then
---    eval = function(a)
---       local ok, res = pcall(loadstring, "return " .. a)
---       if ok then
---          setfenv(res, M)
---          print(res())
---       else
---          print("lua error" .. res())
---       end
---    end
--- end
-
+RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
+RL.set_readline_name "modal"
 while true do
    -- c = assert(socket.connect(host, port))
    line = RL.readline "modal> "
    if not line then
       break
    end
+   RL.add_history(line)
    if line == "exit" then
       break
    end
-   print(eval(line))
+
+   if line == ">>lua" then
+      eval = function(x)
+         return loadstring(x)()
+      end
+   elseif line == ">>modal" then
+      eval = maxi(_G, true)
+   else
+      print(eval(line))
+   end
+
    if c then
       c:send(line .. "\n")
    end
 end
-
+RL.save_history()
 c:close()
+os.exit()

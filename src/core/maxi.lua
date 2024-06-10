@@ -64,14 +64,11 @@ return function(M, top_level)
    end
 
    local function purify(v)
-      -- require "moon.all"
-      -- p(v)
-      if type(v) ~= "table" then
+      if v.tag == "Id" then
          return v
       end
       if v.tag ~= "Call" then
          local res = Call("pure", v)
-         -- print(v.reps)
          res.reps = v.reps
          res.weight = v.weight
          return res
