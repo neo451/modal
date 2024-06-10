@@ -976,7 +976,7 @@ local _scan = function(n)
    for _, v in fun.range(1, n) do
       res[#res + 1] = M.run(v)
    end
-   return M.fromList(res)
+   return M.slowcat(res)
 end
 
 register {
@@ -1296,6 +1296,7 @@ register {
    "every",
    "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(tp, f, pat)
+      -- TODO: into register to auto convert
       tp, pat, f = reify(tp), reify(pat), M.sl(f)
       local _every = function(t)
          return M.when(function(i)
@@ -1306,8 +1307,6 @@ register {
    end,
    false,
 }
-
--- TODO: lastOf, every'
 
 register {
    "scale",
