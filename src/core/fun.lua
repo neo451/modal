@@ -214,7 +214,6 @@ local range = function(start, stop, step)
          stop = start
          start = stop > 0 and 1 or -1
       end
-      print(start, stop)
       step = start <= stop and 1 or -1
    end
 

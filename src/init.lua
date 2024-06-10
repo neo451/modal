@@ -1,6 +1,5 @@
 local pattern = require "modal.pattern"
 local ut = require "modal.utils"
-local params = require "modal.params"
 local pattern_factory = require "modal.pattern_factory"
 local ui = require "modal.ui"
 local P = require "modal.params"
@@ -17,11 +16,6 @@ local modal = {
 }
 
 modal.drawline = drawline
-for name, func in pairs(pattern) do
-   if name ~= "Pattern" then
-      modal[name] = func
-   end
-end
 
 for name, func in pairs(pattern_factory) do
    modal[name] = func
@@ -29,17 +23,18 @@ for name, func in pairs(pattern_factory) do
 end
 
 for name, pat in pairs(lib) do
-   modal[name] = modal.reify(pat)
+   modal[name] = pattern.reify(pat)
 end
 
-for name, func in pairs(ui) do
-   modal[name] = func
+for _, func in pairs(ui) do
+   pattern.register(func)
 end
 
-for name, func in pairs(params) do
-   modal[name] = func
+for name, func in pairs(pattern) do
+   if name ~= "Pattern" then
+      modal[name] = func
+   end
 end
-
 for name, func in pairs(P) do
    modal[name] = func
    base[name] = function(self, ...)

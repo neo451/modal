@@ -55,19 +55,44 @@ return function(M, top_level)
       return { tag = "Number", a }
    end
 
-   local function check_one(elem, T)
-      if T[1] == "Int" then
-         if not tonumber(elem[1]) then
-            log.warn(string.format("Can not match type %s to Int", type(elem[1])))
-            return false
-         end
+   local function id(x)
+      return x
+   end
+
+   local function Call(name, ...)
+      return { tag = "Call", Id(name), ... }
+   end
+
+   local function purify(v)
+      -- require "moon.all"
+      -- p(v)
+      if type(v) ~= "table" then
+         return v
       end
+      if v.tag ~= "Call" then
+         local res = Call("pure", v)
+         -- print(v.reps)
+         res.reps = v.reps
+         res.weight = v.weight
+         return res
+      end
+      return v
+   end
+
+   local function check_one(elem, T)
+      -- if T[1] == "Int" then
+      --    if not tonumber(elem[2][1]) then
+      --       mpp(elem[2][1])
+      --       log.warn(string.format("Can not match type %s to Int", type(elem[2][1])))
+      --       return false
+      --    end
+      -- end
       return true
    end
 
    local function convert_one(elem, T)
       if T.constructor == "Pattern" then
-         return { tag = "Call", Id "pure2", elem }
+         return purify(elem)
       else
          return elem
       end
@@ -87,31 +112,13 @@ return function(M, top_level)
       return true, args
    end
 
-   local function Call(name, ...)
-      return { tag = "Call", Id(name), ... }
-   end
-
-   -- local function tCall(name, ...)
-   --    local ok, args = typecheck(name, { ... })
-   --    if ok then
-   --       return { tag = "Call", Id(name), unpack(args) }
-   --    else
-   --       error()
-   --    end
-   -- end
-   --
-   local function id(x)
-      return x
-   end
-
-   local function purify(v)
-      if type(v) ~= "table" then
-         return v
+   local function tCall(name, ...)
+      local ok, args = typecheck(name, { ... })
+      if ok then
+         return { tag = "Call", Id(name), unpack(args) }
+      else
+         error()
       end
-      if v.tag ~= "Call" then
-         return Call("pure2", v)
-      end
-      return v
    end
 
    local function string2id(v)
@@ -150,7 +157,7 @@ return function(M, top_level)
          return type(a) == "function"
       end, args)
       -- tCall
-      local main = Call(fname, unpack(params))
+      local main = tCall(fname, unpack(params))
       for i = 1, #tails do
          main = tails[i](main)
       end
@@ -176,13 +183,13 @@ return function(M, top_level)
 
    local function pFast(a)
       return function(x)
-         return Call("fast", a, x)
+         return tCall("fast", a, x)
       end
    end
 
    local function pSlow(a)
       return function(x)
-         return Call("slow", a, x)
+         return tCall("slow", a, x)
       end
    end
 
@@ -192,25 +199,23 @@ return function(M, top_level)
       end
       return function(x)
          seed = seed + 1
-         return Call("degradeBy", a, x)
+         return tCall("degradeBy", a, x)
       end
    end
 
    local function pTail(b)
       return function(a)
-         return Call("concat", a, purify(b))
+         return tCall("concat", a, purify(b))
       end
    end
 
    local function pEuclid(p, s, r)
-      r = r and r or Num(0)
+      r = r or Num(0)
       return function(x)
-         return Call("euclid", p, s, r, x)
+         return tCall("euclid", p, s, r, x)
       end
    end
 
-   -- TODO: proper range, just rep
-   -- mutually recursive with replicate??
    local function pRange(s)
       return function(x)
          x.range = s[1]
@@ -222,6 +227,7 @@ return function(M, top_level)
    local function pWeight(a)
       return function(x)
          x.weight = (x.weight or 1) + (tonumber(a[1]) or 2) - 1
+         -- x.weight = tonumber(a[1]) or 1
          return x
       end
    end
@@ -229,6 +235,7 @@ return function(M, top_level)
    local function pReplicate(a)
       return function(x)
          x.reps = (x.reps or 1) + (tonumber(a[1]) or 2) - 1
+         -- x.reps = tonumber(a[1]) or 1
          return x
       end
    end
@@ -254,15 +261,10 @@ return function(M, top_level)
    end
 
    local function pSlices(sli, ...)
-      sli = purify(sli)
-      local ops = { ... }
-      sli.reps = 1
-      sli.weight = 1
-
-      for i = 1, #ops do
-         sli = ops[i](sli)
+      for _, v in ipairs { ... } do
+         sli = v(sli)
       end
-      return sli
+      return purify(sli)
    end
 
    local function addWeight(a, b)
@@ -414,7 +416,7 @@ return function(M, top_level)
       ret = (list + mini + dollar) / pRet,
       list = ws * P "(" * ws * step * expr ^ 0 * ws * P ")" * ws / pList,
       dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
-      expr = ws * (mini + step + list + dollar + tailop) * ws,
+      expr = ws * (mini + list + dollar + tailop) * ws,
       sequence = (mini ^ 1) / pDot,
       stack = sequence * (comma * sequence) ^ 0 / pStack,
       choose = sequence * (pipe * sequence) ^ 1 / pChoose,

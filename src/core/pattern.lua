@@ -632,21 +632,22 @@ local function auto_curry(arity, f)
    end
 end
 
-local function register(name, f, type_sig, should_pat)
+local function register(args)
+   local name, type_sig, f, should_pat = unpack(args)
    if type(should_pat) == "nil" then
       should_pat = true
    end
    if should_pat then
-      if type(type_sig) == "string" then
-         TYPES[name] = TDef:new(type_sig) -- HACK
-      end
+      -- if type(type_sig) == "string" then
+      TYPES[name] = TDef:new(type_sig) -- HACK
+      -- end
       U[name] = f
       M[name] = auto_curry(nparams(f), patternify(f))
       base[name] = method_wrap(patternify(f))
    else
-      if type(type_sig) == "string" then
-         TYPES[name] = TDef:new(type_sig) -- HACK
-      end
+      -- if type(type_sig) == "string" then
+      TYPES[name] = TDef:new(type_sig) -- HACK
+      -- end
       M[name] = auto_curry(nparams(f), f)
       base[name] = method_wrap(f)
    end
@@ -747,158 +748,228 @@ function M.arrange(args)
    return U.slow(total, M.timecat(args))
 end
 
-register("overlay", function(a, b)
-   local query = function(_, st)
-      return ut.concat(a:query(st), b:query(st))
-   end
-   return Pattern(query)
-end, "Pattern a -> Pattern a -> Pattern a", false)
+register {
+   "overlay",
+   "Pattern a -> Pattern a -> Pattern a",
+   function(a, b)
+      local query = function(_, st)
+         return ut.concat(a:query(st), b:query(st))
+      end
+      return Pattern(query)
+   end,
+   false,
+}
 
-register("superimpose", function(f, pat)
-   return M.stack { pat, M.sl(f)(pat) }
-end, "(Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
+register {
+   "superimpose",
+   "(Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(f, pat)
+      return M.stack { pat, M.sl(f)(pat) }
+   end,
+   false,
+}
 
-register("layer", function(tf, pat)
-   local acc = {}
-   for i, f in iter(tf) do
-      acc[i] = M.sl(f)(pat)
-   end
-   return M.stack(acc)
-end, nil, false) -- diff with tidal -- TODO: "[Pattern a -> Pattern b] -> Pattern a -> Pattern b"
+-- register {
+--    "layer",
+--    nil,
+--    function(tf, pat)
+--       local acc = {}
+--       for i, f in iter(tf) do
+--          acc[i] = M.sl(f)(pat)
+--       end
+--       return M.stack(acc)
+--    end,
+--    false,
+-- } -- diff with tidal -- TODO: "[Pattern a -> Pattern b] -> Pattern a -> Pattern b"
 
-register("fast", function(factor, pat)
-   factor = tofrac(factor)
-   if factor:eq(0) then
-      return silence()
-   elseif factor:lt(0) then
-      return M.rev(U.fast(-factor, pat))
-   else
-      return withTime(pat, function(t)
-         return t * factor
-      end, function(t)
-         return t / factor
-      end)
-   end
-end, "Pattern Time -> Pattern a -> Pattern a")
+register {
+   "fast",
+   "Pattern Time -> Pattern a -> Pattern a",
+   function(factor, pat)
+      factor = tofrac(factor)
+      if factor:eq(0) then
+         return silence()
+      elseif factor:lt(0) then
+         return M.rev(U.fast(-factor, pat))
+      else
+         return withTime(pat, function(t)
+            return t * factor
+         end, function(t)
+            return t / factor
+         end)
+      end
+   end,
+}
 
-register("slow", function(factor, pat)
-   factor = tofrac(factor)
-   if factor:eq(0) then
-      return silence()
-   else
-      return M.fast(factor:reverse(), pat)
-   end
-end, "Pattern Time -> Pattern a -> Pattern a")
+register {
+   "slow",
+   "Pattern Time -> Pattern a -> Pattern a",
+   function(factor, pat)
+      factor = tofrac(factor)
+      if factor:eq(0) then
+         return silence()
+      else
+         return M.fast(factor:reverse(), pat)
+      end
+   end,
+}
 
 -- rotL
-register("early", function(offset, pat)
-   return withTime(pat, function(t)
-      return t + offset
-   end, function(t)
-      return t - offset
-   end)
-end, "Time -> Pattern a -> Pattern a", false) -- HACK: why not patternify TIME??
+register {
+   "early",
+   "Time -> Pattern a -> Pattern a",
+   function(offset, pat)
+      return withTime(pat, function(t)
+         return t + offset
+      end, function(t)
+         return t - offset
+      end)
+   end,
+   false,
+} -- HACK: why not patternify TIME??
 
 -- rotR
-register("late", function(offset, pat)
-   return M.early(-offset, pat)
-end, "Time -> Pattern a -> Pattern a", false)
+register {
+   "late",
+   "Time -> Pattern a -> Pattern a",
+   function(offset, pat)
+      return M.early(-offset, pat)
+   end,
+   false,
+}
 
 -- TODO: test
-register("inside", function(np, f, pat)
-   local function _inside(n)
-      return U.fast(n, f(U.slow(n, pat)))
-   end
-   return fmap(np, _inside):innerJoin()
-end, "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", false)
-
-register("outside", function(factor, f, pat)
-   return M.inside(1 / factor, f, pat)
-end, "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", false)
-
-register("ply", function(n, pat)
-   pat = fmap(pat, function(x)
-      return U.fast(n, pure(x))
-   end)
-   return squeezeJoin(pat)
-end, "Pattern Time -> Pattern a -> Pattern a")
-
-register("fastgap", function(factor, pat)
-   factor = tofrac(factor)
-   if factor <= Fraction(0) then
-      return M.silence()
-   end
-   factor = factor:max(1)
-   local mungeQuery = function(t)
-      return t:sam() + ((t - t:sam()) * factor):min(1)
-   end
-   local eventSpanFunc = function(span)
-      local b = span._begin:sam() + (span._begin - span._begin:sam()) / factor
-      local e = span._begin:sam() + (span._end - span._begin:sam()) / factor
-      return Span(b, e)
-   end
-   local query = function(_, state)
-      local span = state.span
-      local new_span = Span(mungeQuery(span._begin), mungeQuery(span._end))
-      if new_span._begin == new_span._begin:nextSam() then
-         return {}
+register {
+   "inside",
+   "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a",
+   function(np, f, pat)
+      local function _inside(n)
+         return U.fast(n, f(U.slow(n, pat)))
       end
-      local new_state = State(new_span)
-      local events = pat:query(new_state)
-      local f
-      f = function(event)
-         return event:withSpan(eventSpanFunc)
+      return fmap(np, _inside):innerJoin()
+   end,
+   false,
+}
+
+register {
+   "outside",
+   "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a",
+   function(factor, f, pat)
+      return M.inside(1 / factor, f, pat)
+   end,
+   false,
+}
+
+register {
+   "ply",
+   "Pattern Time -> Pattern a -> Pattern a",
+   function(n, pat)
+      pat = fmap(pat, function(x)
+         return U.fast(n, pure(x))
+      end)
+      return squeezeJoin(pat)
+   end,
+}
+
+register {
+   "fastgap",
+   "Pattern Time -> Pattern a -> Pattern a",
+   function(factor, pat)
+      factor = tofrac(factor)
+      if factor <= Fraction(0) then
+         return M.silence()
       end
-      return map(f, events)
-   end
-   return Pattern(query):splitQueries()
-end, "Pattern Time -> Pattern a -> Pattern a")
+      factor = factor:max(1)
+      local mungeQuery = function(t)
+         return t:sam() + ((t - t:sam()) * factor):min(1)
+      end
+      local eventSpanFunc = function(span)
+         local b = span._begin:sam() + (span._begin - span._begin:sam()) / factor
+         local e = span._begin:sam() + (span._end - span._begin:sam()) / factor
+         return Span(b, e)
+      end
+      local query = function(_, state)
+         local span = state.span
+         local new_span = Span(mungeQuery(span._begin), mungeQuery(span._end))
+         if new_span._begin == new_span._begin:nextSam() then
+            return {}
+         end
+         local new_state = State(new_span)
+         local events = pat:query(new_state)
+         local f
+         f = function(event)
+            return event:withSpan(eventSpanFunc)
+         end
+         return map(f, events)
+      end
+      return Pattern(query):splitQueries()
+   end,
+}
 
-register("compress", function(b, e, pat)
-   b, e = tofrac(b), tofrac(e)
-   if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
-      return M.silence()
-   end
-   local fasted = U.fastgap((Fraction(1) / (e - b)), pat)
-   return M.late(b, fasted)
-end, "Time -> Time -> Pattern a -> Pattern a", false)
+register {
+   "compress",
+   "Time -> Time -> Pattern a -> Pattern a",
+   function(b, e, pat)
+      b, e = tofrac(b), tofrac(e)
+      if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
+         return M.silence()
+      end
+      local fasted = U.fastgap((Fraction(1) / (e - b)), pat)
+      return M.late(b, fasted)
+   end,
+   false,
+}
 
-register("focus", function(b, e, pat)
-   b, e = tofrac(b), tofrac(e)
-   local fasted = U.fast((Fraction(1) / (e - b)), pat)
-   return M.late(Span:cyclePos(b), fasted)
-end, "Time -> Time -> Pattern a -> Pattern a", false)
+register {
+   "focus",
+   "Time -> Time -> Pattern a -> Pattern a",
+   function(b, e, pat)
+      b, e = tofrac(b), tofrac(e)
+      local fasted = U.fast((Fraction(1) / (e - b)), pat)
+      return M.late(Span:cyclePos(b), fasted)
+   end,
+   false,
+}
 
 -- TODO: replace
 M.focusSpan = function(span, pat)
    return M.focus(span._begin, span._end, reify(pat))
 end
 
-register("zoom", function(s, e, pat)
-   s, e = tofrac(s), tofrac(e)
-   local dur = e - s
-   local qf = function(span)
-      return span:withCycle(function(t)
-         return t * dur + s
-      end)
-   end
-   local ef = function(span)
-      return span:withCycle(function(t)
-         return (t - s) / dur
-      end)
-   end
-   -- HACK:
-   return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
-end, "Time -> Time -> Pattern a -> Pattern a", false)
+register {
+   "zoom",
+   "Time -> Time -> Pattern a -> Pattern a",
+   function(s, e, pat)
+      s, e = tofrac(s), tofrac(e)
+      local dur = e - s
+      local qf = function(span)
+         return span:withCycle(function(t)
+            return t * dur + s
+         end)
+      end
+      local ef = function(span)
+         return span:withCycle(function(t)
+            return (t - s) / dur
+         end)
+      end
+      return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
+   end,
+   false,
+}
 
 local _run = function(n)
    local list = fun.totable(fun.range(0, n - 1))
    return M.fastFromList(list)
 end
 
-register("run", function(n)
-   return fmap(reify(n), _run):join()
-end, "Pattern Int -> Pattern Int", false)
+register {
+   "run",
+   "Pattern Int -> Pattern Int",
+   function(n)
+      return fmap(reify(n), _run):join()
+   end,
+   false,
+}
 
 local _scan = function(n)
    local res = {}
@@ -908,9 +979,14 @@ local _scan = function(n)
    return M.fromList(res)
 end
 
-register("scan", function(n)
-   return fmap(reify(n), _scan):join()
-end, "Pattern Int -> Pattern Int")
+register {
+   "scan",
+   "Pattern Int -> Pattern Int",
+   function(n)
+      return fmap(reify(n), _scan):join()
+   end,
+   false,
+}
 
 local waveform = function(func)
    local query = function(_, state)
@@ -995,55 +1071,85 @@ M.randcat = function(...)
    return chooseCycles(...)
 end
 
-register("degradeByWith", function(prand, by, pat)
-   if T(by) == "fraction" then
-      by = by:asFloat()
-   end
-   local f = function(v)
-      return v > by
-   end
-   return appLeft(
-      fmap(pat, function(val)
-         return function(_)
-            return val
-         end
-      end),
-      filterValues(prand, f)
-   )
-end)
+register {
+   "degradeByWith",
+   "Pattern Double -> Double -> Pattern a -> Pattern a",
+   function(prand, by, pat)
+      if T(by) == "fraction" then
+         by = by:asFloat()
+      end
+      local f = function(v)
+         return v > by
+      end
+      return appLeft(
+         fmap(pat, function(val)
+            return function(_)
+               return val
+            end
+         end),
+         filterValues(prand, f)
+      )
+   end,
+   false,
+}
 
-register("degradeBy", function(by, pat)
-   return U.degradeByWith(M.rand, by, pat)
-end)
+register {
+   "degradeBy",
+   "Pattern Double -> Pattern a -> Pattern a",
+   function(by, pat)
+      return M.degradeByWith(M.rand, by, pat)
+   end,
+}
 
-register("undegradeBy", function(by, pat)
-   return U.degradeByWith(
-      fmap(M.rand, function(r)
-         return 1 - r
-      end),
-      by,
-      pat
-   )
-end)
+register {
+   "undegradeBy",
+   "Pattern Double -> Pattern a -> Pattern a",
+   function(by, pat)
+      return M.degradeByWith(
+         fmap(M.rand, function(r)
+            return 1 - r
+         end),
+         by,
+         pat
+      )
+   end,
+}
 
-register("degrade", function(pat)
-   return U.degradeBy(0.5, pat)
-end)
+register {
+   "degrade",
+   "Pattern a -> Pattern a",
+   function(pat)
+      return U.degradeBy(0.5, pat)
+   end,
+}
 
-register("undegrade", function(pat)
-   return U.undegradeBy(0.5, pat)
-end)
+register {
+   "undegrade",
+   "Pattern a -> Pattern a",
+   function(pat)
+      return U.undegradeBy(0.5, pat)
+   end,
+}
 
-register("sometimesBy", function(by, func, pat)
-   return innerJoin(fmap(reify(by), function()
-      return M.stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
-   end))
-end)
+register {
+   "sometimesBy",
+   "Pattern Double -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(by, func, pat)
+      return innerJoin(fmap(reify(by), function()
+         return M.stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
+      end))
+   end,
+}
 
-register("sometimes", function(func, pat)
-   return U.sometimesBy(0.5, func, pat)
-end)
+register {
+   "sometimes",
+   "(Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(func, pat)
+      return U.sometimesBy(0.5, func, pat)
+   end,
+}
 
+-- TODO: ? register
 function M.struct(boolpat, pat)
    local f = function(b)
       return function(val)
@@ -1054,130 +1160,182 @@ function M.struct(boolpat, pat)
    return appLeft(fmap(bools, f), pat):removeNils()
 end
 
-register("euclid", function(n, k, offset, pat)
-   return op["|?"](pat, bjork(n, k, offset))
-end)
+register {
+   "euclid",
+   "Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a",
+   function(n, k, offset, pat)
+      return op["|?"](pat, bjork(n, k, offset))
+   end,
+}
 
-register("rev", function(pat)
-   local query = function(_, state)
-      local span = state.span
-      local cycle = span._begin:sam()
-      local nextCycle = span._begin:nextSam()
-      local reflect
-      reflect = function(to_reflect)
-         local reflected = to_reflect:withTime(function(t)
-            return cycle + (nextCycle - t)
-         end)
-         local tmp = reflected._begin
-         reflected._begin = reflected._end
-         reflected._end = tmp
-         return reflected
+register {
+   "rev",
+   "Pattern a -> Pattern a",
+   function(pat)
+      local query = function(_, state)
+         local span = state.span
+         local cycle = span._begin:sam()
+         local nextCycle = span._begin:nextSam()
+         local reflect
+         reflect = function(to_reflect)
+            local reflected = to_reflect:withTime(function(t)
+               return cycle + (nextCycle - t)
+            end)
+            local tmp = reflected._begin
+            reflected._begin = reflected._end
+            reflected._end = tmp
+            return reflected
+         end
+         local events = pat:query(state:setSpan(reflect(span)))
+         return map(function(event)
+            return event:withSpan(reflect)
+         end, events)
       end
-      local events = pat:query(state:setSpan(reflect(span)))
-      return map(function(event)
-         return event:withSpan(reflect)
-      end, events)
-   end
-   return Pattern(query)
-end, "Pattern a -> Pattern a")
+      return Pattern(query)
+   end,
+}
 
-register("palindrome", function(pat)
-   return M.slowcat { pat, U.rev(pat) }
-end, "Pattern a -> Pattern a")
+register {
+   "palindrome",
+   "Pattern a -> Pattern a",
+   function(pat)
+      return M.slowcat { pat, U.rev(pat) }
+   end,
+}
 
-register("iter", function(n, pat)
-   local acc = {}
-   for i = 1, n do
-      acc[i] = U.early(Fraction(i - 1, n), pat)
-   end
-   return M.fromList(acc)
-end, "Pattern Int -> Pattern a -> Pattern a")
-
-register("reviter", function(n, pat)
-   local acc = {}
-   for i = 1, n do
-      acc[i] = M.late(Fraction(i - 1, n), pat)
-   end
-   return M.fromList(acc)
-end, "Pattern Int -> Pattern a -> Pattern a")
-
-register("segment", function(n, pat)
-   return appLeft(M.fast(n, pure(id)), pat)
-end)
-
-register("range", function(mi, ma, pat)
-   return pat * (ma - mi) + mi
-end)
-
-register("off", function(tp, f, pat)
-   tp, f, pat = reify(tp), M.sl(f), reify(pat)
-   local _off = function(t)
-      return M.stack { pat, M.late(t, f(pat)) }
-   end
-   return fmap(tp, _off):innerJoin()
-end, "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
-
-register("echoWith", function(times, time, func, pat)
-   local f = function(index)
-      return func(M.late(time * index, pat))
-   end
-   local ts
-   do
-      local _accum_0 = {}
-      local _len_0 = 1
-      for i = 0, times - 1 do
-         _accum_0[_len_0] = i
-         _len_0 = _len_0 + 1
+register {
+   "iter",
+   "Pattern Int -> Pattern a -> Pattern a",
+   function(n, pat)
+      local acc = {}
+      for i = 1, n do
+         acc[i] = U.early(Fraction(i - 1, n), pat)
       end
-      ts = _accum_0
-   end
-   return M.stack(map(f, ts))
-end)
+      return M.fromList(acc)
+   end,
+}
 
-register("when", function(test, f, pat)
-   local query = function(_, state)
-      local cycle_idx = state.span._begin:sam():asFloat()
-      if test(cycle_idx) then
-         return f(pat):query(state)
-      else
-         return pat:query(state)
+register {
+   "reviter",
+   "Pattern Int -> Pattern a -> Pattern a",
+   function(n, pat)
+      local acc = {}
+      for i = 1, n do
+         acc[i] = M.late(Fraction(i - 1, n), pat)
       end
-   end
-   return Pattern(query):splitQueries()
-end, "(Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", false)
+      return M.fromList(acc)
+   end,
+}
 
-register("every", function(tp, f, pat)
-   tp, pat, f = reify(tp), reify(pat), M.sl(f)
-   local _every = function(t)
-      -- stylua: ignore start
-      return M.when(function(i) return i % t == 0 end, f, pat)
-      -- stylua: ignore end
-   end
-   return fmap(tp, _every):innerJoin()
-end, "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", false)
+register {
+   "segment",
+   "Pattern Time -> Pattern a -> Pattern a",
+   function(n, pat)
+      return appLeft(M.fast(n, pure(id)), pat)
+   end,
+}
 
-M.firstOf = M.every
+-- TODO: see tidal impl
+register {
+   "range",
+   "Pattern a -> Pattern a -> Pattern a -> Pattern a",
+   function(mi, ma, pat)
+      return pat * (ma - mi) + mi
+   end,
+   false,
+}
+
+register {
+   "off",
+   "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(tp, f, pat)
+      tp, f, pat = reify(tp), M.sl(f), reify(pat)
+      local _off = function(t)
+         return M.stack { pat, M.late(t, f(pat)) }
+      end
+      return fmap(tp, _off):innerJoin()
+   end,
+   false,
+}
+
+-- register("echoWith", function(times, time, func, pat)
+--    local f = function(index)
+--       return func(M.late(time * index, pat))
+--    end
+--    local ts
+--    do
+--       local _accum_0 = {}
+--       local _len_0 = 1
+--       for i = 0, times - 1 do
+--          _accum_0[_len_0] = i
+--          _len_0 = _len_0 + 1
+--       end
+--       ts = _accum_0
+--    end
+--    return M.stack(map(f, ts))
+-- end)
+--
+register {
+   "when",
+   "(Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a",
+   function(test, f, pat)
+      local query = function(_, state)
+         local cycle_idx = state.span._begin:sam():asFloat()
+         if test(cycle_idx) then
+            return f(pat):query(state)
+         else
+            return pat:query(state)
+         end
+      end
+      return Pattern(query):splitQueries()
+   end,
+   false,
+}
+
+register {
+   "every",
+   "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(tp, f, pat)
+      tp, pat, f = reify(tp), reify(pat), M.sl(f)
+      local _every = function(t)
+         return M.when(function(i)
+            return i % t == 0
+         end, f, pat)
+      end
+      return fmap(tp, _every):innerJoin()
+   end,
+   false,
+}
 
 -- TODO: lastOf, every'
 
-register("scale", function(name, pat)
-   local toScale = function(v)
-      return getScale(name, v)
-   end
-   return fmap(pat, toScale)
-end)
-
-M.concat = function(pat, other)
-   return fmap(pat, function(a)
-      return function(b)
-         if type(a) == "table" then
-            a[#a + 1] = b
-            return a
-         end
-         return { a, b }
+register {
+   "scale",
+   "Pattern String -> Pattern a -> Pattern a",
+   function(name, pat)
+      local toScale = function(v)
+         return getScale(name, v)
       end
-   end):appLeft(other)
-end
+      return fmap(pat, toScale)
+   end,
+}
+
+register {
+   "concat",
+   "Pattern a -> Pattern a -> Pattern a",
+   function(pat, other)
+      return fmap(pat, function(a)
+         return function(b)
+            if type(a) == "table" then
+               a[#a + 1] = b
+               return a
+            end
+            return { a, b }
+         end
+      end):appLeft(other)
+   end,
+   false,
+}
 
 M.id = id
 M.T = T
