@@ -163,4 +163,4 @@ local getScale = function(name, num)
    return note
 end
 
-return { scaleTable = scaleTable, getScale = getScale }
+return getScale

@@ -49,9 +49,10 @@ local eval = function(a)
          print(optf[name](param))
          return
       end
-      local res, ok = evalf(a)
+      local fn, ok = evalf(a)
       if ok then
-         if res then
+         local fok, res = pcall(fn)
+         if fok then
             io.write(M.dump(res))
          end
       else
@@ -62,6 +63,7 @@ end
 
 RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
 RL.set_readline_name "modal"
+
 while true do
    -- c = assert(socket.connect(host, port))
    line = RL.readline "modal> "
@@ -79,12 +81,11 @@ while true do
       end
    elseif line == ">>modal" then
       eval = maxi(_G, true)
-   else
+   elseif line ~= "" then
       print(eval(line))
-   end
-
-   if c then
-      c:send(line .. "\n")
+      if c then
+         c:send(line .. "\n")
+      end
    end
 end
 RL.save_history()

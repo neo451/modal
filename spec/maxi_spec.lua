@@ -14,8 +14,6 @@ local assert = require("busted").assert
 --    end)
 -- end)
 --
-local eval_top = maxi(M, true)
-local _, to_str = maxi(M, true)
 -- TODO: should everything just be default mini?? quote to get literal???
 describe("set", function()
    -- it("should parse set to lua var set in only top level????", function()
@@ -39,7 +37,13 @@ end)
 --    end)
 -- end)
 -- local eval = maxi(M, false)
-local eval = M.mini
+local eval = function(str)
+   return M.mini(str)()
+end
+
+local eval_top = function(str)
+   return maxi(M, true)(str)()
+end
 
 describe("step", function()
    it("numbers", function()

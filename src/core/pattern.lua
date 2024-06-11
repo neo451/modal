@@ -1,9 +1,7 @@
 local ut = require "modal.utils"
-local reduce, map, filter, id, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap, auto_curry =
-   ut.reduce,
+local map, filter, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap, auto_curry =
    ut.map,
    ut.filter,
-   ut.id,
    ut.flatten,
    ut.union,
    ut.timeToRand,
@@ -13,8 +11,8 @@ local reduce, map, filter, id, flatten, union, timeToRand, curry, T, nparams, fl
    ut.flip,
    ut.method_wrap,
    ut.auto_curry
-local bjork = require("modal.euclid").bjork
-local getScale = require("modal.scales").getScale
+local bjork = require "modal.euclid"
+local getScale = require "modal.scales"
 local frac = require "modal.fraction"
 local Fraction, tofrac = frac.Fraction, frac.tofrac
 local types = require "modal.types"
@@ -22,9 +20,9 @@ local Event, Span, State = types.Event, types.Span, types.State
 local TDef = require "modal.type_def"
 local maxi = require "modal.maxi"
 local fun = require "modal.fun"
+local log = require "modal.log"
 
-local Pattern
-local reify, pure, silence, overlay
+local Pattern, reify, pure, silence
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
 local fmap, firstCycle, querySpan
 local withEventTime
@@ -32,6 +30,7 @@ local appLeft, appRight, appBoth
 local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
 local iter = fun.iter
+local reduce = fun.reduce
 local sin = math.sin
 local min = math.min
 local max = math.max
@@ -44,8 +43,13 @@ local floor = math.floor
 local M = {}
 local U = {} -- Unpatternified versions
 local TYPES = {}
+
 M.mini = maxi(M, false)
 M.sl = ut.string_lambda(M)
+
+local id = function(a)
+   return a
+end
 
 local _op = {}
 function _op.In(f)
@@ -582,8 +586,11 @@ M.pure = pure
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = M.mini("[" .. thing .. "]")
-      return res
+      local res, ok = M.mini("[" .. thing .. "]")
+      if not ok then
+         log.warn("failed to compile pattern: " .. thing)
+      end
+      return res()
    elseif "table" == t then
       return M.fastFromList(thing)
    elseif "pattern" == t then
@@ -708,6 +715,7 @@ end
 ---@return Pattern<any>
 ---@usage
 ---fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
+--- TODO: type sig to use in maxi
 function M.fastcat(pats)
    return U.fast(#pats, M.slowcat(pats))
 end
@@ -725,7 +733,7 @@ function M.timecat(args)
          total = total + v
       end
    end
-   local accum = Fraction(0)
+   local accum = 0
    local pats = {}
    local time, pat, b, e
    for i = 1, #args, 2 do
@@ -917,7 +925,7 @@ register {
       if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
          return M.silence()
       end
-      local fasted = U.fastgap((Fraction(1) / (e - b)), pat)
+      local fasted = U.fastgap((e - b):reverse(), pat)
       return M.late(b, fasted)
    end,
    false,
@@ -927,7 +935,7 @@ register {
    "focus",
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
-      local fasted = U.fast((Fraction(1) / (e - b)), pat)
+      local fasted = U.fast((e - b):reverse(), pat)
       return M.late(Span:cyclePos(b), fasted)
    end,
    false,
@@ -1211,7 +1219,7 @@ register {
    function(n, pat)
       local acc = {}
       for i = 1, n do
-         acc[i] = U.early(Fraction(i - 1, n), pat)
+         acc[i] = U.early((i - 1) / n, pat)
       end
       return M.fromList(acc)
    end,
@@ -1223,7 +1231,7 @@ register {
    function(n, pat)
       local acc = {}
       for i = 1, n do
-         acc[i] = M.late(Fraction(i - 1, n), pat)
+         acc[i] = M.late((i - 1) / n, pat)
       end
       return M.fromList(acc)
    end,

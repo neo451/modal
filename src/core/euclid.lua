@@ -47,4 +47,4 @@ local function bjork(ons, steps, offset)
    return rotate(offset, result)
 end
 
-return { bjork = bjork }
+return bjork

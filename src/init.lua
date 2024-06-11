@@ -22,9 +22,9 @@ for name, func in pairs(pattern_factory) do
    base[name] = func
 end
 
-for name, pat in pairs(lib) do
-   modal[name] = pattern.reify(pat)
-end
+-- for name, pat in pairs(lib) do
+--    modal[name] = pattern.reify(pat)
+-- end
 
 for _, func in pairs(ui) do
    pattern.register(func)

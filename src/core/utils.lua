@@ -67,11 +67,9 @@ M.filter = function(func, tab)
    return fun.totable(fun.filter(func, tab))
 end
 
-M.map = function(func, table)
-   return fun.totable(fun.map(func, table))
+M.map = function(func, tab)
+   return fun.totable(fun.map(func, tab))
 end
-
-M.reduce = fun.reduce
 
 M.dump = function(o)
    if M.type(o) == "table" then
@@ -115,15 +113,6 @@ end
 
 M.splitAt = function(index, list)
    local fst, lst = {}, {}
-   -- local pred = function(a)
-   --    return a <= index
-   -- end
-   -- for _, k, v in fun.zip(fun.partition(pred, fun.iter(list))) do
-   --    fst[#fst + 1] = k
-   --    lst[#lst + 1] = v
-   -- end
-   -- require("moon.all")
-   -- p(index)
    for k, v in pairs(list) do
       if k <= index then
          fst[#fst + 1] = v
@@ -139,7 +128,7 @@ M.rotate = function(step, list)
    return M.concat(b, a)
 end
 
-M.id = function(x)
+local id = function(x)
    return x
 end
 
@@ -149,26 +138,7 @@ M.pipe = function(...)
       return function(...)
          return f(g(...))
       end
-   end, M.id, funcs)
-end
-
-M.rurry = function(func, num_args)
-   num_args = num_args or 2
-   if num_args <= 1 then
-      return func
-   end
-   local function curry_h(argtrace, n)
-      if 0 == n then
-         return func(argtrace())
-      else
-         return function(onearg)
-            return curry_h(function()
-               return onearg, argtrace()
-            end, n - 1)
-         end
-      end
-   end
-   return curry_h(function() end, num_args)
+   end, id, funcs)
 end
 
 M.curry = function(func, num_args)
