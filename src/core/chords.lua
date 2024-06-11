@@ -54,6 +54,7 @@ local minor7sharp5flat9 = { 0, 3, 8, 10, 13 }
 local elevenSharp = { 0, 4, 7, 10, 14, 18 }
 local minor11sharp = { 0, 3, 7, 10, 14, 18 }
 
+---@enum (key) Chords
 local chordTable = {
    ["major"] = major,
    ["maj"] = major,

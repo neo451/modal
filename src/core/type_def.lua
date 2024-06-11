@@ -89,10 +89,10 @@ local function gen_T(t)
    return s .. format(t.ret)
 end
 
--- function TDef:__tostring()
---    return gen_T(self.T)
--- end
-t = TDef:new "Time -> Pattern a -> Pattern a"
+function TDef:__tostring()
+   return gen_T(self.T)
+end
+-- t = TDef:new "Time -> Pattern a -> Pattern a"
 -- p(t)
 -- print(TDef:new "Pattern Time -> Pattern a -> Pattern a")
 -- print(TDef:new "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a")
