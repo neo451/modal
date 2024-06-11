@@ -375,6 +375,8 @@ local grammar = {
    euclid = P "(" * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P ")" / pEuclid,
 }
 
+---@param env table
+---@param top_level boolean
 return function(env, top_level)
    if top_level then
       stat = ws * step * (expr - S "=") * expr ^ 0 * ws / pStat
@@ -398,7 +400,6 @@ return function(env, top_level)
          return ast, false
       end
       local lua_src = ast_to_src(ast)
-      print(lua_src)
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
          return nil, false

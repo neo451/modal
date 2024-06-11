@@ -280,6 +280,7 @@ do
    _base_0.__class = _class_0
    State = _class_0
 end
+
 return {
    Span = Span,
    Event = Event,

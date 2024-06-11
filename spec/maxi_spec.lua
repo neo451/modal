@@ -67,7 +67,7 @@ end)
 
 describe("stack", function()
    it("should parse mini stack as a first class", function()
-      assert.same(M.stackFromList { "bd", "sd" }, eval "[bd, sd]")
+      assert.same(M.stack { M.pure "bd", M.pure "sd" }, eval "[bd, sd]")
       assert.same(M.stack { M.fastFromList { "bd", "bd" }, M.fastFromList { "sd", "sd" } }, eval "[bd bd, sd sd]")
    end)
 end)

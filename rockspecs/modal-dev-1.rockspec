@@ -25,7 +25,7 @@ build = {
    type = "builtin",
    modules = {
       ["modal.init"] = "src/init.lua",
-
+      ["modal.luacats"] = "src/luacats.lua",
       ["modal.utils"] = "src/core/utils.lua",
       ["modal.log"] = "src/core/log.lua",
       ["modal.fraction"] = "src/core/fraction.lua",

@@ -36,9 +36,6 @@ local min = math.min
 local max = math.max
 local pi = math.pi
 local floor = math.floor
----@alias State table
----@alias Event<T> {value: T}
----@alias Pattern<T> fun(st: State): Event<T>[]
 
 local M = {}
 local U = {} -- Unpatternified versions
@@ -621,9 +618,11 @@ local patternify = function(func)
    return patterned
 end
 
-require "moon.all"
 local function typecheck(f, name)
    local t = TYPES[name].T
+   -- if name == "stack" then
+   --    return f
+   -- end
    return function(...)
       local args = { ... }
       for i = 1, #args do
@@ -654,67 +653,72 @@ local function register(args)
    if should_pat then
       TYPES[name] = TDef:new(type_sig)
       U[name] = f
-      M[name] = auto_curry(nparams(f), patternify(f))
+      local f_c_p = auto_curry(nparams(f), patternify(f))
+      M[name] = f_c_p
       base[name] = method_wrap(patternify(f))
+      return f_c_p
    else
-      -- local t = TDef:new(type_sig)
       TYPES[name] = TDef:new(type_sig)
-      M[name] = typecheck(auto_curry(nparams(f), f), name)
+      local f_c = typecheck(auto_curry(nparams(f), f), name)
+      M[name] = f_c
       base[name] = method_wrap(f)
+      return f_c
    end
 end
 M.register = register
 
-function M.stack(pats)
-   return reduce(M.overlay, silence(), iter(pats))
-end
+register {
+   "stack",
+   "a -> Pattern a",
+   function(pats)
+      return reduce(M.overlay, silence(), iter(pats))
+   end,
+   false,
+}
 
-function M.stackFromList(list)
-   return M.stack(map(pure, list))
-end
-
----stack up pats in polymeter way
----@param steps number | Pattern
----@param pats Pattern
----@return Pattern
-function M.polymeter(steps, pats)
-   local nsteps, ratio, res = reify(steps), nil, {}
-   for _, pat in iter(pats) do
-      ratio = nsteps / #(firstCycle(pat))
-      res[#res + 1] = M.fast(ratio, pat)
-   end
-   return M.stack(res)
-end
-
-function M.slowcat(pats)
-   local query = function(_, state)
-      local a = state.span
-      local cyc = a._begin:sam():asFloat()
-      local n = #pats
-      local i = cyc % n
-      local pat = pats[i + 1]
-      if not pat then
-         return {}
+register {
+   "polymeter",
+   "Pattern Int -> a -> Pattern a",
+   function(steps, pats)
+      local nsteps, ratio, res = reify(steps), nil, {}
+      for _, pat in iter(pats) do
+         ratio = nsteps / #(firstCycle(pat))
+         res[#res + 1] = M.fast(ratio, pat)
       end
-      local offset = cyc - (cyc - i) / n
-      return withEventTime(pat, function(t)
-         return t + offset
-      end):query(state:setSpan(a:withTime(function(t)
-         return t - offset
-      end)))
-   end
-   return Pattern(query):splitQueries()
-end
+      return M.stack(res)
+   end,
+   false,
+}
+
+register {
+   "slowcat",
+   "a -> Pattern a",
+   function(pats)
+      local query = function(_, state)
+         local a = state.span
+         local cyc = a._begin:sam():asFloat()
+         local n = #pats
+         local i = cyc % n
+         local pat = pats[i + 1]
+         if not pat then
+            return {}
+         end
+         local offset = cyc - (cyc - i) / n
+         return withEventTime(pat, function(t)
+            return t + offset
+         end):query(state:setSpan(a:withTime(function(t)
+            return t - offset
+         end)))
+      end
+      return Pattern(query):splitQueries()
+   end,
+   false,
+}
 
 function M.fromList(list)
    return M.slowcat(map(pure, list))
 end
 
----Like slowcat, but the items are crammed into one cycle.
----@param pats Pattern<any>[]
----@return Pattern<any>
----@usage
----fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
 --- TODO: type sig to use in maxi
 function M.fastcat(pats)
    return U.fast(#pats, M.slowcat(pats))
@@ -724,11 +728,9 @@ function M.fastFromList(list)
    return M.fastcat(map(pure, list))
 end
 
----@param args Pattern<any>[] | number[] #####
----@return Pattern<any>
-function M.timecat(args)
+function M.timecat(tups)
    local total = 0
-   for i, v in iter(args) do
+   for i, v in iter(tups) do
       if i % 2 == 1 then
          total = total + v
       end
@@ -736,8 +738,8 @@ function M.timecat(args)
    local accum = 0
    local pats = {}
    local time, pat, b, e
-   for i = 1, #args, 2 do
-      time, pat = args[i], args[i + 1]
+   for i = 1, #tups, 2 do
+      time, pat = tups[i], tups[i + 1]
       b, e = accum / total, (accum + time) / total
       pats[#pats + 1] = M.compress(b, e, pat)
       accum = accum + time
@@ -821,7 +823,7 @@ register {
       if factor:eq(0) then
          return silence()
       else
-         return M.fast(factor:reverse(), pat)
+         return U.fast(factor:reverse(), pat)
       end
    end,
 }
@@ -1061,9 +1063,9 @@ local _chooseWith = function(pat, ...)
    end)
 end
 
-local chooseWith = function(pat, ...)
-   return outerJoin(_chooseWith(pat, ...))
-end
+-- local chooseWith = function(pat, ...)
+--    return outerJoin(_chooseWith(pat, ...))
+-- end
 
 local chooseInWith = function(pat, ...)
    return innerJoin(_chooseWith(pat, ...))
