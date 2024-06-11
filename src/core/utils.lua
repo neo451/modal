@@ -325,4 +325,19 @@ function M.method_wrap(f)
    end
 end
 
+function M.auto_curry(arity, f)
+   return function(...)
+      local args = { ... }
+      if #args < arity then
+         f = M.curry(f, arity)
+         for _, v in ipairs(args) do
+            f = f(v)
+         end
+         return f
+      else
+         return f(...)
+      end
+   end
+end
+
 return M

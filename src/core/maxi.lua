@@ -2,12 +2,11 @@
 -- d3 $ n (scan 8) |> s alphabet |> vowel [a e]
 --d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
 -- d2 $ note {[0|5] [3|4] 9 12 _ _}%5 |> s supermandolin only one [] works
---TODO: repl with persistant history
 
+-- TODO: proper arithemtic
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local ut = require "modal.utils"
-local log = require "modal.log"
 
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
@@ -63,61 +62,6 @@ return function(M, top_level)
       return { tag = "Call", Id(name), ... }
    end
 
-   local function purify(v)
-      if v.tag == "Id" then
-         return v
-      end
-      if v.tag ~= "Call" then
-         local res = Call("pure", v)
-         res.reps = v.reps
-         res.weight = v.weight
-         return res
-      end
-      return v
-   end
-
-   local function check_one(elem, T)
-      -- if T[1] == "Int" then
-      --    if not tonumber(elem[2][1]) then
-      --       mpp(elem[2][1])
-      --       log.warn(string.format("Can not match type %s to Int", type(elem[2][1])))
-      --       return false
-      --    end
-      -- end
-      return true
-   end
-
-   local function convert_one(elem, T)
-      if T.constructor == "Pattern" then
-         return purify(elem)
-      else
-         return elem
-      end
-   end
-
-   local function typecheck(name, args)
-      local types = M.t[name] -- infer types maybe
-      if not types then
-         return true, args
-      end
-      for i = 1, #args do
-         if not check_one(args[i], types.T[i]) then
-            return false, {}
-         end
-         args[i] = convert_one(args[i], types.T[i])
-      end
-      return true, args
-   end
-
-   local function tCall(name, ...)
-      local ok, args = typecheck(name, { ... })
-      if ok then
-         return { tag = "Call", Id(name), unpack(args) }
-      else
-         error()
-      end
-   end
-
    local function string2id(v)
       if v.tag == "String" then
          v.tag = "Id"
@@ -153,8 +97,7 @@ return function(M, top_level)
       local tails = ut.filter(function(a)
          return type(a) == "function"
       end, args)
-      -- tCall
-      local main = tCall(fname, unpack(params))
+      local main = Call(fname, unpack(params))
       for i = 1, #tails do
          main = tails[i](main)
       end
@@ -163,8 +106,6 @@ return function(M, top_level)
 
    local step_char = R("09", "AZ", "az") + S [[-~^'.]]
    local tidalop = S "|+-*/^%><" ^ 2 / id
-   -- TODO: proper arithemtic
-   -- local step = ws * (((step_char ^ 1) + P "+" + P "-" + P "*" + P "/" + P "%") / parseStep) * ws
    local step = ws * (step_char ^ 1 / pStep) * ws
    local minus = P "-"
    local plus = P "+"
@@ -180,13 +121,13 @@ return function(M, top_level)
 
    local function pFast(a)
       return function(x)
-         return tCall("fast", a, x)
+         return Call("fast", a, x)
       end
    end
 
    local function pSlow(a)
       return function(x)
-         return tCall("slow", a, x)
+         return Call("slow", a, x)
       end
    end
 
@@ -196,20 +137,20 @@ return function(M, top_level)
       end
       return function(x)
          seed = seed + 1
-         return tCall("degradeBy", a, x)
+         return Call("degradeBy", a, x)
       end
    end
 
    local function pTail(b)
       return function(a)
-         return tCall("concat", a, purify(b))
+         return Call("concat", a, b)
       end
    end
 
    local function pEuclid(p, s, r)
       r = r or Num(0)
       return function(x)
-         return tCall("euclid", p, s, r, x)
+         return Call("euclid", p, s, r, x)
       end
    end
 
@@ -224,7 +165,6 @@ return function(M, top_level)
    local function pWeight(a)
       return function(x)
          x.weight = (x.weight or 1) + (tonumber(a[1]) or 2) - 1
-         -- x.weight = tonumber(a[1]) or 1
          return x
       end
    end
@@ -232,7 +172,6 @@ return function(M, top_level)
    local function pReplicate(a)
       return function(x)
          x.reps = (x.reps or 1) + (tonumber(a[1]) or 2) - 1
-         -- x.reps = tonumber(a[1]) or 1
          return x
       end
    end
@@ -247,8 +186,8 @@ return function(M, top_level)
                res[#res + 1] = node
             end
          elseif node.range then
-            for i = node[2][1], node.range do -- HACK:
-               res[#res + 1] = Call("pure", Num(i))
+            for i = node[1], node.range do
+               res[#res + 1] = Num(i)
             end
          else
             res[#res + 1] = node
@@ -261,7 +200,7 @@ return function(M, top_level)
       for _, v in ipairs { ... } do
          sli = v(sli)
       end
-      return purify(sli)
+      return sli
    end
 
    local function addWeight(a, b)
@@ -284,7 +223,7 @@ return function(M, top_level)
          if weightSum > #args then
             return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
          else
-            return Call(isSlow and "slowcat" or "fastcat", Table(args))
+            return Call(isSlow and "fromList" or "fastFromList", Table(args))
          end
       end
    end
@@ -456,6 +395,7 @@ return function(M, top_level)
          return ast, false
       end
       local lua_src = ast_to_src(ast)
+      -- print(lua_src)
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
          return fstr, false

@@ -69,25 +69,31 @@ function TDef:new(str)
    self.__index = self
    return setmetatable(newobj, self)
 end
-
+-- require "moon.all"
 local function gen_T(t)
    local function format(a)
       if type(a[1]) == "table" then
          return string.format("(%s)", gen_T(a))
+      elseif a.constructor then
+         return string.format("%s %s", a.constructor, a[1])
+      elseif type(a) == "string" then
+         -- print(a)
+         return a
       end
-      return string.format("%s %s", a.constructor, a[1])
    end
    local s = ""
    for i = 1, #t do
+      -- print(t[i])
       s = s .. format(t[i]) .. " -> "
    end
    return s .. format(t.ret)
 end
 
-function TDef:__tostring()
-   return gen_T(self.T)
-end
-
+-- function TDef:__tostring()
+--    return gen_T(self.T)
+-- end
+t = TDef:new "Time -> Pattern a -> Pattern a"
+-- p(t)
 -- print(TDef:new "Pattern Time -> Pattern a -> Pattern a")
 -- print(TDef:new "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a")
 return TDef

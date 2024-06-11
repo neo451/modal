@@ -1,7 +1,18 @@
 local ut = require "modal.utils"
-local map, filter, id, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap =
-   ut.map, ut.filter, ut.id, ut.flatten, ut.union, ut.timeToRand, ut.curry, ut.type, ut.nparams, ut.flip, ut.method_wrap
-
+local reduce, map, filter, id, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap, auto_curry =
+   ut.reduce,
+   ut.map,
+   ut.filter,
+   ut.id,
+   ut.flatten,
+   ut.union,
+   ut.timeToRand,
+   ut.curry,
+   ut.type,
+   ut.nparams,
+   ut.flip,
+   ut.method_wrap,
+   ut.auto_curry
 local bjork = require("modal.euclid").bjork
 local getScale = require("modal.scales").getScale
 local frac = require "modal.fraction"
@@ -552,7 +563,6 @@ end
 M.silence = silence
 
 function pure(value)
-   -- HACK: ??
    if value == "~" then
       return silence()
    end
@@ -569,22 +579,9 @@ end
 
 M.pure = pure
 
--- TODO: temp
-M.pure2 = function(a)
-   if T(a) == "pattern" then
-      return a
-   else
-      return M.pure(a)
-   end
-end
-
 reify = function(thing)
    local t = T(thing)
    if "string" == t then
-      -- TODO: think about this?
-      -- for i, v in pairs(M) do
-      --    _G[i] = v
-      -- end
       local res = M.mini("[" .. thing .. "]")
       return res
    elseif "table" == t then
@@ -612,23 +609,33 @@ local patternify = function(func)
          return func(unpack(args))
       end
       mapFn = curry(mapFn, arity - 1)
-      return ut.reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
+      return reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
    end
    return patterned
 end
 
-local function auto_curry(arity, f)
+require "moon.all"
+local function typecheck(f, name)
+   local t = TYPES[name].T
    return function(...)
       local args = { ... }
-      if #args < arity then
-         f = curry(f, arity)
-         for _, v in ipairs(args) do
-            f = f(v)
+      for i = 1, #args do
+         local _t = t[i]
+         if type(_t) == "table" then
+            if _t.constructor then
+               local tt = _t.constructor
+               if tt == "Pattern" then
+                  args[i] = reify(args[i])
+               end
+            end
          end
-         return f
-      else
-         return f(...)
+         if type(_t) == "string" then
+            if _t == "Time" then
+               args[i] = tofrac(args[i])
+            end
+         end
       end
+      return f(unpack(args))
    end
 end
 
@@ -638,24 +645,21 @@ local function register(args)
       should_pat = true
    end
    if should_pat then
-      -- if type(type_sig) == "string" then
-      TYPES[name] = TDef:new(type_sig) -- HACK
-      -- end
+      TYPES[name] = TDef:new(type_sig)
       U[name] = f
       M[name] = auto_curry(nparams(f), patternify(f))
       base[name] = method_wrap(patternify(f))
    else
-      -- if type(type_sig) == "string" then
-      TYPES[name] = TDef:new(type_sig) -- HACK
-      -- end
-      M[name] = auto_curry(nparams(f), f)
+      -- local t = TDef:new(type_sig)
+      TYPES[name] = TDef:new(type_sig)
+      M[name] = typecheck(auto_curry(nparams(f), f), name)
       base[name] = method_wrap(f)
    end
 end
 M.register = register
 
 function M.stack(pats)
-   return fun.reduce(M.overlay, silence(), iter(pats))
+   return reduce(M.overlay, silence(), iter(pats))
 end
 
 function M.stackFromList(list)
@@ -743,7 +747,7 @@ function M.arrange(args)
    local cycles, pat
    for i = 1, #args, 2 do
       cycles, pat = args[i], args[i + 1]
-      args[i + 1] = U.fast(cycles, pat)
+      args[i + 1] = M.fast(cycles, pat)
    end
    return U.slow(total, M.timecat(args))
 end
@@ -825,7 +829,7 @@ register {
          return t - offset
       end)
    end,
-   false,
+   -- false,
 } -- HACK: why not patternify TIME??
 
 -- rotR
@@ -835,7 +839,7 @@ register {
    function(offset, pat)
       return M.early(-offset, pat)
    end,
-   false,
+   -- false,
 }
 
 -- TODO: test
@@ -910,7 +914,6 @@ register {
    "compress",
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
-      b, e = tofrac(b), tofrac(e)
       if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
          return M.silence()
       end
@@ -924,7 +927,6 @@ register {
    "focus",
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
-      b, e = tofrac(b), tofrac(e)
       local fasted = U.fast((Fraction(1) / (e - b)), pat)
       return M.late(Span:cyclePos(b), fasted)
    end,
@@ -940,7 +942,6 @@ register {
    "zoom",
    "Time -> Time -> Pattern a -> Pattern a",
    function(s, e, pat)
-      s, e = tofrac(s), tofrac(e)
       local dur = e - s
       local qf = function(span)
          return span:withCycle(function(t)
@@ -966,7 +967,7 @@ register {
    "run",
    "Pattern Int -> Pattern Int",
    function(n)
-      return fmap(reify(n), _run):join()
+      return fmap(n, _run):join()
    end,
    false,
 }
@@ -983,7 +984,7 @@ register {
    "scan",
    "Pattern Int -> Pattern Int",
    function(n)
-      return fmap(reify(n), _scan):join()
+      return fmap(n, _scan):join()
    end,
    false,
 }
@@ -1030,17 +1031,18 @@ M.tri = M.fastcat { M.isaw, M.saw }
 M.tri2 = M.fastcat { M.isaw2, M.saw2 }
 M.time = waveform(id)
 M.rand = waveform(timeToRand)
+
 M._irand = function(i)
    return fmap(M.rand, function(x)
       return floor(x * i)
    end)
 end
+-- TODO: reigister
 M.irand = function(ipat)
    return innerJoin(fmap(reify(ipat), M._irand))
 end
 
 local _chooseWith = function(pat, ...)
-   -- local vals = map(reify, { ... })
    local vals = { ... }
    if #vals == 0 then
       return M.silence()
@@ -1135,7 +1137,7 @@ register {
    "sometimesBy",
    "Pattern Double -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(by, func, pat)
-      return innerJoin(fmap(reify(by), function()
+      return innerJoin(fmap(by, function()
          return M.stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
       end))
    end,
@@ -1249,7 +1251,7 @@ register {
    "off",
    "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      tp, f, pat = reify(tp), M.sl(f), reify(pat)
+      f = M.sl(f)
       local _off = function(t)
          return M.stack { pat, M.late(t, f(pat)) }
       end
@@ -1296,8 +1298,7 @@ register {
    "every",
    "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      -- TODO: into register to auto convert
-      tp, pat, f = reify(tp), reify(pat), M.sl(f)
+      f = M.sl(f)
       local _every = function(t)
          return M.when(function(i)
             return i % t == 0
