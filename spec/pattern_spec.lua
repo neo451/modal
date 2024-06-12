@@ -529,3 +529,17 @@ describe("off", function()
       assert.are.same(expected, pat(0, 1))
    end)
 end)
+
+describe("scale", function()
+   it("should `quantise` notes in scale", function()
+      -- gong : { 0, 2, 4, 7, 9 }
+      local pat = M.note("1 2 3"):scale "gong"
+      local expected = M.note "2 4 7"
+      assert.are.same(expected, pat)
+   end)
+   it("should do mod", function()
+      local pat = M.note("5 6 7"):scale "gong"
+      local expected = M.note "12 14 16" -- 0, 2, 4 + 12
+      assert.are.same(expected, pat)
+   end)
+end)

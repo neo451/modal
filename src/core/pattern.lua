@@ -17,7 +17,7 @@ local frac = require "modal.fraction"
 local Fraction, tofrac = frac.Fraction, frac.tofrac
 local types = require "modal.types"
 local Event, Span, State = types.Event, types.Span, types.State
-local TDef = require "modal.type_def"
+local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 local log = require "modal.log"
@@ -141,6 +141,7 @@ for k, f in pairs(ops) do
 end
 
 M.op = op
+
 local base = {}
 
 function base:type()
@@ -386,7 +387,8 @@ squeezeJoin = function(pat)
       local events = discreteOnly(pat):query(state)
       local flatEvent
       flatEvent = function(outerEvent)
-         local innerPat = M.focusSpan(outerEvent:wholeOrPart(), outerEvent.value)
+         local span = outerEvent:wholeOrPart()
+         local innerPat = M.focus(span._begin, span._end, outerEvent.value)
          local innerEvents = innerPat:query(State(outerEvent.part))
          local munge
          munge = function(outer, inner)
@@ -601,6 +603,7 @@ M.reify = reify
 local patternify = function(func)
    local patterned = function(...)
       local arity = nparams(func)
+      -- TODO:
       local pats = map(reify, { ... })
       local pat = table.remove(pats, #pats)
       if arity == 1 then
@@ -619,25 +622,21 @@ local patternify = function(func)
 end
 
 local function typecheck(f, name)
-   local t = TYPES[name].T
-   -- if name == "stack" then
-   --    return f
-   -- end
+   local sig = TYPES[name].T
    return function(...)
       local args = { ... }
       for i = 1, #args do
-         local _t = t[i]
-         if type(_t) == "table" then
-            if _t.constructor then
-               local tt = _t.constructor
-               if tt == "Pattern" then
-                  args[i] = reify(args[i])
-               end
-            end
+         local t = sig[i]
+         local tc, tvar = t.constructor, t[1]
+         if type(tvar) == "table" then
+            args[i] = M.sl(args[i])
          end
-         if type(_t) == "string" then
-            if _t == "Time" then
-               args[i] = tofrac(args[i])
+         if tvar == "Time" then
+            args[i] = tofrac(args[i])
+         end
+         if tc then
+            if tc == "Pattern" then
+               args[i] = reify(args[i])
             end
          end
       end
@@ -653,16 +652,14 @@ local function register(args)
    if should_pat then
       TYPES[name] = TDef:new(type_sig)
       U[name] = f
-      local f_c_p = auto_curry(nparams(f), patternify(f))
+      local f_c_p = typecheck(auto_curry(nparams(f), patternify(f)), name)
       M[name] = f_c_p
       base[name] = method_wrap(patternify(f))
-      return f_c_p
    else
       TYPES[name] = TDef:new(type_sig)
       local f_c = typecheck(auto_curry(nparams(f), f), name)
       M[name] = f_c
       base[name] = method_wrap(f)
-      return f_c
    end
 end
 M.register = register
@@ -719,10 +716,14 @@ function M.fromList(list)
    return M.slowcat(map(pure, list))
 end
 
---- TODO: type sig to use in maxi
-function M.fastcat(pats)
-   return U.fast(#pats, M.slowcat(pats))
-end
+register {
+   "fastcat",
+   "a -> Pattern a",
+   function(pats)
+      return U.fast(#pats, M.slowcat(pats))
+   end,
+   false,
+}
 
 function M.fastFromList(list)
    return M.fastcat(map(pure, list))
@@ -852,7 +853,6 @@ register {
    -- false,
 }
 
--- TODO: test
 register {
    "inside",
    "Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a",
@@ -942,11 +942,6 @@ register {
    end,
    false,
 }
-
--- TODO: replace
-M.focusSpan = function(span, pat)
-   return M.focus(span._begin, span._end, reify(pat))
-end
 
 register {
    "zoom",
@@ -1257,19 +1252,6 @@ register {
    false,
 }
 
-register {
-   "off",
-   "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
-   function(tp, f, pat)
-      f = M.sl(f)
-      local _off = function(t)
-         return M.stack { pat, M.late(t, f(pat)) }
-      end
-      return fmap(tp, _off):innerJoin()
-   end,
-   false,
-}
-
 -- register("echoWith", function(times, time, func, pat)
 --    local f = function(index)
 --       return func(M.late(time * index, pat))
@@ -1308,7 +1290,6 @@ register {
    "every",
    "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      f = M.sl(f)
       local _every = function(t)
          return M.when(function(i)
             return i % t == 0
@@ -1320,13 +1301,22 @@ register {
 }
 
 register {
+   "off",
+   "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   function(tp, f, pat)
+      local _off = function(t)
+         return M.stack { pat, M.late(t, f(pat)) }
+      end
+      return fmap(tp, _off):innerJoin()
+   end,
+   false,
+}
+
+register {
    "scale",
    "Pattern String -> Pattern a -> Pattern a",
    function(name, pat)
-      local toScale = function(v)
-         return getScale(name, v)
-      end
-      return fmap(pat, toScale)
+      return fmap(pat, getScale(name))
    end,
 }
 

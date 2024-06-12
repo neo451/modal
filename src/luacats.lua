@@ -45,6 +45,13 @@ timecat = function(tups) end
 ---@return Pattern
 arrange = function(tups) end
 
+---generate ons amount of events evenly in steps, with an offset
+---@param ons number
+---@param steps number
+---@param offset number
+---@return table
+bjork = function(ons, steps, offset) end
+
 ---@param factor Time
 ---@param pat any
 ---@return Pattern

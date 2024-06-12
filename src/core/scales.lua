@@ -152,16 +152,26 @@ local scaleTable = {
    ["iraq"] = iraq,
 }
 
-local getScale = function(name, num)
-   num = tonumber(num)
-   local scale = scaleTable[name]
-   local index = (num + 1) % #scale
-   local octave = math.floor(num / #scale)
-   if index == 0 then
-      index = #scale
+local getScale = function(name)
+   return function(num)
+      local istab = false
+      if type(num) == "table" and num.note then
+         num = num.note
+         istab = true
+      end
+      num = tonumber(num)
+      local scale = scaleTable[name]
+      local index = (num + 1) % #scale
+      local octave = math.floor(num / #scale)
+      if index == 0 then
+         index = #scale
+      end
+      local note = scale[index] + octave * 12
+      if istab then
+         return { ["note"] = note }
+      end
+      return note
    end
-   local note = scale[index] + octave * 12
-   return note
 end
 
 return getScale

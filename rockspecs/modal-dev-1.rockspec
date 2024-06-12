@@ -50,7 +50,7 @@ build = {
 
       ["modal.maxi"] = "src/core/maxi.lua",
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
-      ["modal.type_def"] = "src/core/type_def.lua",
+      ["modal.typedef"] = "src/core/typedef.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
       ["modal.server"] = "src/repl/server.lua",

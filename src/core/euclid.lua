@@ -32,7 +32,7 @@ local function _bjork(n, m)
    end
 end
 
-local function bjork(ons, steps, offset)
+return function(ons, steps, offset)
    offset = offset and offset or 0
    local offs = steps - ons
    local x, y = {}, {}
@@ -46,5 +46,3 @@ local function bjork(ons, steps, offset)
    result = concat(flatten(result[2][1]), flatten(result[2][2]))
    return rotate(offset, result)
 end
-
-return bjork
