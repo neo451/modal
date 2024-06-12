@@ -35,6 +35,7 @@ for name, func in pairs(pattern) do
       modal[name] = func
    end
 end
+
 for name, func in pairs(P) do
    modal[name] = func
    mt[name] = function(self, ...)
