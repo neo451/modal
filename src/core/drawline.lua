@@ -1,7 +1,11 @@
-local F = require "modal.fraction"
-local Fraction, gcd_reduce = F.Fraction, F.gcd_reduce
-local P = require "modal.pattern"
+local Fraction = require("modal.fraction").Fraction
 local ut = require "modal.utils"
+
+local gcd_reduce = function(tab)
+   return ut.reduce(function(acc, value)
+      return acc:gcd(value)
+   end, tab[1], tab)
+end
 
 local map = function(func, items)
    local _accum_0 = {}
@@ -20,7 +24,7 @@ local drawline = function(pat, chars)
    local lines = { "" }
    local emptyLine = ""
    while #lines[1] < chars do
-      local events = P.querySpan(cycle, cycle + 1, pat)
+      local events = pat(cycle, cycle + 1)
       local filterfunc = function(event)
          return event:hasOnset()
       end
@@ -53,7 +57,7 @@ local drawline = function(pat, chars)
                local isOnset = event.whole._begin == _begin
                local char = nil
                if isOnset then
-                  char = dump(event.value)
+                  char = ut.dump(event.value)
                else
                   char = "-"
                end

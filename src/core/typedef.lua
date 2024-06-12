@@ -12,9 +12,12 @@ end
 local function pDef(...)
    local args = { ... }
    local ret = table.remove(args, #args)
-   args.ret = ret
-   -- p(args)
-   return args
+   return { ret = ret, unpack(args) }
+end
+
+local function pTab(a)
+   a.type = "Table"
+   return a
 end
 
 local typedef = V "typedef"
@@ -26,13 +29,8 @@ local char = R("AZ", "az")
 local ws = S " \n\r\t" ^ 0
 local id = ws * ((char ^ 1) / pId) * ws
 
-local function pTab(a)
-   a.type = "Table"
-   return a
-end
-
 local rules = {
-   "typedef",
+   [1] = "typedef",
    typedef = (elem * ws * P "->" * ws) ^ 1 * elem / pDef,
    elem = comp_type + id + fdef + tab,
    fdef = P "(" * ws * typedef * ws * P ")",

@@ -125,8 +125,6 @@ local rawiter = function(obj, param, state)
       return string_gen, obj, 0
    end
    require "moon.all"
-   p(obj)
-   p(type(obj))
    error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))
 end
 
@@ -785,7 +783,7 @@ methods.maximum_by = methods.max_by
 exports.maximum_by = exports.max_by
 
 local totable = function(gen_x, param_x, state_x)
-   local tab, key, val = {}
+   local tab, key, val = {}, nil, nil
    while true do
       state_x, val = gen_x(param_x, state_x)
       if state_x == nil then
@@ -799,7 +797,7 @@ methods.totable = method0(totable)
 exports.totable = export0(totable)
 
 local tomap = function(gen_x, param_x, state_x)
-   local tab, key, val = {}
+   local tab, key, val = {}, nil, nil
    while true do
       state_x, key, val = gen_x(param_x, state_x)
       if state_x == nil then

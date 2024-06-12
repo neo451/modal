@@ -33,18 +33,14 @@ M.compare = function(rhs, lhs)
    return true
 end
 
-local lua = {
-   debug = debug,
-   type = type,
-}
+local lua = { type = type }
 
--- local is_object = function(value)
--- 	return lua.type(value) == "table" and value.__class
--- end
-local is_object = require("moon").is_object
+local is_object = function(value)
+   return lua.type(value) == "table" and value.__class
+end
 
-M.type = function(obj)
-   return is_object(obj) and obj:type() or lua.type(obj)
+M.T = function(obj)
+   return is_object(obj) and obj.__class or lua.type(obj)
 end
 
 M.flatten = function(t)
@@ -72,7 +68,7 @@ M.map = function(func, tab)
 end
 
 M.dump = function(o)
-   if M.type(o) == "table" then
+   if M.T(o) == "table" then
       local s = "{"
       for k, v in pairs(o) do
          s = s .. " " .. k .. ": " .. M.dump(v)
@@ -84,7 +80,7 @@ M.dump = function(o)
 end
 
 M.dump2 = function(o)
-   if M.type(o) == "table" then
+   if M.T(o) == "table" then
       local s = ""
       for _, v in pairs(o) do
          s = s .. M.dump(v) .. "\n"
@@ -204,7 +200,7 @@ end
 
 M.string_lambda = function(env)
    return function(f)
-      if type(f) == "function" or M.type(f) == "pattern" then
+      if type(f) == "function" or M.T(f) == "pattern" then
          return f
       end
       if f:find "->" then
@@ -266,24 +262,6 @@ M.nparams = function(func)
       local info = debug.getinfo(func)
       return info.nparams, info.isvararg
    end
-end
-
-local bind_methods = function(obj)
-   return setmetatable({}, {
-      __index = function(self, name)
-         local val = obj[name]
-         if val and type(val) == "function" then
-            local bound
-            bound = function(...)
-               return val(obj, ...)
-            end
-            self[name] = bound
-            return bound
-         else
-            return val
-         end
-      end,
-   })
 end
 
 function M.method_wrap(f)

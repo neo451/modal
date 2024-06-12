@@ -6,23 +6,22 @@ local map, filter, flatten, union, timeToRand, curry, T, nparams, flip, method_w
    ut.union,
    ut.timeToRand,
    ut.curry,
-   ut.type,
+   ut.T,
    ut.nparams,
    ut.flip,
    ut.method_wrap,
    ut.auto_curry
+
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
-local frac = require "modal.fraction"
-local Fraction, tofrac = frac.Fraction, frac.tofrac
 local types = require "modal.types"
-local Event, Span, State = types.Event, types.Span, types.State
+local Event, Span, State, Time = types.Event, types.Span, types.State, types.Time
 local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 local log = require "modal.log"
 
-local Pattern, reify, pure, silence
+local Pattern, reify, pure, silence, purify
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
 local fmap, firstCycle, querySpan
 local withEventTime
@@ -142,92 +141,75 @@ end
 
 M.op = op
 
-local base = {}
+local mt = {}
 
-function base:type()
+function mt:type()
    return "pattern"
 end
 
-function base:__call(b, e)
+function mt:__call(b, e)
    return querySpan(b, e, self)
 end
 
-function base:__tostring()
+function mt:__tostring()
    return ut.dump2(firstCycle(self))
 end
 
-function base:__concat(other)
+function mt:__concat(other)
    return M.op["|>"](self, other)
 end
 
-function base:__add(other)
+function mt:__add(other)
    return M.op["|+"](self, other)
 end
 
-function base:__sub(other)
+function mt:__sub(other)
    return M.op["|-"](self, other)
 end
 
-function base:__mul(other)
+function mt:__mul(other)
    return M.op["|*"](self, other)
 end
 
-function base:__div(other)
+function mt:__div(other)
    return M.op["|/"](self, other)
 end
 
-function base:__mod(other)
+function mt:__mod(other)
    return M.op["|%"](self, other)
 end
 
-function base:__pow(other)
+function mt:__pow(other)
    return M.op["|^"](self, other)
 end
 
-function base:__eq(other)
+function mt:__eq(other)
    return self:__tostring() == other:__tostring()
 end
 
-base.__index = base
+mt.__index = mt
 
-Pattern = {
-   __base = base,
-   __name = "Pattern",
-}
-M.Pattern = Pattern
-
-function Pattern:__init(query)
-   if query == nil then
-      query = function()
-         return {}
-      end
+---@class Pattern
+function Pattern(query)
+   local new_obj = setmetatable({}, mt)
+   new_obj.query = query or function()
+      return {}
    end
-   self.query = query
+   new_obj.__class = "pattern"
+   return new_obj
 end
-
-setmetatable(Pattern, {
-   __index = base,
-   __call = function(cls, ...)
-      local _self_0 = setmetatable({}, base)
-      cls.__init(_self_0, ...)
-      return _self_0
-   end,
-})
-
-base.__class = Pattern
+M.Pattern = Pattern
 
 function fmap(pat, func)
    return withValue(pat, func)
 end
-M.fmap = fmap
+mt.fmap = fmap
 
 function querySpan(b, e, pat)
    local span = Span(b, e)
    local state = State(span)
    return pat:query(state)
 end
-base.fmap = fmap
-M.querySpan = querySpan
 
 function firstCycle(pat)
    return pat(0, 1)
@@ -270,7 +252,7 @@ appBoth = function(pat, pat_val)
    end
    return appWhole(pat, whole_func, pat_val)
 end
-base.appBoth = appBoth
+mt.appBoth = appBoth
 
 -- Tidal's <*
 appLeft = function(pat, pat_val)
@@ -294,7 +276,7 @@ appLeft = function(pat, pat_val)
    end
    return Pattern(query)
 end
-base.appLeft = appLeft
+mt.appLeft = appLeft
 
 -- Tidal's *>
 appRight = function(pat, pat_val)
@@ -318,7 +300,7 @@ appRight = function(pat, pat_val)
    end
    return Pattern(query)
 end
-base.appRight = appRight
+mt.appRight = appRight
 
 bindWhole = function(pat, choose_whole, func)
    local query = function(_, state)
@@ -338,7 +320,7 @@ bindWhole = function(pat, choose_whole, func)
    end
    return Pattern(query)
 end
-base.bindWhole = bindWhole
+mt.bindWhole = bindWhole
 
 bind = function(pat, func)
    local whole_func
@@ -350,36 +332,36 @@ bind = function(pat, func)
    end
    return bindWhole(pat, whole_func, func)
 end
-base.bind = bind
+mt.bind = bind
 
 join = function(pat)
    return bind(pat, id)
 end
-base.join = join
+mt.join = join
 
 outerBind = function(pat, func)
    return bindWhole(pat, function(a)
       return a
    end, func)
 end
-base.outerBind = outerBind
+mt.outerBind = outerBind
 
 innerBind = function(pat, func)
    return bindWhole(pat, function(_, b)
       return b
    end, func)
 end
-base.innerBind = innerBind
+mt.innerBind = innerBind
 
 outerJoin = function(pat)
    return outerBind(pat, id)
 end
-base.outerJoin = outerJoin
+mt.outerJoin = outerJoin
 
 innerJoin = function(pat)
    return innerBind(pat, id)
 end
-base.innerJoin = innerJoin
+mt.innerJoin = innerJoin
 
 squeezeJoin = function(pat)
    local query
@@ -418,12 +400,12 @@ squeezeJoin = function(pat)
    end
    return Pattern(query)
 end
-base.squeezeJoin = squeezeJoin
+mt.squeezeJoin = squeezeJoin
 
 squeezeBind = function(pat, func)
    return squeezeJoin(fmap(pat, func))
 end
-base.squeezeBind = squeezeBind
+mt.squeezeBind = squeezeBind
 
 filterEvents = function(pat, func)
    local query = function(_, state)
@@ -432,7 +414,7 @@ filterEvents = function(pat, func)
    end
    return Pattern(query)
 end
-base.filterEvents = filterEvents
+mt.filterEvents = filterEvents
 
 filterValues = function(pat, condf)
    local query
@@ -446,14 +428,14 @@ filterValues = function(pat, condf)
    end
    return Pattern(query)
 end
-base.filterValues = filterValues
+mt.filterValues = filterValues
 
 removeNils = function(pat)
    return filterValues(pat, function(v)
       return v ~= nil
    end)
 end
-base.removeNils = removeNils
+mt.removeNils = removeNils
 
 splitQueries = function(pat)
    local query = function(_, state)
@@ -465,7 +447,7 @@ splitQueries = function(pat)
    end
    return Pattern(query)
 end
-base.splitQueries = splitQueries
+mt.splitQueries = splitQueries
 
 withValue = function(pat, func)
    local query = function(_, state)
@@ -478,7 +460,7 @@ withValue = function(pat, func)
    end
    return Pattern(query)
 end
-base.withValue = withValue
+mt.withValue = withValue
 
 withQuerySpan = function(pat, func)
    local query
@@ -488,35 +470,35 @@ withQuerySpan = function(pat, func)
    end
    return Pattern(query)
 end
-base.withQuerySpan = withQuerySpan
+mt.withQuerySpan = withQuerySpan
 
 withQueryTime = function(pat, func)
    return withQuerySpan(pat, function(span)
       return span:withTime(func)
    end)
 end
-base.withQueryTime = withQueryTime
+mt.withQueryTime = withQueryTime
 
 withTime = function(pat, qf, ef)
    local query = withQueryTime(pat, qf)
    local pattern = withEventTime(query, ef)
    return pattern
 end
-base.withTime = withTime
+mt.withTime = withTime
 
 withEvents = function(pat, func)
    return Pattern(function(_, state)
       return func(pat:query(state))
    end)
 end
-base.withEvents = withEvents
+mt.withEvents = withEvents
 
 withEvent = function(pat, func)
    return withEvents(pat, function(events)
       return map(func, events)
    end)
 end
-base.withEvent = withEvent
+mt.withEvent = withEvent
 
 withEventSpan = function(pat, func)
    local query = function(_, state)
@@ -527,7 +509,7 @@ withEventSpan = function(pat, func)
    end
    return Pattern(query)
 end
-base.withEventSpan = withEventSpan
+mt.withEventSpan = withEventSpan
 
 withEventTime = function(pat, func)
    local query = function(_, state)
@@ -542,24 +524,22 @@ withEventTime = function(pat, func)
    end
    return Pattern(query)
 end
-base.withEventTime = withEventTime
+mt.withEventTime = withEventTime
 
 onsetsOnly = function(pat)
    return filterEvents(pat, function(event)
       return event:hasOnset()
    end)
 end
-M.onsetsOnly = onsetsOnly
-base.onsetsOnly = onsetsOnly
+mt.onsetsOnly = onsetsOnly
 
 discreteOnly = function(pat)
    return filterEvents(pat, function(event)
       return event.whole
    end)
 end
-base.discreteOnly = discreteOnly
+mt.discreteOnly = discreteOnly
 
----@alias pattern function # specify
 function silence()
    return Pattern()
 end
@@ -572,7 +552,7 @@ function pure(value)
    local query = function(_, state)
       local cycles = state.span:spanCycles()
       local f = function(span)
-         local whole = span:wholeCycle(span._begin)
+         local whole = span._begin:wholeCycle()
          return Event(whole, span, value)
       end
       return map(f, cycles)
@@ -581,6 +561,14 @@ function pure(value)
 end
 
 M.pure = pure
+
+function purify(value)
+   if T(value) == "pattern" then
+      return value
+   else
+      return pure(value)
+   end
+end
 
 reify = function(thing)
    local t = T(thing)
@@ -591,7 +579,7 @@ reify = function(thing)
       end
       return res()
    elseif "table" == t then
-      return M.fastFromList(thing)
+      return M.fastcat(thing)
    elseif "pattern" == t then
       return thing
    else
@@ -604,7 +592,8 @@ local patternify = function(func)
    local patterned = function(...)
       local arity = nparams(func)
       -- TODO:
-      local pats = map(reify, { ... })
+      -- local pats = map(reify, { ... })
+      local pats = { ... }
       local pat = table.remove(pats, #pats)
       if arity == 1 then
          return func(pat)
@@ -625,19 +614,30 @@ local function typecheck(f, name)
    local sig = TYPES[name].T
    return function(...)
       local args = { ... }
-      for i = 1, #args do
+      for i, v in ipairs(args) do
          local t = sig[i]
-         local tc, tvar = t.constructor, t[1]
-         if type(tvar) == "table" then
-            args[i] = M.sl(args[i])
-         end
-         if tvar == "Time" then
-            args[i] = tofrac(args[i])
-         end
-         if tc then
-            if tc == "Pattern" then
-               args[i] = reify(args[i])
+         local tc, tvar, istable = t.constructor, t[1], t.type
+         if istable then
+            for j, vv in ipairs(v) do
+               if tc then
+                  if tc == "Pattern" then
+                     v[j] = purify(vv)
+                  end
+               end
             end
+         else
+            if type(tvar) == "table" then
+               v = M.sl(v)
+            end
+            if tvar == "Time" then
+               v = Time(v)
+            end
+            if tc then
+               if tc == "Pattern" then
+                  v = reify(v)
+               end
+            end
+            args[i] = v
          end
       end
       return f(unpack(args))
@@ -645,51 +645,53 @@ local function typecheck(f, name)
 end
 
 local function register(args)
-   local name, type_sig, f, should_pat = unpack(args)
-   if type(should_pat) == "nil" then
-      should_pat = true
+   local name, type_sig, f, nify = unpack(args)
+   if type(nify) == "nil" then
+      nify = true
    end
-   if should_pat then
+   if nify then
       TYPES[name] = TDef:new(type_sig)
       U[name] = f
       local f_c_p = typecheck(auto_curry(nparams(f), patternify(f)), name)
       M[name] = f_c_p
-      base[name] = method_wrap(patternify(f))
+      mt[name] = method_wrap(typecheck(patternify(f), name))
    else
       TYPES[name] = TDef:new(type_sig)
       local f_c = typecheck(auto_curry(nparams(f), f), name)
       M[name] = f_c
-      base[name] = method_wrap(f)
+      mt[name] = method_wrap(f)
    end
 end
 M.register = register
 
 register {
    "stack",
-   "a -> Pattern a",
+   "[Pattern a] -> Pattern a",
    function(pats)
       return reduce(M.overlay, silence(), iter(pats))
    end,
    false,
 }
 
-register {
-   "polymeter",
-   "Pattern Int -> a -> Pattern a",
-   function(steps, pats)
-      local nsteps, ratio, res = reify(steps), nil, {}
-      for _, pat in iter(pats) do
-         ratio = nsteps / #(firstCycle(pat))
-         res[#res + 1] = M.fast(ratio, pat)
-      end
-      return M.stack(res)
-   end,
-   false,
-}
+-- register {
+--    "polymeter",
+-- "Pattern Int -> [Pattern a] -> Pattern a",
+-- TODO: need to patternify steps
+function M.polymeter(steps, pats)
+   -- local nsteps, ratio, res = reify(steps), nil, {}
+   local res, ratio = {}, nil
+   for _, pat in iter(pats) do
+      ratio = steps / #(firstCycle(pat))
+      res[#res + 1] = U.fast(ratio, pat)
+   end
+   return M.stack(res)
+end
+--    false,
+-- }
 
 register {
    "slowcat",
-   "a -> Pattern a",
+   "[Pattern a] -> Pattern a",
    function(pats)
       local query = function(_, state)
          local a = state.span
@@ -712,22 +714,14 @@ register {
    false,
 }
 
-function M.fromList(list)
-   return M.slowcat(map(pure, list))
-end
-
 register {
    "fastcat",
-   "a -> Pattern a",
+   "[Pattern a] -> Pattern a",
    function(pats)
       return U.fast(#pats, M.slowcat(pats))
    end,
    false,
 }
-
-function M.fastFromList(list)
-   return M.fastcat(map(pure, list))
-end
 
 function M.timecat(tups)
    local total = 0
@@ -760,7 +754,7 @@ function M.arrange(args)
       cycles, pat = args[i], args[i + 1]
       args[i + 1] = M.fast(cycles, pat)
    end
-   return U.slow(total, M.timecat(args))
+   return M.slow(total, M.timecat(args))
 end
 
 register {
@@ -779,29 +773,29 @@ register {
    "superimpose",
    "(Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(f, pat)
-      return M.stack { pat, M.sl(f)(pat) }
+      return M.stack { pat, f(pat) }
    end,
    false,
 }
 
--- register {
---    "layer",
---    nil,
---    function(tf, pat)
---       local acc = {}
---       for i, f in iter(tf) do
---          acc[i] = M.sl(f)(pat)
---       end
---       return M.stack(acc)
---    end,
---    false,
--- } -- diff with tidal -- TODO: "[Pattern a -> Pattern b] -> Pattern a -> Pattern b"
+register {
+   "layer",
+   "[(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", -- a little ugly lol
+   function(tf, pat)
+      local acc = {}
+      for i, f in iter(tf) do
+         acc[i] = f(pat)
+      end
+      return M.stack(acc)
+   end,
+   false,
+}
 
 register {
    "fast",
    "Pattern Time -> Pattern a -> Pattern a",
    function(factor, pat)
-      factor = tofrac(factor)
+      factor = Time(factor)
       if factor:eq(0) then
          return silence()
       elseif factor:lt(0) then
@@ -820,7 +814,7 @@ register {
    "slow",
    "Pattern Time -> Pattern a -> Pattern a",
    function(factor, pat)
-      factor = tofrac(factor)
+      -- factor = Time(factor)
       if factor:eq(0) then
          return silence()
       else
@@ -840,7 +834,7 @@ register {
          return t - offset
       end)
    end,
-   -- false,
+   false,
 } -- HACK: why not patternify TIME??
 
 -- rotR
@@ -850,7 +844,7 @@ register {
    function(offset, pat)
       return M.early(-offset, pat)
    end,
-   -- false,
+   false,
 }
 
 register {
@@ -889,8 +883,8 @@ register {
    "fastgap",
    "Pattern Time -> Pattern a -> Pattern a",
    function(factor, pat)
-      factor = tofrac(factor)
-      if factor <= Fraction(0) then
+      factor = Time(factor)
+      if factor <= Time(0) then
          return M.silence()
       end
       factor = factor:max(1)
@@ -924,7 +918,7 @@ register {
    "compress",
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
-      if b > e or e > Fraction(1) or b > Fraction(1) or b < Fraction(0) or e < Fraction(0) then
+      if b > e or e > Time(1) or b > Time(1) or b < Time(0) or e < Time(0) then
          return M.silence()
       end
       local fasted = U.fastgap((e - b):reverse(), pat)
@@ -938,7 +932,7 @@ register {
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
       local fasted = U.fast((e - b):reverse(), pat)
-      return M.late(Span:cyclePos(b), fasted)
+      return M.late(b:cyclePos(), fasted)
    end,
    false,
 }
@@ -958,14 +952,14 @@ register {
             return (t - s) / dur
          end)
       end
-      return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
+      return withEventSpan(withQuerySpan(pat, qf), ef):splitQueries()
    end,
    false,
 }
 
 local _run = function(n)
    local list = fun.totable(fun.range(0, n - 1))
-   return M.fastFromList(list)
+   return M.fastcat(list)
 end
 
 register {
@@ -1042,7 +1036,7 @@ M._irand = function(i)
       return floor(x * i)
    end)
 end
--- TODO: reigister
+-- TODO: register
 M.irand = function(ipat)
    return innerJoin(fmap(reify(ipat), M._irand))
 end
@@ -1318,6 +1312,7 @@ register {
    function(name, pat)
       return fmap(pat, getScale(name))
    end,
+   false,
 }
 
 register {
@@ -1344,7 +1339,7 @@ M.pipe = ut.pipe
 M.dump = ut.dump2
 M.u = U
 M.t = TYPES
-M.base = base
+M.mt = mt
 
 M.pp = function(a)
    print(M.dump(a))

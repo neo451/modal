@@ -645,9 +645,6 @@ do
    reify, stack, fastcat = _obj_0.reify, _obj_0.stack, _obj_0.fastcat
 end
 
-local pat = require "modal.pattern"
-local fmap, outerJoin = pat.fmap, pat.outerJoin
-
 local parseChord = require("modal.chords").parseChord
 
 local P = {}
@@ -667,14 +664,14 @@ local create = function(name)
          end
       end
       P[name[1]] = function(args)
-         return fmap(fastcat(args), withVal)
+         return fastcat(args):fmap(withVal)
       end
    else
       withVal = function(v)
          return { [name] = v }
       end
       P[name] = function(args)
-         return fmap(reify(args), withVal)
+         return reify(args):fmap(withVal)
       end
    end
 end
@@ -707,7 +704,7 @@ P.note = function(args)
       }, notemt)
    end
    -- return fmap((fmap(reify(args), chordToStack)):outerJoin(), withVal)
-   return fmap(reify(args), withVal)
+   return reify(args):fmap(withVal)
 end
 
 return P

@@ -5,7 +5,7 @@ local ui = require "modal.ui"
 local P = require "modal.params"
 local drawline = require "modal.drawline"
 local lib = require "modal.lib"
-local base = pattern.base
+local mt = pattern.mt
 local Pattern = pattern.Pattern
 local maxi = require "modal.maxi"
 
@@ -19,7 +19,7 @@ modal.drawline = drawline
 
 for name, func in pairs(pattern_factory) do
    modal[name] = func
-   base[name] = func
+   mt[name] = func
 end
 
 -- for name, pat in pairs(lib) do
@@ -37,21 +37,10 @@ for name, func in pairs(pattern) do
 end
 for name, func in pairs(P) do
    modal[name] = func
-   base[name] = function(self, ...)
+   mt[name] = function(self, ...)
       return self .. func(...)
    end
 end
-
-setmetatable(Pattern, {
-   __index = base,
-   __call = function(cls, ...)
-      local _self_0 = setmetatable({}, base)
-      cls.__init(_self_0, ...)
-      return _self_0
-   end,
-})
-
-base.__class = Pattern
 
 -- TODO: update env??
 pattern.sl = ut.string_lambda(modal)

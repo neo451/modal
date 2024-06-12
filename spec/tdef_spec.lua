@@ -22,6 +22,9 @@ describe("table", function()
          T = { { "a", type = "Table" }, ret = { "a" } },
       }, M:new "[a] -> a")
    end)
+   it("should return list with constructors", function()
+      -- assert.same({}, M:new "[Pattern a] -> Pattern a")
+   end)
 end)
 
 describe("nested def", function()

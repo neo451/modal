@@ -223,7 +223,7 @@ local function pSeq(isSlow)
       if weightSum > #args then
          return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
       else
-         return Call(isSlow and "fromList" or "fastFromList", Table(args))
+         return Call(isSlow and "slowcat" or "fastcat", Table(args))
       end
    end
 end
@@ -346,7 +346,7 @@ end
 
 local semi = P ";" ^ -1
 local grammar = {
-   "root",
+   [1] = "root",
    root = ((set + ret) * semi) ^ 1 / pRoot,
    set = step * P "=" * expr / pSet,
    ret = (list + mini + dollar) / pRet,

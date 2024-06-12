@@ -1,8 +1,6 @@
-local concat, map
-do
-   local _obj_0 = require "xi.utils"
-   concat, map = _obj_0.concat, _obj_0.map
-end
+local ut = require "modal.utils"
+local concat, map = ut.concat, ut.map
+
 local major = { 0, 4, 7 }
 local aug = { 0, 4, 8 }
 local six = { 0, 4, 7, 9 }
@@ -197,7 +195,6 @@ token = function(id)
    return Ct(Cc(id) * C(V(id)))
 end
 local note = token "note"
-local chord = token "chord"
 local chordname = token "chordname"
 local chordmods = token "chordmods"
 local notename = token "notename"
@@ -210,8 +207,9 @@ local offset = token "offset"
 local octave = token "octave"
 local number = token "number"
 local sep = V "sep"
+
 local grammar = {
-   "chord",
+   [1] = "chord",
    chord = note * sep ^ -1 * chordname ^ -1 * chordmods ^ -1,
    note = notename * notemods ^ -1,
    chordname = R("az", "09") ^ 1,
@@ -227,18 +225,12 @@ local grammar = {
    number = R "09",
    sep = P "'",
 }
+
 grammar = Ct(C(grammar))
-local notes = {
-   c = 0,
-   d = 2,
-   e = 4,
-   f = 5,
-   g = 7,
-   a = 9,
-   b = 11,
-}
-local pconcat
-pconcat = function(table1, pivot, table2)
+
+local notes = { c = 0, d = 2, e = 4, f = 5, g = 7, a = 9, b = 11 }
+
+local pconcat = function(table1, pivot, table2)
    table.insert(table1, pivot)
    for _index_0 = 1, #table2 do
       local elem = table2[_index_0]
@@ -247,6 +239,7 @@ pconcat = function(table1, pivot, table2)
    return table1
 end
 local qsort
+
 qsort = function(table)
    if #table <= 1 then
       return table
@@ -292,17 +285,20 @@ qsort = function(table)
    end
    return pconcat((qsort(left)), pivot, (qsort(right)))
 end
+
 open = function(chord)
    chord[1] = chord[1] - 12
    chord[3] = chord[3] - 12
    return chord
 end
+
 drop = function(n, chord)
    chord = qsort(chord)
    local index = #chord - (n - 1)
    chord[index] = chord[index] - 12
    return chord
 end
+
 invert = function(n, chord)
    chord = qsort(chord)
    for i = 1, n do
@@ -314,6 +310,7 @@ invert = function(n, chord)
    end
    return chord
 end
+
 range = function(n, chord)
    local new_tones = {}
    n = tonumber(n)
@@ -340,8 +337,8 @@ range = function(n, chord)
       return concat(chord, new_tones)
    end
 end
-local parseChord
-parseChord = function(chord)
+
+local parseChord = function(chord)
    if type(chord) == "number" then
       return chord
    end

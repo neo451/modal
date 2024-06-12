@@ -16,7 +16,7 @@
 --     Fabien Fleutot - API and implementation
 --
 -------------------------------------------------------------------------------
-pp = require "metalua.pprint"
+local pp = require "metalua.pprint"
 local M = {}
 M.__index = M
 
@@ -199,7 +199,7 @@ function M:node(node)
    -- if node.lineinfo.first.comments then
    --    M.first_comment(self, node)
    -- end
-   assert(self ~= M and self._acc)
+   assert(self ~= M and self._acc, "wrong ast_to_src compiler?")
    if node == nil then
       self:acc "<<error>>"
       return
@@ -253,6 +253,7 @@ function M:list(list, sep, start)
       self:node(list[i])
       if list[i + 1] then
          if not sep then
+            return -- HACK:
          elseif type(sep) == "function" then
             sep(self)
          elseif type(sep) == "string" then

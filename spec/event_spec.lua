@@ -1,6 +1,5 @@
-local Fraction = require("modal.fraction").Fraction
 local types = require "modal.types"
-local Span, Event = types.Span, types.Event
+local Span, Event, Time = types.Span, types.Event, types.Time
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
@@ -38,7 +37,7 @@ describe("Event", function()
          local whole = Span(1 / 2, 1)
          local part = Span(1 / 2, 3 / 4)
          local event = Event(whole, part, 5, {}, false)
-         assert.are.equals(Fraction(1, 2), event:duration())
+         assert.are.equals(Time(1, 2), event:duration())
       end)
       describe("wholeOrPart", function()
          it("should return whole if defined", function()
