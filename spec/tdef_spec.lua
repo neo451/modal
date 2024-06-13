@@ -5,25 +5,19 @@ local assert = require("busted").assert
 
 describe("id", function()
    it("should return elem", function()
-      assert.same({
-         T = { { "a" }, ret = { "a" } },
-      }, M:new "a -> a")
+      assert.same({ { "a" }, ret = { "a" } }, M "a -> a")
    end)
    it("should return elem", function()
-      assert.same({
-         T = { { "Time" }, ret = { constructor = "Pattern", "a" } },
-      }, M:new "Time -> Pattern a")
+      assert.same({ { "Time" }, ret = { constructor = "Pattern", "a" } }, M "Time -> Pattern a")
    end)
 end)
 
 describe("table", function()
    it("should return elem with table tag", function()
-      assert.same({
-         T = { { "a", type = "Table" }, ret = { "a" } },
-      }, M:new "[a] -> a")
+      assert.same({ { "a", istable = true }, ret = { "a" } }, M "[a] -> a")
    end)
    it("should return list with constructors", function()
-      -- assert.same({}, M:new "[Pattern a] -> Pattern a")
+      -- assert.same({}, M"[Pattern a] -> Pattern a")
    end)
 end)
 
@@ -31,6 +25,6 @@ describe("nested def", function()
    it("should return def", function()
       -- assert.same({
       --    T = { { "a", type = "Table" }, ret = { "a" } },
-      -- }, M:new "(a -> a) -> a")
+      -- }, M"(a -> a) -> a")
    end)
 end)

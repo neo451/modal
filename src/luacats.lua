@@ -4,13 +4,13 @@
 ---@field denomenator number
 ---@field numerator number
 
----@alias Time Fraction | number | Pattern<Fraction> | Pattern<number>
----@alias Int number | Pattern<number>
+---@alias Time Fraction | number | Pattern
+---@alias Int number | Pattern
 ---@alias State table
----@alias Event<T> {value: T}
+---@alias Event {value: any, }
 
----@param value any: Pattern
----@return Pattern: Pattern
+---@param value any
+---@return Pattern
 pure = function(value) end
 
 ---stack up pats in polymeter way
@@ -20,7 +20,7 @@ pure = function(value) end
 polymeter = function(steps, pats) end
 
 ---stack up pats
----@param pats Pattern<any>[]
+---@param pats Pattern[]
 ---@return Pattern
 stack = function(pats) end
 
@@ -35,7 +35,7 @@ slowcat = function(pats) end
 fastcat = function(pats) end
 
 ---Like [slowcat](lua://slowcat), but each step has a length, relative to the whole.
----@param tups (Pattern | number)[]
+---@param tups (Pattern | Time)[]
 ---@return Pattern
 timecat = function(tups) end
 
@@ -91,6 +91,7 @@ scale = function(name, pat) end
 ---@param v string | number
 ---@return Pattern
 n = function(v) end
+
 ---@param v string | number | Chords
 ---@return Pattern
 note = function(v) end

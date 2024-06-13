@@ -35,19 +35,30 @@ end
 
 local lua = { type = type }
 
-local is_object = function(value)
-   return lua.type(value) == "table" and value.__class
-end
+-- local is_object = function(value)
+--    return lua.type(value) == "table" and value.__class
+-- end
 
-M.T = function(obj)
-   return is_object(obj) and obj.__class or lua.type(obj)
+-- M.T = function(obj)
+--    return is_object(obj) and obj.__class or lua.type(obj)
+-- end
+
+M.T = function(value)
+   local base_type = lua.type(value)
+   if base_type == "table" then
+      local cls = value.__class
+      if cls then
+         return cls
+      end
+   end
+   return base_type
 end
 
 M.flatten = function(t)
    local flat = {}
    for i = 1, #t do
       local value = t[i]
-      if type(value) == "table" then
+      if M.T(value) == "table" then
          local list = M.flatten(value)
          for j = 1, #list do
             flat[#flat + 1] = list[j]
@@ -157,8 +168,7 @@ M.curry = function(func, num_args)
 end
 
 M.reverse = function(...)
-   local reverse_h
-   reverse_h = function(acc, v, ...)
+   local function reverse_h(acc, v, ...)
       if 0 == select("#", ...) then
          return v, acc()
       else

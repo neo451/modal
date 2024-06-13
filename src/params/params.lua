@@ -1,18 +1,24 @@
 local genericParams = {
+   { { "s", "n", "gain" } },
    {
-      "s",
-      -- {
-      --    "s",
-      --    "n",
-      --    "gain",
-      -- },
+      { "cutoff", "resonance" },
+      "a pattern of numbers from 0 to 1. Applies the cutoff frequency of the low-pass filter.",
    },
    {
-      -- {
-      --    "bandf",
-      --    "bandq",
-      --    "bpenv",
-      -- },
+      { "hcutoff", "hresonance" },
+      "a pattern of numbers from 0 to 1. Applies the cutoff frequency of the high-pass filter. Also has alias @hpf@",
+   },
+   {
+      { "delay", "delaytime", "delayfeedback" },
+      "a pattern of numbers from 0 to 1. Sets the level of the delay signal.",
+   },
+   {
+      { "room", "size" },
+      "a pattern of numbers from 0 to 1. Sets the level of reverb.",
+   },
+   {
+      -- { "bandf", "bandq", "bpenv" },
+      { "bandf", "bandq" },
       "a pattern of numbers from 0 to 1. Sets the center frequency of the band-pass filter.",
    },
    {
@@ -72,20 +78,12 @@ local genericParams = {
       "In the style of classic drum-machines, `cut` will stop a playing sample as soon as another samples with in same cutgroup is to be played. An example would be an open hi-hat followed by a closed one, essentially muting the open.",
    },
    {
-      "cutoff",
-      "a pattern of numbers from 0 to 1. Applies the cutoff frequency of the low-pass filter.",
-   },
-   {
       "cutoffegint",
       "",
    },
    {
       "decay",
       "",
-   },
-   {
-      "delay",
-      "a pattern of numbers from 0 to 1. Sets the level of the delay signal.",
    },
    {
       "delayfeedback",
@@ -134,10 +132,6 @@ local genericParams = {
    {
       "hatgrain",
       "",
-   },
-   {
-      "hcutoff",
-      "a pattern of numbers from 0 to 1. Applies the cutoff frequency of the high-pass filter. Also has alias @hpf@",
    },
    {
       "hold",
@@ -346,10 +340,6 @@ local genericParams = {
    {
       "resonance",
       "a pattern of numbers from 0 to 1. Specifies the resonance of the low-pass filter.",
-   },
-   {
-      "room",
-      "a pattern of numbers from 0 to 1. Sets the level of reverb.",
    },
    {
       "sagogo",
@@ -580,6 +570,7 @@ local genericParams = {
       "Low pass sort of spectral filter",
    },
 }
+
 local aliasParams = {
    s = "sound",
    note = "up",
@@ -639,16 +630,13 @@ local aliasParams = {
    vcoegint = "vco",
    voice = "voi",
 }
-local reify, stack, fastcat
+local reify, stack
 do
    local _obj_0 = require "modal.pattern"
-   reify, stack, fastcat = _obj_0.reify, _obj_0.stack, _obj_0.fastcat
+   reify, stack = _obj_0.reify, _obj_0.stack
 end
 
-local parseChord = require("modal.chords").parseChord
-
 local P = {}
-
 local create = function(name)
    local withVal
    if type(name) == "table" then
@@ -660,11 +648,12 @@ local create = function(name)
             end
             return acc
          else
-            return { [name] = xs }
+            return { [name[1]] = xs }
          end
       end
+
       P[name[1]] = function(args)
-         return fastcat(args):fmap(withVal)
+         return reify(args):fmap(withVal)
       end
    else
       withVal = function(v)
@@ -686,25 +675,23 @@ for i = 1, #genericParams do
    end
 end
 
-local notemt = {
-   __add = function(self, other)
-      return {
-         note = self.note + other.note,
-      }
-   end,
-}
+local parseChord = require "modal.chords"
 
-P.note = function(args)
+P.note = function(pat)
+   local notemt = {
+      __add = function(self, other)
+         return { note = self.note + other.note }
+      end,
+   }
+
    local chordToStack = function(thing)
       return stack(parseChord(thing))
    end
    local withVal = function(v)
-      return setmetatable({
-         note = v,
-      }, notemt)
+      return setmetatable({ note = v }, notemt)
    end
    -- return fmap((fmap(reify(args), chordToStack)):outerJoin(), withVal)
-   return reify(args):fmap(withVal)
+   return reify(pat):fmap(withVal)
 end
 
 return P

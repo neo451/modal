@@ -1,6 +1,6 @@
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-require "moon.all"
+
 local function pId(...)
    return { table.concat { ... } }
 end
@@ -16,7 +16,7 @@ local function pDef(...)
 end
 
 local function pTab(a)
-   a.type = "Table"
+   a.istable = true
    return a
 end
 
@@ -40,39 +40,25 @@ local rules = {
 
 local grammar = Ct(C(rules))
 
-local read = function(a)
-   return grammar:match(a)[2]
-end
-
-local TDef = {}
-
-function TDef:new(str)
-   local newobj = { T = read(str) }
-   self.__index = self
-   return setmetatable(newobj, self)
-end
-
-local function gen_T(t)
+local function show_sig(t)
    local function format(a)
       if type(a[1]) == "table" then
-         return string.format("(%s)", gen_T(a))
+         return string.format("(%s)", show_sig(a))
       elseif a.constructor then
          return string.format("%s %s", a.constructor, a[1])
       elseif type(a) == "string" then
-         -- print(a)
          return a
       end
    end
    local s = ""
    for i = 1, #t do
-      -- print(t[i])
       s = s .. format(t[i]) .. " -> "
    end
    return s .. format(t.ret)
 end
 
-function TDef:__tostring()
-   return gen_T(self.T)
+local TDef = function(a)
+   return grammar:match(a)[2]
 end
 
 return TDef

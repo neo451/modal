@@ -1,13 +1,19 @@
+local T = require("modal.utils").T
+local decimaltofraction, gcd, lcm
 local ut = require "modal.utils"
 local compare, dump = ut.compare, ut.dump
 local Time, Span, Event, State
+local abs = math.abs
+local floor = math.floor
 
-local span_mt = {}
-local state_mt = {}
-local event_mt = {}
+local mt = { __class = "fraction" }
+local span_mt = { __class = "span" }
+local state_mt = { __class = "state" }
+local event_mt = { __class = "event" }
 span_mt.__index = span_mt
 event_mt.__index = event_mt
 state_mt.__index = state_mt
+mt.__index = mt
 
 function span_mt:spanCycles()
    local spans = {}
@@ -99,7 +105,6 @@ function Span(b, e)
    b = b or 1
    e = e or 1
    new_obj._begin, new_obj._end = Time(b), Time(e)
-   span_mt.__class = "span"
    return new_obj
 end
 
@@ -142,6 +147,7 @@ end
 function event_mt:withValue(func)
    return Event(self.whole, self.part, func(self.value), self.context, self.stateful)
 end
+
 function event_mt:show()
    return self:__tostring()
 end
@@ -189,12 +195,11 @@ function Event(whole, part, value, context, stateful)
    part = part or Span()
    context = context or {}
    stateful = stateful or false
-   if stateful and type(value) ~= "function" then
+   if stateful and T(value) ~= "function" then
       error "Event: stateful event values must be of type function"
    end
    local new_obj = setmetatable({}, event_mt)
    new_obj.whole, new_obj.part, new_obj.value, new_obj.context, new_obj.stateful = whole, part, value, context, stateful
-   new_obj.__class = "event"
    return new_obj
 end
 
@@ -214,6 +219,10 @@ function state_mt:__tostring()
    return "span: " .. self.span:show() .. " controls: " .. dump(self.controls)
 end
 
+function state_mt:show()
+   return self.__tostring(self)
+end
+
 function state_mt:__eq(other)
    return self.span == other.span and compare(self.controls, other.controls)
 end
@@ -224,14 +233,8 @@ function State(span, controls)
    controls = controls or {}
    new_obj.span = span
    new_obj.controls = controls
-   new_obj.__class = "state"
    return new_obj
 end
-
-local T = require("modal.utils").T
-local decimaltofraction, gcd, lcm
-local abs = math.abs
-local floor = math.floor
 
 decimaltofraction = function(x0, err)
    err = err or 0.0000000001
@@ -264,17 +267,12 @@ lcm = function(a, b)
    return (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
 end
 
-local mt = {}
 function mt:wholeCycle()
    return Span(self:sam(), self:nextSam())
 end
 
 function mt:cyclePos()
    return self - self:sam()
-end
-
-function mt:type()
-   return "fraction"
 end
 
 function mt:__add(f2)
@@ -460,15 +458,10 @@ end
 function mt:show()
    return self:__tostring()
 end
-mt.__index = mt
 
 function Time(n, d, normalize)
    if T(n) == "fraction" then
       return n
-   end
-   if T(n) == "pattern" then
-      -- print(n(0, 1).value)
-      n = n(0, 1).value
    end
    local new_obj = setmetatable({}, mt)
    n = n or 0
@@ -489,7 +482,6 @@ function Time(n, d, normalize)
    end
    new_obj.numerator = n
    new_obj.denominator = d
-   new_obj.__class = "fraction"
    return new_obj
 end
 

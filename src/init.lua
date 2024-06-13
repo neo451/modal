@@ -45,10 +45,22 @@ end
 
 -- TODO: update env??
 pattern.sl = ut.string_lambda(modal)
-
 modal.sl = pattern.sl
+
 pattern.mini = maxi(modal, false)
 modal.mini = pattern.mini
+
+---@class Pattern
+function Pattern(query)
+   local new_obj = setmetatable({}, mt)
+   new_obj.query = query or function()
+      return {}
+   end
+   new_obj.__class = "pattern"
+   return new_obj
+end
+
+modal.Pattern = Pattern
 
 if jit then
    local reify = modal.reify

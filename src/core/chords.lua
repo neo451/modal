@@ -396,4 +396,4 @@ local parseChord = function(chord)
    return chordtable
 end
 
-return { parseChord = parseChord }
+return parseChord

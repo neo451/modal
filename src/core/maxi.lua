@@ -1,7 +1,4 @@
---d1 $ fast <1 1.25 1 2> $ s [bd _ can? 808sd _] ~ -> nil is going to sc, timecat gets wrong weight
--- d3 $ n (scan 8) |> s alphabet |> vowel [a e]
 --d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
--- d2 $ note {[0|5] [3|4] 9 12 _ _}%5 |> s supermandolin only one [] works
 
 -- TODO: proper arithemtic
 local lpeg = require "lpeg"
@@ -42,7 +39,7 @@ local function Id(a)
    return { tag = "Id", a }
 end
 
-local Table = function(a)
+local function Table(a)
    return { tag = "Table", unpack(a) }
 end
 
