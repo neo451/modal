@@ -60,10 +60,10 @@ function mt:start()
    end
 end
 
--- function mt:stop()
---    self.running = false
---    return print "clock stopped"
--- end
+function mt:stop()
+   self.running = false
+   print "Clock: stopped"
+end
 
 function mt:subscribe(subscriber)
    return table.insert(self.subscribers, subscriber)
@@ -99,14 +99,14 @@ function mt:createNotifyCoroutine()
          if not self.running then
             break
          end
-         self.link:capture_audio_session_state(self.sessionState)
-         local cps = (self.sessionState:tempo() / self.beatsPerCycle) / 60
-         local cycleFrom = self.sessionState:beat_at_time(logicalNow, 0) / self.beatsPerCycle
-         local cycleTo = self.sessionState:beat_at_time(logicalNext, 0) / self.beatsPerCycle
+         s = self.link:capture_audio_session_state(self.sessionState)
+         local cps = (s:tempo() / self.beatsPerCycle) / 60
+         local cycleFrom = s:beat_at_time(logicalNow, 0) / self.beatsPerCycle
+         local cycleTo = s:beat_at_time(logicalNext, 0) / self.beatsPerCycle
          -- print(string.format("cycleFrom : %d;  cycleTo : %d", cycleFrom, cycleTo))
          f()
          for _, sub in ipairs(self.subscribers) do
-            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
+            sub:notifyTick(cycleFrom, cycleTo, s, cps, self.beatsPerCycle, mill, now)
          end
          coroutine.yield()
       end
