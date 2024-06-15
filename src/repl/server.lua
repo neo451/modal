@@ -7,19 +7,20 @@ clock:start()
 
 local host = "*"
 local port = arg[1] or 9000
-local s = assert(socket.bind(host, port))
-local i, p = s:getsockname()
+local sock = assert(socket.bind(host, port))
+local i, p = sock:getsockname()
 assert(i, p)
+
 print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
-local c = assert(s:accept())
+local c = assert(sock:accept())
 c:settimeout(0)
 
 print "Connected"
 
 M()
--- local log = require "modal.log"
 
 local evalf = maxi(_G, true)
+
 local eval = function(a)
    local ok, fn = pcall(evalf, a)
    if not ok then
@@ -27,10 +28,11 @@ local eval = function(a)
       error("syntax error: " .. fn)
    end
    local ok, res = pcall(fn)
-   if not ok then
+   if ok then
+      print(res)
+   else
       error("function error: " .. res)
    end
-   return res
 end
 
 local l, e
@@ -42,6 +44,6 @@ local listen = function()
    end
 end
 
-while true do
-   coroutine.resume(clock.notifyCoroutine, listen)
-end
+repeat
+   coroutine.resume(clock.co, listen)
+until false

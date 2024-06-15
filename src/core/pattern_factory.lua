@@ -1,14 +1,9 @@
-local Stream = require "modal.stream"
 local Clock = require "modal.clock"
 local DefaultClock = Clock()
 local M = {}
 
 function M.p(pattern, key)
-   if not DefaultClock.subscribers[key] then
-      local stream = Stream(DefaultClock.sendf)
-      DefaultClock:subscribe(key, stream)
-   end
-   DefaultClock.subscribers[key].pattern = pattern
+   DefaultClock:subscribe(key, pattern)
    return pattern
 end
 

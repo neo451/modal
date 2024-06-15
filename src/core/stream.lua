@@ -1,6 +1,8 @@
 local mt = { __class = "stream" }
+local ut = require "modal.utils"
 
 function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
+   print(string.format("cycleFrom : %d;  cycleTo : %d", cycleFrom, cycleTo))
    if not self.pattern then
       return
    end
@@ -17,6 +19,7 @@ function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
       value.cps = event.value.cps or cps
       value.cycle = cycleOn:asFloat()
       value.delta = deltaSeconds
+      print(ut.dump(value))
       self.sendf(value)
    end
 end
