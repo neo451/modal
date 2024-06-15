@@ -3,7 +3,7 @@ local ut = require "modal.utils"
 local pattern_factory = require "modal.pattern_factory"
 local ui = require "modal.ui"
 local P = require "modal.params"
-local drawline = require "modal.drawline"
+local drawLine = require "modal.drawline"
 local lib = require "modal.lib"
 local mt = pattern.mt
 local Pattern = pattern.Pattern
@@ -15,16 +15,16 @@ local modal = {
    _DESCRIPTION = "A language for algorithmic pattern. Tidalcycles for moonscript",
 }
 
-modal.drawline = drawline
+modal.drawLine = drawLine
 
 for name, func in pairs(pattern_factory) do
    modal[name] = func
    mt[name] = func
 end
 
--- for name, pat in pairs(lib) do
---    modal[name] = pattern.reify(pat)
--- end
+for name, pat in pairs(lib) do
+   modal[name] = pattern.reify(pat)
+end
 
 for _, func in pairs(ui) do
    pattern.register(func)

@@ -15,31 +15,33 @@ local c = assert(s:accept())
 c:settimeout(0)
 
 print "Connected"
+
+M()
+-- local log = require "modal.log"
+
+local evalf = maxi(_G, true)
 local eval = function(a)
-   if a then
-      local res, ok = maxi(M, true)(a)
-      if ok then
-         if res then
-            io.write(M.dump(res))
-         end
-      else
-         print("Compilation error: " .. res)
-      end
+   local ok, fn = pcall(evalf, a)
+   if not ok then
+      -- log.warn("syntax error: " .. fn)
+      error("syntax error: " .. fn)
    end
+   local ok, res = pcall(fn)
+   if not ok then
+      error("function error: " .. res)
+   end
+   return res
 end
 
 local l, e
 
-local listen = function(client)
-   l, e = client:receive()
-   while not e do
-      -- c = assert(s:accept())
+local listen = function()
+   l, e = c:receive()
+   if not e then
       eval(l)
-      print(l)
-      l, e = client:receive()
    end
 end
 
-while coroutine.resume(clock.notifyCoroutine) do
-   listen(c)
+while true do
+   coroutine.resume(clock.notifyCoroutine, listen)
 end

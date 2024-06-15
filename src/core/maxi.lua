@@ -259,9 +259,7 @@ end
 
 local function pList(...)
    local args = { ... }
-   if #args == 1 then
-      return args
-   elseif #args == 3 then
+   if #args == 3 then
       if is_op(args[2][1]) then
          local opname, is_native = opsymb[args[2][1]][1], opsymb[args[2][1]][2]
          table.remove(args, 2)
@@ -376,7 +374,7 @@ local grammar = {
 ---@param top_level boolean
 return function(env, top_level)
    if top_level then
-      stat = ws * step * (expr - S "=") * expr ^ 0 * ws / pStat
+      stat = ws * step * (expr - S "=") ^ 0 * expr ^ 0 * ws / pStat
       grammar.root = ((stat + set + ret) * semi) ^ 1 / pRoot
    else
       grammar.root = ((set + ret) * semi) ^ 1 / pRoot

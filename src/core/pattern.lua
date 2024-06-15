@@ -571,7 +571,8 @@ reify = function(thing)
    if "string" == t then
       local res, ok = M.mini("[" .. thing .. "]")
       if not ok then
-         log.warn("failed to compile pattern: " .. thing)
+         -- log.warn("failed to compile pattern: " .. thing)
+         print "faile to compile "
       end
       return res()
    elseif "table" == t then

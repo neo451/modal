@@ -278,7 +278,7 @@ function M.method_wrap(f)
    return function(...)
       local args = { ... }
       local pat = table.remove(args, 1)
-      table.insert(args, pat)
+      args[#args + 1] = pat
       return f(unpack(args))
    end
 end

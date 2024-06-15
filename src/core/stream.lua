@@ -1,7 +1,4 @@
-local mt = {}
-function mt:type()
-   return "stream"
-end
+local mt = { __class = "stream" }
 
 function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
    if not self.pattern then
@@ -20,9 +17,10 @@ function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
       value.cps = event.value.cps or cps
       value.cycle = cycleOn:asFloat()
       value.delta = deltaSeconds
-      self:sendf(value)
+      self.sendf(value)
    end
 end
+mt.__index = mt
 
 function Stream(sendf)
    local new_obj = setmetatable({}, mt)
@@ -30,10 +28,7 @@ function Stream(sendf)
    new_obj.latency = 0.3
    new_obj.pattern = nil
    new_obj.sendf = sendf
-   new_obj.__class = "stream"
    return new_obj
 end
 
-return {
-   Stream = Stream,
-}
+return Stream

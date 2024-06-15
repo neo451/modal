@@ -4,6 +4,8 @@ local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
 local bundle = require "losc.bundle"
 
+local floor = math.floor
+
 local sleep = function(sec)
    return socket.sleep(sec)
 end
@@ -17,8 +19,7 @@ local target = {
 }
 
 local typeMap = { table = "b", number = "f", string = "s" }
-local typesString
-typesString = function(msg)
+local typesString = function(msg)
    local types = ""
    for _index_0 = 1, #msg do
       local x = msg[_index_0]
@@ -38,11 +39,11 @@ local osc = losc.new {
    },
 }
 
-local sendOSC = function(_, value, ts)
+local sendOSC = function(value, ts)
    local msg = {}
    for key, val in pairs(value) do
-      table.insert(msg, key)
-      table.insert(msg, val)
+      msg[#msg + 1] = key
+      msg[#msg + 1] = val
    end
    msg.types = typesString(msg)
    msg.address = "/dirt/play"
@@ -50,107 +51,85 @@ local sendOSC = function(_, value, ts)
    return osc:send(b)
 end
 
-local Clock
-do
-   local _class_0
-   local _base_0 = {
-      type = function()
-         return "clock"
-      end,
-      start = function(self)
-         if not self.running then
-            self.running = true
-            return self:createNotifyCoroutine()
-         end
-      end,
-      stop = function(self)
-         self.running = false
-         return print "clock stopped"
-      end,
-      subscribe = function(self, subscriber)
-         return table.insert(self.subscribers, subscriber)
-      end,
-      unsubscribe = function(self, subscriber)
-         local position = nil
-         for i, sub in ipairs(self.subscribers) do
-            if sub == subscriber then
-               position = i
-            end
-         end
-         if position ~= nil then
-            return table.remove(self.subscribers, position)
-         end
-      end,
-      createNotifyCoroutine = function(self)
-         self.notifyCoroutine = coroutine.create(function()
-            local start = self.link:clock_micros()
-            -- print(start)
-            local ticks = 0
-            local mill = 1000000
-            local frame = self.sampleRate * mill
-            while self.running do
-               ticks = ticks + 1
-               local logicalNow = math.floor(start + (ticks * frame))
-               local logicalNext = math.floor(start + ((ticks + 1) * frame))
-               local now = self.link:clock_micros()
-               local wait = (logicalNow - now) / mill
-               if wait > 0 then
-                  sleep(wait)
-               end
-               if not self.running then
-                  break
-               end
-               self.link:capture_audio_session_state(self.sessionState)
-               local cps = (self.sessionState:tempo() / self.beatsPerCycle) / 60
-               local cycleFrom = self.sessionState:beat_at_time(logicalNow, 0) / self.beatsPerCycle
-               local cycleTo = self.sessionState:beat_at_time(logicalNext, 0) / self.beatsPerCycle
-               -- local _list_0 =
-               for i = 1, #self.subscribers do
-                  local sub = self.subscribers[i]
-                  sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
-               end
-               coroutine.yield()
-            end
-            self.linkEnabled = false
-         end)
-      end,
-   }
-   _base_0.__index = _base_0
-   _class_0 = setmetatable({
-      __init = function(self, bpm, sampleRate, beatsPerCycle)
-         if bpm == nil then
-            bpm = 120
-         end
-         if sampleRate == nil then
-            sampleRate = 1 / 20
-         end
-         if beatsPerCycle == nil then
-            beatsPerCycle = 4
-         end
-         self.bpm, self.sampleRate, self.beatsPerCycle = bpm, sampleRate, beatsPerCycle
-         self.link = link.create(bpm)
-         self.sessionState = link.create_session_state()
-         self.subscribers = {}
-         self.running = false
-         self.notifyCoroutine = nil
-         self.latency = 0.2
-         self.sendf = sendOSC
-      end,
-      __base = _base_0,
-      __name = "Clock",
-   }, {
-      __index = _base_0,
-      __call = function(cls, ...)
-         local _self_0 = setmetatable({}, _base_0)
-         cls.__init(_self_0, ...)
-         return _self_0
-      end,
-   })
-   _base_0.__class = _class_0
-   local self = _class_0
-   self.sendf = sendOSC
-   Clock = _class_0
+local mt = { __class = "clock" }
+
+function mt:start()
+   if not self.running then
+      self.running = true
+      return self:createNotifyCoroutine()
+   end
 end
-return {
-   Clock = Clock,
-}
+
+-- function mt:stop()
+--    self.running = false
+--    return print "clock stopped"
+-- end
+
+function mt:subscribe(subscriber)
+   return table.insert(self.subscribers, subscriber)
+end
+
+function mt:unsubscribe(subscriber)
+   local position = nil
+   for i, sub in ipairs(self.subscribers) do
+      if sub == subscriber then
+         position = i
+      end
+   end
+   if position ~= nil then
+      return table.remove(self.subscribers, position)
+   end
+end
+
+function mt:createNotifyCoroutine()
+   self.notifyCoroutine = coroutine.create(function(f)
+      local start = self.link:clock_micros()
+      local ticks = 0
+      local mill = 1000000
+      local frame = self.sampleRate * mill
+      while self.running do
+         ticks = ticks + 1
+         local logicalNow = floor(start + (ticks * frame))
+         local logicalNext = floor(start + ((ticks + 1) * frame))
+         local now = self.link:clock_micros()
+         local wait = (logicalNow - now) / mill
+         if wait > 0 then
+            sleep(wait)
+         end
+         if not self.running then
+            break
+         end
+         self.link:capture_audio_session_state(self.sessionState)
+         local cps = (self.sessionState:tempo() / self.beatsPerCycle) / 60
+         local cycleFrom = self.sessionState:beat_at_time(logicalNow, 0) / self.beatsPerCycle
+         local cycleTo = self.sessionState:beat_at_time(logicalNext, 0) / self.beatsPerCycle
+         -- print(string.format("cycleFrom : %d;  cycleTo : %d", cycleFrom, cycleTo))
+         f()
+         for _, sub in ipairs(self.subscribers) do
+            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
+         end
+         coroutine.yield()
+      end
+      self.linkEnabled = false
+   end)
+end
+
+mt.__index = mt
+
+local function Clock(bpm, sampleRate, beatsPerCycle)
+   bpm = bpm or 120
+   sampleRate = sampleRate or (1 / 20)
+   beatsPerCycle = beatsPerCycle or 4
+   local new_obj = setmetatable({}, mt)
+   new_obj.bpm, new_obj.sampleRate, new_obj.beatsPerCycle = bpm, sampleRate, beatsPerCycle
+   new_obj.link = link.create(bpm)
+   new_obj.sessionState = link.create_session_state()
+   new_obj.subscribers = {}
+   new_obj.running = false
+   new_obj.notifyCoroutine = nil
+   new_obj.latency = 0.2
+   new_obj.sendf = sendOSC
+   return new_obj
+end
+
+return Clock

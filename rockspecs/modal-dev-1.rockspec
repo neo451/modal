@@ -1,8 +1,10 @@
+rockspec_format = "3.0"
 package = "modal"
 version = "dev-1"
 source = {
    url = "git+ssh://git@github.com/noearc/modal.git",
 }
+
 description = {
    summary = "a port of the tidalcycles pattern language to lua/moonscript",
    detailed = [[

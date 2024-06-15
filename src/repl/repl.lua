@@ -88,6 +88,7 @@ while true do
       end
    end
 end
+
 RL.save_history()
 c:close()
 os.exit()
