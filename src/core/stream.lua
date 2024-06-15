@@ -1,8 +1,7 @@
 local mt = { __class = "stream" }
-local ut = require "modal.utils"
+local losc = require "losc"
 
 function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
-   print(string.format("cycleFrom : %d;  cycleTo : %d", cycleFrom, cycleTo))
    if not self.pattern then
       return
    end
@@ -14,24 +13,27 @@ function mt:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
       local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)
       local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
       local deltaSeconds = (linkOff - linkOn) / mill
-      -- local linkSecs = now / mill
       local value = event.value
       value.cps = event.value.cps or cps
       value.cycle = cycleOn:asFloat()
       value.delta = deltaSeconds
-      print(ut.dump(value))
-      self.sendf(value)
+      local link_secs = now / mill
+      local nudge = 0
+      local diff = losc:now() + -link_secs
+      print(link_secs)
+      print(diff:seconds())
+      local ts = diff + (linkOn / mill) + self.latency + nudge
+      self.sendf(value, ts)
    end
 end
 mt.__index = mt
 
 function Stream(sendf)
-   local new_obj = setmetatable({}, mt)
-   new_obj.isPlaying = false
-   new_obj.latency = 0.3
-   new_obj.pattern = nil
-   new_obj.sendf = sendf
-   return new_obj
+   local new_obj = {
+      latency = 0.2,
+      sendf = sendf,
+   }
+   return setmetatable(new_obj, mt)
 end
 
 return Stream

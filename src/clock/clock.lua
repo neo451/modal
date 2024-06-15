@@ -2,8 +2,9 @@ local socket = require "socket"
 local link = require "abletonlink"
 local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
-local bundle = require "losc.bundle"
+local timetag = require "losc.timetag"
 local Stream = require "modal.stream"
+local ut = require "modal.utils"
 
 local floor = math.floor
 local tremove = table.remove
@@ -50,8 +51,10 @@ local sendOSC = function(value, ts)
    end
    msg.types = typesString(msg)
    msg.address = "/dirt/play"
-   local b = osc.new_message(msg)
-   return osc:send(b)
+   print(ut.dump(value), ts)
+   -- local b = osc.new_bundle(timetag.new(ts), osc.new_message(msg))
+   local b = osc.new_bundle(ts, osc.new_message(msg))
+   osc:send(b)
 end
 
 local mt = { __class = "clock" }
@@ -109,7 +112,7 @@ function mt:createNotifyCoroutine()
             f()
          end
          for _, sub in pairs(self.subscribers) do
-            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
+            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now, losc:now())
          end
          coroutine.yield()
       end

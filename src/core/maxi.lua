@@ -20,6 +20,7 @@ local mini = V "mini"
 local op = V "op"
 local fast = V "fast"
 local slow = V "slow"
+local rand = V "rand"
 local replicate = V "replicate"
 local degrade = V "degrade"
 local weight = V "weight"
@@ -125,6 +126,14 @@ end
 local function pSlow(a)
    return function(x)
       return Call("slow", a, x)
+   end
+end
+
+local function pRand(a)
+   lower = a[1] or 0
+   return function(x)
+      -- TODO: idea rand run
+      return Num(math.random(lower, x[1]))
    end
 end
 
@@ -359,11 +368,12 @@ local grammar = {
    slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
    polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
    polymeter_steps = (P "%" * slice) ^ -1 / pPolymeterSteps,
-   op = fast + slow + tail + range + replicate + degrade + weight + euclid,
+   op = fast + slow + tail + range + replicate + degrade + weight + euclid + rand,
    fast = P "*" * slice / pFast,
    slow = P "/" * slice / pSlow,
    tail = P ":" * slice / pTail,
    range = P ".." * ws * slice / pRange,
+   rand = P "#" * (number ^ -1) / pRand,
    degrade = P "?" * (number ^ -1) / pDegrade,
    replicate = ws * P "!" * (number ^ -1) / pReplicate,
    weight = ws * (P "@" + P "_") * (number ^ -1) / pWeight,
