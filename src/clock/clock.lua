@@ -5,6 +5,7 @@ local plugin = require "losc.plugins.udp-socket"
 local bundle = require "losc.bundle"
 
 local floor = math.floor
+local tremove = table.remove
 
 local sleep = function(sec)
    return socket.sleep(sec)
@@ -65,20 +66,12 @@ function mt:stop()
    print "Clock: stopped"
 end
 
-function mt:subscribe(subscriber)
-   return table.insert(self.subscribers, subscriber)
+function mt:subscribe(key, stream)
+   self.subscribers[key] = stream
 end
 
-function mt:unsubscribe(subscriber)
-   local position = nil
-   for i, sub in ipairs(self.subscribers) do
-      if sub == subscriber then
-         position = i
-      end
-   end
-   if position ~= nil then
-      return table.remove(self.subscribers, position)
-   end
+function mt:unsubscribe(key)
+   tremove(self.subscribers, key)
 end
 
 function mt:createNotifyCoroutine()
@@ -105,7 +98,7 @@ function mt:createNotifyCoroutine()
          local cycleTo = s:beat_at_time(logicalNext, 0) / self.beatsPerCycle
          -- print(string.format("cycleFrom : %d;  cycleTo : %d", cycleFrom, cycleTo))
          f()
-         for _, sub in ipairs(self.subscribers) do
+         for _, sub in pairs(self.subscribers) do
             sub:notifyTick(cycleFrom, cycleTo, s, cps, self.beatsPerCycle, mill, now)
          end
          coroutine.yield()

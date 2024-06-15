@@ -155,10 +155,9 @@ function mt:__tostring()
 end
 
 -- TODO: not triggered???
--- function mt:__eq(other)
---    -- return self:__tostring() == other:__tostring()
---    return self(0, 10) == other(0, 10)
--- end
+function mt:__eq(other)
+   return self:__tostring() == other:__tostring()
+end
 
 function mt:__concat(other)
    return M.op["|>"](self, other)
