@@ -191,11 +191,10 @@ mt.__index = mt
 
 ---@class Pattern
 function Pattern(query)
-   local new_obj = setmetatable({}, mt)
-   new_obj.query = query or function()
+   query = query or function()
       return {}
    end
-   return new_obj
+   return setmetatable({ query = query }, mt)
 end
 M.Pattern = Pattern
 

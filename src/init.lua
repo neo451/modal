@@ -1,6 +1,6 @@
 local pattern = require "modal.pattern"
 local ut = require "modal.utils"
-local pattern_factory = require "modal.pattern_factory"
+local factory = require "modal.factory"
 local ui = require "modal.ui"
 local P = require "modal.params"
 local drawLine = require "modal.drawline"
@@ -17,7 +17,7 @@ local modal = {
 
 modal.drawLine = drawLine
 
-for name, func in pairs(pattern_factory) do
+for name, func in pairs(factory) do
    modal[name] = func
    mt[name] = func
 end

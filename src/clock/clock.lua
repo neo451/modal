@@ -1,5 +1,5 @@
 local socket = require "socket"
-local link = require "abletonlink"
+local al = require "abletonlink"
 local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
 local timetag = require "losc.timetag"
@@ -112,7 +112,7 @@ function mt:createNotifyCoroutine()
             f()
          end
          for _, sub in pairs(self.subscribers) do
-            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now, losc:now())
+            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
          end
          coroutine.yield()
       end
@@ -126,17 +126,16 @@ local function Clock(bpm, sampleRate, beatsPerCycle)
    bpm = bpm or 120
    sampleRate = sampleRate or (1 / 20)
    beatsPerCycle = beatsPerCycle or 4
-   local new_obj = {
-      bpm = bpm or 120,
-      sampleRate = sampleRate or (1 / 20),
-      beatsPerCycle = beatsPerCycle or 4,
-      link = link.create(bpm),
-      sessionState = link.create_session_state(),
+   return setmetatable({
+      bpm = bpm,
+      sampleRate = sampleRate,
+      beatsPerCycle = beatsPerCycle,
+      link = al.create(bpm),
+      sessionState = al.create_session_state(),
       subscribers = {},
       running = false,
       latency = 0.2,
-   }
-   return setmetatable(new_obj, mt)
+   }, mt)
 end
 
 return Clock
