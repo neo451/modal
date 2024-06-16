@@ -78,11 +78,11 @@ M.map = function(func, tab)
    return fun.totable(fun.map(func, tab))
 end
 
-M.dump = function(o)
+M.tdump = function(o)
    if M.T(o) == "table" then
       local s = "{"
       for k, v in pairs(o) do
-         s = s .. " " .. k .. ": " .. M.dump(v)
+         s = s .. " " .. k .. ": " .. M.tdump(v)
       end
       return s .. " } "
    else
@@ -90,11 +90,11 @@ M.dump = function(o)
    end
 end
 
-M.dump2 = function(o)
+M.dump = function(o)
    if M.T(o) == "table" then
       local s = ""
-      for _, v in pairs(o) do
-         s = s .. M.dump(v) .. "\n"
+      for k, v in pairs(o) do
+         s = s .. k .. ": " .. M.tdump(v) .. "\n"
       end
       return s
    else
@@ -296,6 +296,10 @@ function M.auto_curry(arity, f)
          return f(...)
       end
    end
+end
+
+function M.id(x)
+   return x
 end
 
 return M

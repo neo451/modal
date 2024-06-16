@@ -1,17 +1,16 @@
 local ut = require "modal.utils"
-local map, filter, flatten, union, timeToRand, curry, T, nparams, flip, method_wrap, auto_curry =
-   ut.map,
-   ut.filter,
-   ut.flatten,
-   ut.union,
-   ut.timeToRand,
-   ut.curry,
-   ut.T,
-   ut.nparams,
-   ut.flip,
-   ut.method_wrap,
-   ut.auto_curry
-
+local id = ut.id
+local map = ut.map
+local filter = ut.filter
+local flatten = ut.flatten
+local union = ut.union
+local timeToRand = ut.timeToRand
+local curry = ut.curry
+local T = ut.T
+local nparams = ut.nparams
+local flip = ut.flip
+local method_wrap = ut.method_wrap
+local auto_curry = ut.auto_curry
 local dump = ut.dump
 
 local bjork = require "modal.euclid"
@@ -23,12 +22,9 @@ local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 local log = require "modal.log"
 
-local Pattern, reify, pure, silence, purify, id
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
-local fmap, firstCycle, querySpan
-local withEventTime
-local appLeft, appRight, appBoth
-local squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
+local fmap, firstCycle, querySpan, appLeft, appRight, appBoth
+local withEventTime, squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
 
 local iter = fun.iter
 local reduce = fun.reduce
@@ -45,6 +41,24 @@ local TYPES = {}
 M.mini = maxi(M, false)
 M.sl = ut.string_lambda(M)
 
+local function reify(thing)
+   local t = T(thing)
+   if "string" == t then
+      local res, ok = M.mini("[" .. thing .. "]")
+      if not ok then
+         log.warn("failed to compile pattern: " .. thing)
+      end
+      return res()
+   elseif "table" == t then
+      return M.fastcat(thing)
+   elseif "pattern" == t then
+      return thing
+   else
+      return M.pure(thing)
+   end
+end
+M.reify = reify
+
 local mt = { __class = "pattern" }
 
 function mt:__call(b, e)
@@ -52,7 +66,7 @@ function mt:__call(b, e)
 end
 
 function mt:__tostring()
-   return ut.dump2(firstCycle(self))
+   return ut.dump(firstCycle(self))
 end
 
 -- TODO: not triggered???
@@ -91,7 +105,7 @@ end
 mt.__index = mt
 
 ---@class Pattern
-function Pattern(query)
+local function Pattern(query)
    query = query or function()
       return {}
    end
@@ -441,10 +455,6 @@ discreteOnly = function(pat)
 end
 mt.discreteOnly = discreteOnly
 
-id = function(a)
-   return a
-end
-
 local _op = {}
 function _op.In(f)
    return function(a, b)
@@ -539,15 +549,13 @@ end
 
 M.op = op
 
-function silence()
+function M.silence()
    return Pattern()
 end
 
-M.silence = silence
-
-function pure(value)
+function M.pure(value)
    if value == "~" then
-      return silence()
+      return M.silence()
    end
    local query = function(_, state)
       local cycles = state.span:spanCycles()
@@ -559,34 +567,14 @@ function pure(value)
    end
    return Pattern(query)
 end
-M.pure = pure
 
-function purify(value)
+function M.purify(value)
    if T(value) == "pattern" then
       return value
    else
-      return pure(value)
+      return M.pure(value)
    end
 end
-
-reify = function(thing)
-   local t = T(thing)
-   if "string" == t then
-      local res, ok = M.mini("[" .. thing .. "]")
-      if not ok then
-         -- log.warn("failed to compile pattern: " .. thing)
-         print "faile to compile "
-      end
-      return res()
-   elseif "table" == t then
-      return M.fastcat(thing)
-   elseif "pattern" == t then
-      return thing
-   else
-      return pure(thing)
-   end
-end
-M.reify = reify
 
 local patternify = function(func)
    local patterned = function(...)
@@ -621,7 +609,7 @@ local function typecheck(f, name)
             for j, vv in ipairs(v) do
                if tc then
                   if tc == "Pattern" then
-                     v[j] = purify(vv)
+                     v[j] = M.purify(vv)
                   end
                end
             end
@@ -672,7 +660,7 @@ register {
    "stack",
    "[Pattern a] -> Pattern a",
    function(pats)
-      return reduce(M.overlay, silence(), iter(pats))
+      return reduce(M.overlay, M.silence(), iter(pats))
    end,
    false,
 }
@@ -801,7 +789,7 @@ register {
    function(factor, pat)
       factor = Time(factor)
       if factor:eq(0) then
-         return silence()
+         return M.silence()
       elseif factor:lt(0) then
          return M.rev(U.fast(-factor, pat))
       else
@@ -820,7 +808,7 @@ register {
    function(factor, pat)
       -- factor = Time(factor)
       if factor:eq(0) then
-         return silence()
+         return M.silence()
       else
          return U.fast(factor:reverse(), pat)
       end
@@ -877,7 +865,7 @@ register {
    "Pattern Time -> Pattern a -> Pattern a",
    function(n, pat)
       pat = fmap(pat, function(x)
-         return U.fast(n, pure(x))
+         return U.fast(n, M.pure(x))
       end)
       return squeezeJoin(pat)
    end,
@@ -1236,7 +1224,7 @@ register {
    "segment",
    "Pattern Time -> Pattern a -> Pattern a",
    function(n, pat)
-      return appLeft(M.fast(n, pure(id)), pat)
+      return appLeft(M.fast(n, M.pure(id)), pat)
    end,
 }
 
@@ -1345,13 +1333,9 @@ M.id = id
 M.T = T
 M.maxi = maxi
 M.pipe = ut.pipe
-M.dump = ut.dump2
+M.dump = ut.dump
 M.u = U
 M.t = TYPES
 M.mt = mt
-
-M.pp = function(a)
-   print(dump(a))
-end
 
 return M

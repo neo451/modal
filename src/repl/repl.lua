@@ -4,7 +4,6 @@ local host = "localhost"
 local port = 9000
 local RL = require "readline"
 local M = require "modal"
-local ut = require "modal.utils"
 local maxi = require "modal.maxi"
 
 local keywords = {}
@@ -14,25 +13,6 @@ end
 
 RL.set_complete_list(keywords)
 
-local line
-
-local function show_sig(t)
-   local function format(a)
-      if type(a[1]) == "table" then
-         return string.format("(%s)", show_sig(a))
-      elseif a.constructor then
-         return string.format("%s %s", a.constructor, a[1])
-      elseif type(a) == "string" then
-         return a
-      end
-   end
-   local s = ""
-   for i = 1, #t do
-      s = s .. format(t[i]) .. " -> "
-   end
-   return s .. format(t.ret)
-end
-
 local optf = {
    ["?"] = function()
       return [[
@@ -41,7 +21,7 @@ local optf = {
 :q  quit repl ]]
    end,
    t = function(a)
-      return show_sig(M.t[a])
+      return M.t[a]
    end,
    v = function()
       return M._VERSION
@@ -65,15 +45,16 @@ local eval = function(a)
          param = param and param or nil
          print(optf[name](param))
          return
-      end
-      local fn, ok = evalf(a)
-      if ok then
-         local fok, res = pcall(fn)
-         if fok then
-            io.write(M.dump(res))
-         end
       else
-         print("Compilation error: " .. res)
+         local fn, ok = evalf(a)
+         if ok then
+            local fok, res = pcall(fn)
+            if fok then
+               io.write(M.dump(res))
+            end
+         else
+            print(fn)
+         end
       end
    end
 end
@@ -81,6 +62,7 @@ end
 RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
 RL.set_readline_name "modal"
 
+local line
 while true do
    -- c = assert(socket.connect(host, port))
    line = RL.readline "modal> "
@@ -104,6 +86,7 @@ while true do
          c:send(line .. "\n")
       end
    end
+   RL.save_history()
 end
 
 RL.save_history()
