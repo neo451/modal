@@ -107,7 +107,11 @@ mt.fmap = fmap
 function querySpan(b, e, pat)
    local span = Span(b, e)
    local state = State(span)
-   return pat:query(state)
+   return setmetatable(pat:query(state), {
+      __tostring = function(self)
+         return ut.dump2(self)
+      end,
+   })
 end
 
 function firstCycle(pat)
@@ -1280,16 +1284,19 @@ register {
    false,
 }
 
+local function _every(t, f, pat)
+   return M.when(function(i)
+      return i % t == 0
+   end, f, pat)
+end
+
 register {
    "every",
    "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      local _every = function(t)
-         return M.when(function(i)
-            return i % t == 0
-         end, f, pat)
-      end
-      return fmap(tp, _every):innerJoin()
+      return fmap(tp, function(t)
+         return _every(t, f, pat)
+      end):innerJoin()
    end,
    false,
 }

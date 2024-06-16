@@ -287,11 +287,11 @@ function M.auto_curry(arity, f)
    return function(...)
       local args = { ... }
       if #args < arity then
-         f = M.curry(f, arity)
+         cf = M.curry(f, arity)
          for _, v in ipairs(args) do
-            f = f(v)
+            cf = cf(v)
          end
-         return f
+         return cf
       else
          return f(...)
       end
