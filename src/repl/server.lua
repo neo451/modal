@@ -1,5 +1,6 @@
 local socket = require "socket"
 local maxi = require "modal.maxi"
+local log = require "modal.log"
 local M = require "modal"
 
 local clock = M.DefaultClock
@@ -24,14 +25,15 @@ local evalf = maxi(_G, true)
 local eval = function(a)
    local ok, fn = pcall(evalf, a)
    if not ok then
-      -- log.warn("syntax error: " .. fn)
-      error("syntax error: " .. fn)
+      log.warn("syntax error: " .. fn)
    end
    local ok, res = pcall(fn)
    if ok then
-      print(res)
+      if res then
+         print(res)
+      end
    else
-      error("function error: " .. res)
+      log.warn("function error: " .. res)
    end
 end
 

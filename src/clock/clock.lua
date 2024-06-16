@@ -51,8 +51,7 @@ local sendOSC = function(value, ts)
    end
    msg.types = typesString(msg)
    msg.address = "/dirt/play"
-   print(ut.dump(value), ts)
-   -- local b = osc.new_bundle(timetag.new(ts), osc.new_message(msg))
+   -- local b = osc.new_message(msg)
    local b = osc.new_bundle(ts, osc.new_message(msg))
    osc:send(b)
 end
@@ -81,8 +80,17 @@ function mt:subscribe(key, pattern)
 end
 
 function mt:unsubscribe(key)
-   tremove(self.subscribers, key)
-   -- self.subscribers[key] = nil
+   self.subscribers[key] = nil
+end
+
+function mt:setbpm(bpm)
+   self.sessionState:set_tempo(bpm, 0)
+   self.link:commit_audio_session_state(self.sessionState)
+end
+
+function mt:setcps(cps)
+   self.sessionState:set_tempo(cps * self.beatsPerCycle * 60, 0)
+   self.link:commit_audio_session_state(self.sessionState)
 end
 
 function mt:createNotifyCoroutine()

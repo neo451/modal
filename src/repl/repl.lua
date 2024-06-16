@@ -16,6 +16,23 @@ RL.set_complete_list(keywords)
 
 local line
 
+local function show_sig(t)
+   local function format(a)
+      if type(a[1]) == "table" then
+         return string.format("(%s)", show_sig(a))
+      elseif a.constructor then
+         return string.format("%s %s", a.constructor, a[1])
+      elseif type(a) == "string" then
+         return a
+      end
+   end
+   local s = ""
+   for i = 1, #t do
+      s = s .. format(t[i]) .. " -> "
+   end
+   return s .. format(t.ret)
+end
+
 local optf = {
    ["?"] = function()
       return [[
@@ -24,7 +41,7 @@ local optf = {
 :q  quit repl ]]
    end,
    t = function(a)
-      return M.t[a]
+      return show_sig(M.t[a])
    end,
    v = function()
       return M._VERSION

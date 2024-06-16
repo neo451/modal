@@ -198,9 +198,13 @@ function Event(whole, part, value, context, stateful)
    if stateful and T(value) ~= "function" then
       error "Event: stateful event values must be of type function"
    end
-   local new_obj = setmetatable({}, event_mt)
-   new_obj.whole, new_obj.part, new_obj.value, new_obj.context, new_obj.stateful = whole, part, value, context, stateful
-   return new_obj
+   return setmetatable({
+      whole = whole,
+      part = part,
+      value = value,
+      context = context,
+      stateful = stateful,
+   }, event_mt)
 end
 
 function state_mt:setSpan(span)
@@ -228,12 +232,12 @@ function state_mt:__eq(other)
 end
 
 function State(span, controls)
-   local new_obj = setmetatable({}, state_mt)
    span = span or Span()
    controls = controls or {}
-   new_obj.span = span
-   new_obj.controls = controls
-   return new_obj
+   return setmetatable({
+      span = span,
+      controls = controls,
+   }, state_mt)
 end
 
 decimaltofraction = function(x0, err)
@@ -459,11 +463,12 @@ function mt:show()
    return self:__tostring()
 end
 
+---@class Fraction
 function Time(n, d, normalize)
+   -- HACK:
    if T(n) == "fraction" then
       return n
    end
-   local new_obj = setmetatable({}, mt)
    n = n or 0
    d = d or 1
    if normalize == nil then
@@ -480,9 +485,10 @@ function Time(n, d, normalize)
       n = floor(n / g)
       d = floor(d / g)
    end
-   new_obj.numerator = n
-   new_obj.denominator = d
-   return new_obj
+   return setmetatable({
+      numerator = n,
+      denominator = d,
+   }, mt)
 end
 
 return { Span = Span, Event = Event, State = State, Time = Time }

@@ -67,7 +67,7 @@ local function string2id(v)
    return v
 end
 
-local seed = -1
+local seed = -1 -- TODO: use this?
 local ws = S " \n\r\t" ^ 0
 local comma = ws * P "," * ws
 local pipe = ws * P "|" * ws
@@ -102,7 +102,7 @@ local function rTails(args)
    return main
 end
 
-local step_char = R("09", "AZ", "az") + S [[-~^'.]]
+local step_char = R("09", "AZ", "az") + S [[-~^'._]]
 local tidalop = S "|+-*/^%><" ^ 2 / id
 local step = ws * (step_char ^ 1 / pStep) * ws
 local minus = P "-"

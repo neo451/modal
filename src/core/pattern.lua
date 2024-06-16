@@ -14,7 +14,6 @@ local map, filter, flatten, union, timeToRand, curry, T, nparams, flip, method_w
 
 local dump = ut.dump
 
--- require "moon.all"
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
 local types = require "modal.types"
@@ -24,7 +23,7 @@ local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 local log = require "modal.log"
 
-local Pattern, reify, pure, silence, purify
+local Pattern, reify, pure, silence, purify, id
 local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
 local fmap, firstCycle, querySpan
 local withEventTime
@@ -45,104 +44,6 @@ local TYPES = {}
 
 M.mini = maxi(M, false)
 M.sl = ut.string_lambda(M)
-
-local id = function(a)
-   return a
-end
-
-local _op = {}
-function _op.In(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appLeft(a, b):removeNils()
-   end
-end
-
-function _op.Out(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appRight(a, b):removeNils()
-   end
-end
-
-function _op.Mix(f)
-   return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
-      return appBoth(a, b):removeNils()
-   end
-end
-
-function _op.Squeeze(f)
-   return function(a, b)
-      return squeezeJoin(fmap(reify(a), function(c)
-         return fmap(reify(b), function(d)
-            return f(c, d)
-         end)
-      end)):removeNils()
-   end
-end
-
-function _op.SqueezeOut(f)
-   return function(a, b)
-      return squeezeJoin(fmap(reify(b), function(c)
-         return fmap(reify(a), function(d)
-            return f(d, c)
-         end)
-      end)):removeNils()
-   end
-end
-
--- stylua: ignore start
-local ops = {
-   add = function(a, b) return a + b end,
-   sub = function(a, b) return a - b end,
-   mul = function(a, b) return a * b end,
-   div = function(a, b) return a / b end,
-   mod = function(a, b) return a % b end,
-   pow = function(a, b) return a ^ b end,
-   concat = function (a, b) return a .. b end,
-   keepif = function (a, b) return b and a or nil end,
-   uni = function (a, b) return union(a, b) end,
-   funi = function (a, b) return flip(union)(a, b) end,
-}
--- stylua: ignore end
-
--- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
-local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
-local op_set = {
-   add = "+",
-   sub = "-",
-   mul = "*",
-   div = "/",
-   mod = "%",
-   pow = "^",
-   keepif = "?",
-   concat = "..", -- ?
-   uni = "<",
-   funi = ">",
-}
-
-local how_format = {
-   In = "|%s",
-   Out = "%s|",
-   Mix = "|%s|",
-   Squeeze = "||%s",
-   SqueezeOut = "%s||",
-}
-
-local op = {}
-for k, f in pairs(ops) do
-   op[k] = {}
-   for _, v in ipairs(hows) do
-      op[k][v] = _op[v](f)
-      if op_set[k] and how_format[v] then
-         local symb = string.format(how_format[v], op_set[k])
-         op[symb] = _op[v](f)
-      end
-   end
-end
-
-M.op = op
 
 local mt = { __class = "pattern" }
 
@@ -536,9 +437,109 @@ discreteOnly = function(pat)
 end
 mt.discreteOnly = discreteOnly
 
+id = function(a)
+   return a
+end
+
+local _op = {}
+function _op.In(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appLeft(a, b):removeNils()
+   end
+end
+
+function _op.Out(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appRight(a, b):removeNils()
+   end
+end
+
+function _op.Mix(f)
+   return function(a, b)
+      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      return appBoth(a, b):removeNils()
+   end
+end
+
+function _op.Squeeze(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(a), function(c)
+         return fmap(reify(b), function(d)
+            return f(c, d)
+         end)
+      end)):removeNils()
+   end
+end
+
+function _op.SqueezeOut(f)
+   return function(a, b)
+      return squeezeJoin(fmap(reify(b), function(c)
+         return fmap(reify(a), function(d)
+            return f(d, c)
+         end)
+      end)):removeNils()
+   end
+end
+
+-- stylua: ignore start
+local ops = {
+   add = function(a, b) return a + b end,
+   sub = function(a, b) return a - b end,
+   mul = function(a, b) return a * b end,
+   div = function(a, b) return a / b end,
+   mod = function(a, b) return a % b end,
+   pow = function(a, b) return a ^ b end,
+   concat = function (a, b) return a .. b end,
+   keepif = function (a, b) return b and a or nil end,
+   uni = function (a, b) return union(a, b) end,
+   funi = function (a, b) return flip(union)(a, b) end,
+}
+-- stylua: ignore end
+
+-- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
+local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
+local op_set = {
+   add = "+",
+   sub = "-",
+   mul = "*",
+   div = "/",
+   mod = "%",
+   pow = "^",
+   keepif = "?",
+   concat = "..", -- ?
+   uni = "<",
+   funi = ">",
+}
+
+local how_format = {
+   In = "|%s",
+   Out = "%s|",
+   Mix = "|%s|",
+   Squeeze = "||%s",
+   SqueezeOut = "%s||",
+}
+
+local op = {}
+for k, f in pairs(ops) do
+   op[k] = {}
+   for _, v in ipairs(hows) do
+      op[k][v] = _op[v](f)
+      if op_set[k] and how_format[v] then
+         local symb = string.format(how_format[v], op_set[k])
+         op[symb] = _op[v](f)
+      end
+   end
+end
+
+M.op = op
+
 function silence()
    return Pattern()
 end
+
+M.silence = silence
 
 function pure(value)
    if value == "~" then

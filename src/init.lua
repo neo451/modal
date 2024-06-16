@@ -19,7 +19,7 @@ modal.drawLine = drawLine
 
 for name, func in pairs(factory) do
    modal[name] = func
-   mt[name] = func
+   mt[name] = ut.method_wrap(func)
 end
 
 for name, pat in pairs(lib) do

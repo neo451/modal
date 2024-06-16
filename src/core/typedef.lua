@@ -40,23 +40,6 @@ local rules = {
 
 local grammar = Ct(C(rules))
 
-local function show_sig(t)
-   local function format(a)
-      if type(a[1]) == "table" then
-         return string.format("(%s)", show_sig(a))
-      elseif a.constructor then
-         return string.format("%s %s", a.constructor, a[1])
-      elseif type(a) == "string" then
-         return a
-      end
-   end
-   local s = ""
-   for i = 1, #t do
-      s = s .. format(t[i]) .. " -> "
-   end
-   return s .. format(t.ret)
-end
-
 local TDef = function(a)
    return grammar:match(a)[2]
 end

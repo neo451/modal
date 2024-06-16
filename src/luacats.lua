@@ -4,7 +4,7 @@
 ---@field denomenator number
 ---@field numerator number
 
----@alias Time Fraction | number | Pattern
+-- ---@alias Time Fraction | number | Pattern
 ---@alias Int number | Pattern
 ---@alias State table
 ---@alias Event {value: any, }
