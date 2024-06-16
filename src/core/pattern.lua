@@ -69,7 +69,7 @@ function mt:__tostring()
    return ut.dump(firstCycle(self))
 end
 
--- TODO: not triggered???
+-- TODO: not triggered in busted
 function mt:__eq(other)
    return self:__tostring() == other:__tostring()
 end
@@ -104,6 +104,15 @@ end
 
 mt.__index = mt
 
+-- crazy idea ......
+-- setmetatable(mt, {
+--    __newindex = function(t, k, v)
+--       M[k] = v
+--       _G[k] = v
+--       -- t[k] = v
+--    end,
+-- })
+
 ---@class Pattern
 local function Pattern(query)
    query = query or function()
@@ -123,7 +132,7 @@ function querySpan(b, e, pat)
    local state = State(span)
    return setmetatable(pat:query(state), {
       __tostring = function(self)
-         return ut.dump2(self)
+         return ut.dump(self)
       end,
    })
 end
@@ -645,13 +654,15 @@ local function register(args)
       local f_p_t = typecheck(f_p, name)
       local f_c_p_t = auto_curry(arity, f_p_t)
       M[name] = f_c_p_t
-      mt[name] = method_wrap(f_c_p_t)
+      rawset(mt, name, method_wrap(f_c_p_t))
+      -- mt[name] = method_wrap(f_c_p_t)
    else
       TYPES[name] = TDef(type_sig)
       local f_t = typecheck(f, name)
       local f_t_c = auto_curry(arity, f_t)
       M[name] = f_t_c
-      mt[name] = method_wrap(f_t)
+      rawset(mt, name, method_wrap(f_t))
+      -- mt[name] = method_wrap(f_t)
    end
 end
 M.register = register
