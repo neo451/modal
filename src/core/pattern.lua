@@ -44,11 +44,13 @@ M.sl = ut.string_lambda(M)
 local function reify(thing)
    local t = T(thing)
    if "string" == t then
-      local res, ok = M.mini("[" .. thing .. "]")
-      if not ok then
-         log.warn("failed to compile pattern: " .. thing)
+      local res = M.mini("[" .. thing .. "]")
+      if res then
+         return res()
+      else
+         return M.silence()
       end
-      return res()
+      -- return res and res() or M.silence()
    elseif "table" == t then
       return M.fastcat(thing)
    elseif "pattern" == t then

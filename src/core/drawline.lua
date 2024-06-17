@@ -1,4 +1,4 @@
-local Fraction = require("modal.fraction").Fraction
+local Time = require("modal.types").Time
 local ut = require "modal.utils"
 
 local gcd_reduce = function(tab)
@@ -20,7 +20,7 @@ end
 local drawline = function(pat, chars)
    chars = chars or 60
    local cycle = 0
-   local pos = Fraction(0)
+   local pos = Time(0)
    local lines = { "" }
    local emptyLine = ""
    while #lines[1] < chars do
@@ -34,7 +34,7 @@ local drawline = function(pat, chars)
       end
       local durations = map(mapfunc, events_with_onset)
       local charFraction = gcd_reduce(durations)
-      local totalSlots = Fraction(1) / charFraction
+      local totalSlots = Time(1) / charFraction
       lines = map(function(line)
          return line .. "|"
       end, lines)

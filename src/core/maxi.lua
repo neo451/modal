@@ -397,21 +397,21 @@ return function(env, top_level)
    end
 
    ---@param src string
-   ---@return function?, boolean
+   ---@return function | boolean
    return function(src)
       local ok, ast, fstr, fn
       ok, ast = pcall(read, src)
       if not ok then
-         return ast, false
+         return false
       end
       local lua_src = ast_to_src(ast)
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
-         return nil, false
+         return false
       end
       fn = setfenv(fstr and fstr or function()
          print "not a valid maxi notation"
       end, env)
-      return fn, true
+      return fn
    end
 end

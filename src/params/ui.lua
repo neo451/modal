@@ -10,11 +10,6 @@ do
       _obj_0._patternify_p_p,
       _obj_0._patternify_p_p_p
 end
-local Fraction, tofrac, tofloat
-do
-   local _obj_0 = require "modal.fraction"
-   Fraction, tofrac, tofloat = _obj_0.Fraction, _obj_0.tofrac, _obj_0.tofloat
-end
 local map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
 do
    local _obj_0 = require "modal.utils"

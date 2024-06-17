@@ -78,13 +78,18 @@ M.map = function(func, tab)
    return fun.totable(fun.map(func, tab))
 end
 
+-- TODO: color!
 M.tdump = function(o)
    if M.T(o) == "table" then
-      local s = "{"
+      local s = { "{" }
       for k, v in pairs(o) do
-         s = s .. " " .. k .. ": " .. M.tdump(v)
+         s[#s + 1] = " "
+         s[#s + 1] = k
+         s[#s + 1] = ": "
+         s[#s + 1] = M.tdump(v)
       end
-      return s .. " } "
+      s[#s + 1] = " } "
+      return table.concat(s)
    else
       return tostring(o)
    end
@@ -92,11 +97,15 @@ end
 
 M.dump = function(o)
    if M.T(o) == "table" then
-      local s = ""
+      local s = {}
       for k, v in pairs(o) do
-         s = s .. k .. ": " .. M.tdump(v) .. "\n"
+         s[#s + 1] = k
+         s[#s + 1] = ": "
+         s[#s + 1] = M.dump(v)
+         s[#s + 1] = (k ~= #o) and "\n" or ""
+         -- s = s .. k .. ": " .. M.tdump(v) .. "\n"
       end
-      return s
+      return table.concat(s)
    else
       return tostring(o)
    end

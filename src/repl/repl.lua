@@ -5,6 +5,7 @@ local port = 9000
 local RL = require "readline"
 local M = require "modal"
 local maxi = require "modal.maxi"
+local ut = require "modal.utils"
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -46,11 +47,11 @@ local eval = function(a)
          print(optf[name](param))
          return
       else
-         local fn, ok = evalf(a)
-         if ok then
+         local fn = evalf(a)
+         if fn then
             local fok, res = pcall(fn)
             if fok then
-               io.write(M.dump(res))
+               print(res)
             end
          else
             print(fn)

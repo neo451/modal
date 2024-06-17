@@ -1,7 +1,7 @@
 local T = require("modal.utils").T
 local decimaltofraction, gcd, lcm
 local ut = require "modal.utils"
-local compare, dump = ut.compare, ut.dump
+local compare = ut.compare
 local Time, Span, Event, State
 local abs = math.abs
 local floor = math.floor
@@ -159,7 +159,7 @@ function event_mt:__tostring()
       h = (self.whole._begin ~= self.part._begin) and self.whole._begin:show() .. "-" or ""
       t = (self.whole._end ~= self.part._end) and "-" .. self.whole._end:show() or ""
    end
-   return string.format("%s(%s)%s | %s", h, part, t, dump(self.value))
+   return string.format("%s(%s)%s | %s", h, part, t, ut.tdump(self.value))
 end
 
 function event_mt:spanEquals(other)
@@ -220,7 +220,7 @@ function state_mt:setControls(controls)
 end
 
 function state_mt:__tostring()
-   return "span: " .. self.span:show() .. " controls: " .. dump(self.controls)
+   return "span: " .. self.span:show() .. " controls: " .. ut.tdump(self.controls)
 end
 
 function state_mt:show()

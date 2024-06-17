@@ -30,7 +30,6 @@ build = {
       ["modal.luacats"] = "src/luacats.lua",
       ["modal.utils"] = "src/core/utils.lua",
       ["modal.log"] = "src/core/log.lua",
-      ["modal.fraction"] = "src/core/fraction.lua",
       ["modal.bitop"] = "src/core/bitop.lua",
       ["modal.fun"] = "src/core/fun.lua",
 
@@ -55,12 +54,14 @@ build = {
       ["modal.typedef"] = "src/core/typedef.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
+      ["modal.luv_repl"] = "src/repl/luv_repl.lua",
       ["modal.server"] = "src/repl/server.lua",
    },
    install = {
       bin = {
          "bin/modal",
          "bin/mods",
+         "bin/lmodal",
       },
    },
 }
