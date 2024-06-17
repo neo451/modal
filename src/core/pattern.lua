@@ -2,16 +2,7 @@ local ut = require "modal.utils"
 local id = ut.id
 local map = ut.map
 local filter = ut.filter
-local flatten = ut.flatten
-local union = ut.union
-local timeToRand = ut.timeToRand
-local curry = ut.curry
 local T = ut.T
-local nparams = ut.nparams
-local flip = ut.flip
-local method_wrap = ut.method_wrap
-local auto_curry = ut.auto_curry
-local dump = ut.dump
 
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
@@ -20,11 +11,10 @@ local Event, Span, State, Time = types.Event, types.Span, types.State, types.Tim
 local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 local fun = require "modal.fun"
-local log = require "modal.log"
 
-local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
-local fmap, firstCycle, querySpan, appLeft, appRight, appBoth
-local withEventTime, squeezeJoin, squeezeBind, filterEvents, filterValues, removeNils, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, onsetsOnly, discreteOnly, withValue
+-- local bindWhole, bind, innerBind, outerBind, innerJoin, outerJoin, join
+-- local appLeft, appRight, appBoth
+-- local withEventTime, squeezeJoin, filterEvents, filterValues, splitQueries, withQueryTime, withQuerySpan, withTime, withEvents, withEvent, withEventSpan, withValue
 
 local iter = fun.iter
 local reduce = fun.reduce
@@ -64,11 +54,11 @@ M.reify = reify
 local mt = { __class = "pattern" }
 
 function mt:__call(b, e)
-   return querySpan(b, e, self)
+   return querySpan(self, b, e)
 end
 
 function mt:__tostring()
-   return ut.dump(firstCycle(self))
+   return ut.dump(self(0, 1))
 end
 
 -- TODO: not triggered in busted
@@ -104,16 +94,28 @@ function mt:__pow(other)
    return M.op["|^"](self, other)
 end
 
+function mt:slowcat(pats)
+   pats[#pats + 1] = self
+   return M.slowcat(pats)
+end
+
+function mt:fastcat(pats)
+   pats[#pats + 1] = self
+   return M.fastcat(pats)
+end
+
+function mt:stack(pats)
+   pats[#pats + 1] = self
+   return M.stack(pats)
+end
+
 mt.__index = mt
 
--- crazy idea ......
--- setmetatable(mt, {
---    __newindex = function(t, k, v)
---       M[k] = v
---       _G[k] = v
---       -- t[k] = v
---    end,
--- })
+setmetatable(mt, {
+   __index = function(_, k)
+      return _G[k]
+   end,
+})
 
 ---@class Pattern
 local function Pattern(query)
@@ -127,9 +129,8 @@ M.Pattern = Pattern
 function fmap(pat, func)
    return withValue(pat, func)
 end
-mt.fmap = fmap
 
-function querySpan(b, e, pat)
+function querySpan(pat, b, e)
    local span = Span(b, e)
    local state = State(span)
    return setmetatable(pat:query(state), {
@@ -139,11 +140,7 @@ function querySpan(b, e, pat)
    })
 end
 
-function firstCycle(pat)
-   return pat(0, 1)
-end
-
-local appWhole = function(pat, whole_func, pat_val)
+function appWhole(pat, whole_func, pat_val)
    local query = function(_, state)
       local event_funcs = pat:query(state)
       local event_vals = pat_val:query(state)
@@ -171,7 +168,7 @@ local appWhole = function(pat, whole_func, pat_val)
 end
 
 -- Tidal's <*>
-appBoth = function(pat, pat_val)
+function appBoth(pat, pat_val)
    local whole_func = function(span_a, span_b)
       if not span_a or not span_b then
          return
@@ -180,10 +177,9 @@ appBoth = function(pat, pat_val)
    end
    return appWhole(pat, whole_func, pat_val)
 end
-mt.appBoth = appBoth
 
 -- Tidal's <*
-appLeft = function(pat, pat_val)
+function appLeft(pat, pat_val)
    local query = function(_, state)
       local events = {}
       local event_funcs = pat:query(state)
@@ -204,10 +200,9 @@ appLeft = function(pat, pat_val)
    end
    return Pattern(query)
 end
-mt.appLeft = appLeft
 
 -- Tidal's *>
-appRight = function(pat, pat_val)
+function appRight(pat, pat_val)
    local query = function(_, state)
       local events = {}
       local event_vals = pat_val:query(state)
@@ -228,9 +223,8 @@ appRight = function(pat, pat_val)
    end
    return Pattern(query)
 end
-mt.appRight = appRight
 
-bindWhole = function(pat, choose_whole, func)
+function bindWhole(pat, choose_whole, func)
    local query = function(_, state)
       local withWhole = function(a, b)
          local new_whole = choose_whole(a.whole, b.whole)
@@ -244,13 +238,12 @@ bindWhole = function(pat, choose_whole, func)
          return map(f, events)
       end
       local events = pat:query(state)
-      return flatten(map(match, events))
+      return ut.flatten(map(match, events))
    end
    return Pattern(query)
 end
-mt.bindWhole = bindWhole
 
-bind = function(pat, func)
+function bind(pat, func)
    local whole_func
    whole_func = function(a, b)
       if a == nil or b == nil then
@@ -260,38 +253,32 @@ bind = function(pat, func)
    end
    return bindWhole(pat, whole_func, func)
 end
-mt.bind = bind
 
-join = function(pat)
+function join(pat)
    return bind(pat, id)
 end
-mt.join = join
 
-outerBind = function(pat, func)
+function outerBind(pat, func)
    return bindWhole(pat, function(a)
       return a
    end, func)
 end
-mt.outerBind = outerBind
 
-innerBind = function(pat, func)
+function innerBind(pat, func)
    return bindWhole(pat, function(_, b)
       return b
    end, func)
 end
-mt.innerBind = innerBind
 
-outerJoin = function(pat)
+function outerJoin(pat)
    return outerBind(pat, id)
 end
-mt.outerJoin = outerJoin
 
-innerJoin = function(pat)
+function innerJoin(pat)
    return innerBind(pat, id)
 end
-mt.innerJoin = innerJoin
 
-squeezeJoin = function(pat)
+function squeezeJoin(pat)
    local query
    query = function(_, state)
       local events = discreteOnly(pat):query(state)
@@ -321,30 +308,27 @@ squeezeJoin = function(pat)
          end
          return map(f, innerEvents)
       end
-      local result = flatten(map(flatEvent, events))
+      local result = ut.flatten(map(flatEvent, events))
       return filter(function(x)
          return x
       end, result)
    end
    return Pattern(query)
 end
-mt.squeezeJoin = squeezeJoin
 
-squeezeBind = function(pat, func)
+function squeezeBind(pat, func)
    return squeezeJoin(fmap(pat, func))
 end
-mt.squeezeBind = squeezeBind
 
-filterEvents = function(pat, func)
+function filterEvents(pat, func)
    local query = function(_, state)
       local events = pat:query(state)
       return filter(func, events)
    end
    return Pattern(query)
 end
-mt.filterEvents = filterEvents
 
-filterValues = function(pat, condf)
+function filterValues(pat, condf)
    local query
    query = function(_, state)
       local events = pat:query(state)
@@ -356,28 +340,26 @@ filterValues = function(pat, condf)
    end
    return Pattern(query)
 end
-mt.filterValues = filterValues
 
-removeNils = function(pat)
+function removeNils(pat)
    return filterValues(pat, function(v)
       return v ~= nil
    end)
 end
-mt.removeNils = removeNils
 
-splitQueries = function(pat)
+function splitQueries(pat)
    local query = function(_, state)
       local cycles = state.span:spanCycles()
       local f = function(subspan)
          return pat:query(state:setSpan(subspan))
       end
-      return flatten(map(f, cycles))
+      -- TODO: replace
+      return ut.flatten(map(f, cycles))
    end
    return Pattern(query)
 end
-mt.splitQueries = splitQueries
 
-withValue = function(pat, func)
+function withValue(pat, func)
    local query = function(_, state)
       local events = pat:query(state)
       local f = function(event)
@@ -387,46 +369,40 @@ withValue = function(pat, func)
    end
    return Pattern(query)
 end
-mt.withValue = withValue
 
-withQuerySpan = function(pat, func)
+function withQuerySpan(pat, func)
    local query = function(_, state)
       local new_state = state:withSpan(func)
       return pat:query(new_state)
    end
    return Pattern(query)
 end
-mt.withQuerySpan = withQuerySpan
 
-withQueryTime = function(pat, func)
+function withQueryTime(pat, func)
    return withQuerySpan(pat, function(span)
       return span:withTime(func)
    end)
 end
-mt.withQueryTime = withQueryTime
 
-withTime = function(pat, qf, ef)
+function withTime(pat, qf, ef)
    local query = withQueryTime(pat, qf)
    local pattern = withEventTime(query, ef)
    return pattern
 end
-mt.withTime = withTime
 
-withEvents = function(pat, func)
+function withEvents(pat, func)
    return Pattern(function(_, state)
       return func(pat:query(state))
    end)
 end
-mt.withEvents = withEvents
 
-withEvent = function(pat, func)
+function withEvent(pat, func)
    return withEvents(pat, function(events)
       return map(func, events)
    end)
 end
-mt.withEvent = withEvent
 
-withEventSpan = function(pat, func)
+function withEventSpan(pat, func)
    local query = function(_, state)
       local events = pat:query(state)
       return map(function(ev)
@@ -435,9 +411,8 @@ withEventSpan = function(pat, func)
    end
    return Pattern(query)
 end
-mt.withEventSpan = withEventSpan
 
-withEventTime = function(pat, func)
+function withEventTime(pat, func)
    local query = function(_, state)
       local events = pat:query(state)
       local time_func = function(span)
@@ -450,40 +425,37 @@ withEventTime = function(pat, func)
    end
    return Pattern(query)
 end
-mt.withEventTime = withEventTime
 
-onsetsOnly = function(pat)
+function onsetsOnly(pat)
    return filterEvents(pat, function(event)
       return event:hasOnset()
    end)
 end
-mt.onsetsOnly = onsetsOnly
 
-discreteOnly = function(pat)
+function discreteOnly(pat)
    return filterEvents(pat, function(event)
       return event.whole
    end)
 end
-mt.discreteOnly = discreteOnly
 
 local _op = {}
 function _op.In(f)
    return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      a, b = fmap(reify(a), ut.curry(f, 2)), reify(b)
       return appLeft(a, b):removeNils()
    end
 end
 
 function _op.Out(f)
    return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      a, b = fmap(reify(a), ut.curry(f, 2)), reify(b)
       return appRight(a, b):removeNils()
    end
 end
 
 function _op.Mix(f)
    return function(a, b)
-      a, b = fmap(reify(a), curry(f, 2)), reify(b)
+      a, b = fmap(reify(a), ut.curry(f, 2)), reify(b)
       return appBoth(a, b):removeNils()
    end
 end
@@ -518,8 +490,8 @@ local ops = {
    pow = function(a, b) return a ^ b end,
    concat = function (a, b) return a .. b end,
    keepif = function (a, b) return b and a or nil end,
-   uni = function (a, b) return union(a, b) end,
-   funi = function (a, b) return flip(union)(a, b) end,
+   uni = function (a, b) return ut.union(a, b) end,
+   funi = function (a, b) return ut.flip(ut.union)(a, b) end,
 }
 -- stylua: ignore end
 
@@ -589,7 +561,7 @@ end
 
 local patternify = function(func)
    local patterned = function(...)
-      local arity = nparams(func)
+      local arity = ut.nparams(func)
       -- TODO:
       -- local pats = map(reify, { ... })
       local pats = { ... }
@@ -603,7 +575,7 @@ local patternify = function(func)
          args[#args + 1] = pat
          return func(unpack(args))
       end
-      mapFn = curry(mapFn, arity - 1)
+      mapFn = ut.curry(mapFn, arity - 1)
       return reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
    end
    return patterned
@@ -648,23 +620,23 @@ local function register(args)
    if T(nify) == "nil" then
       nify = true
    end
-   local arity = nparams(f)
+   local arity = ut.nparams(f)
    if nify then
       TYPES[name] = TDef(type_sig)
       U[name] = f
       local f_p = patternify(f)
       local f_p_t = typecheck(f_p, name)
-      local f_c_p_t = auto_curry(arity, f_p_t)
+      local f_c_p_t = ut.auto_curry(arity, f_p_t)
       M[name] = f_c_p_t
-      rawset(mt, name, method_wrap(f_c_p_t))
-      -- mt[name] = method_wrap(f_c_p_t)
+      rawset(mt, name, ut.method_wrap(f_c_p_t))
+      -- mt[name] = ut.method_wrap(f_c_p_t)
    else
       TYPES[name] = TDef(type_sig)
       local f_t = typecheck(f, name)
-      local f_t_c = auto_curry(arity, f_t)
+      local f_t_c = ut.auto_curry(arity, f_t)
       M[name] = f_t_c
-      rawset(mt, name, method_wrap(f_t))
-      -- mt[name] = method_wrap(f_t)
+      rawset(mt, name, ut.method_wrap(f_t))
+      -- mt[name] = ut.method_wrap(f_t)
    end
 end
 M.register = register
@@ -686,7 +658,7 @@ function M.polymeter(steps, pats)
    -- local nsteps, ratio, res = reify(steps), nil, {}
    local res, ratio = {}, nil
    for _, pat in iter(pats) do
-      ratio = steps / #(firstCycle(pat))
+      ratio = steps / #((pat)(0, 1))
       res[#res + 1] = U.fast(ratio, pat)
    end
    return M.stack(res)
@@ -1034,7 +1006,7 @@ M.saw2 = toBipolar(M.saw)
 M.tri = M.fastcat { M.isaw, M.saw }
 M.tri2 = M.fastcat { M.isaw2, M.saw2 }
 M.time = waveform(id)
-M.rand = waveform(timeToRand)
+M.rand = waveform(ut.timeToRand)
 
 M._irand = function(i)
    return fmap(M.rand, function(x)

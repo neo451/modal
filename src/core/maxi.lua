@@ -88,14 +88,17 @@ local function pStep(chars)
 end
 
 local function rTails(args)
-   local fname = table.remove(args, 1)[1]
+   local f = table.remove(args, 1)
+   if f.tag == "String" then
+      f.tag = "Id"
+   end
    local params = ut.filter(function(a)
       return type(a) ~= "function"
    end, args)
    local tails = ut.filter(function(a)
       return type(a) == "function"
    end, args)
-   local main = Call(fname, unpack(params))
+   local main = { tag = "Call", f, unpack(params) }
    for i = 1, #tails do
       main = tails[i](main)
    end
@@ -129,14 +132,14 @@ local function pSlow(a)
    end
 end
 
-local function pRand(a)
-   lower = a[1] or 0
-   return function(x)
-      -- TODO: idea rand run
-      return Num(math.random(lower, x[1]))
-   end
-end
-
+-- local function pRand(a)
+--    lower = a[1] or 0
+--    return function(x)
+--       -- TODO: idea rand run
+--       return Num(math.random(lower, x[1]))
+--    end
+-- end
+--
 local function pDegrade(a)
    if a == "?" then
       a = Num(0.5)
@@ -354,7 +357,7 @@ local grammar = {
    root = ((set + ret) * semi) ^ 1 / pRoot,
    set = step * P "=" * expr / pSet,
    ret = (list + mini + dollar) / pRet,
-   list = ws * P "(" * ws * step * expr ^ 0 * ws * P ")" * ws / pList,
+   list = ws * P "(" * ws * expr ^ 1 * ws * P ")" * ws / pList,
    dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
    expr = ws * (mini + list + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pDot,
@@ -368,12 +371,13 @@ local grammar = {
    slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
    polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
    polymeter_steps = (P "%" * slice) ^ -1 / pPolymeterSteps,
-   op = fast + slow + tail + range + replicate + degrade + weight + euclid + rand,
+   -- op = fast + slow + tail + range + replicate + degrade + weight + euclid + rand,
+   op = fast + slow + tail + range + replicate + degrade + weight + euclid,
    fast = P "*" * slice / pFast,
    slow = P "/" * slice / pSlow,
    tail = P ":" * slice / pTail,
    range = P ".." * ws * slice / pRange,
-   rand = P "#" * (number ^ -1) / pRand,
+   -- rand = P "#" * (number ^ -1) / pRand,
    degrade = P "?" * (number ^ -1) / pDegrade,
    replicate = ws * P "!" * (number ^ -1) / pReplicate,
    weight = ws * (P "@" + P "_") * (number ^ -1) / pWeight,

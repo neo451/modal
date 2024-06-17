@@ -1,6 +1,8 @@
 local fun = require "modal.fun"
 local bit = require "modal.bitop"
 local M = {}
+
+local tconcat = table.concat
 local floor = math.floor
 local abs = math.abs
 local tsize
@@ -71,11 +73,11 @@ M.flatten = function(t)
 end
 
 M.filter = function(func, tab)
-   return fun.totable(fun.filter(func, tab))
+   return fun.filter(func, tab):totable()
 end
 
 M.map = function(func, tab)
-   return fun.totable(fun.map(func, tab))
+   return fun.map(func, tab):totable()
 end
 
 -- TODO: color!
@@ -89,7 +91,7 @@ M.tdump = function(o)
          s[#s + 1] = M.tdump(v)
       end
       s[#s + 1] = " } "
-      return table.concat(s)
+      return tconcat(s)
    else
       return tostring(o)
    end
@@ -103,9 +105,8 @@ M.dump = function(o)
          s[#s + 1] = ": "
          s[#s + 1] = M.dump(v)
          s[#s + 1] = (k ~= #o) and "\n" or ""
-         -- s = s .. k .. ": " .. M.tdump(v) .. "\n"
       end
-      return table.concat(s)
+      return tconcat(s)
    else
       return tostring(o)
    end
@@ -120,11 +121,11 @@ M.zipWith = function(f, xs, ys)
 end
 
 M.concat = function(a, b)
-   return fun.totable(fun.chain(a, b))
+   return fun.chain(a, b):totable()
 end
 
 M.union = function(a, b)
-   return fun.tomap(fun.chain(a, b))
+   return fun.chain(a, b):tomap()
 end
 
 M.splitAt = function(index, list)
@@ -144,17 +145,13 @@ M.rotate = function(step, list)
    return M.concat(b, a)
 end
 
-local id = function(x)
-   return x
-end
-
 M.pipe = function(...)
    local funcs = { ... }
    return fun.reduce(function(f, g)
       return function(...)
          return f(g(...))
       end
-   end, id, funcs)
+   end, M.id, funcs)
 end
 
 M.curry = function(func, num_args)
@@ -252,6 +249,7 @@ M.string_lambda = function(env)
    end
 end
 
+-- TODO:
 M.memoize = function(func)
    local cache = {}
    return function(k)
@@ -292,6 +290,9 @@ function M.method_wrap(f)
    end
 end
 
+---@param arity number
+---@param f function
+---@return function
 function M.auto_curry(arity, f)
    return function(...)
       local args = { ... }
