@@ -2,14 +2,14 @@ rockspec_format = "3.0"
 package = "modal"
 version = "dev-1"
 source = {
-   url = "git+ssh://git@github.com/noearc/modal.git",
+   url = "https://github.com/noearc/modal.git",
 }
 
 description = {
-   summary = "a port of the tidalcycles pattern language to lua/moonscript",
+   summary = "lua port of the tidalcycles pattern language",
    detailed = [[
-modal is an experimental port of the livecoding music language [Tidalcycles](http://tidalcycles.org/) to the lua programming language.
-This project follows the footsteps of [vortex](https://github.com/tidalcycles/vortex) and [strudel](https://strudel.tidalcycles.org) and tranquility.]],
+modal is an experimental port of the livecoding music language Tidalcycles(http://tidalcycles.org/) to the lua.
+This project follows the footsteps of vortex, strudel and tranquility.]],
    homepage = "https://github.com/noearc/modal",
    license = "GPL3",
 }
