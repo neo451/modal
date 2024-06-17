@@ -62,41 +62,6 @@ end
 
 modal.Pattern = Pattern
 
-if jit then
-   local reify = modal.reify
-   getmetatable("").__add = function(a, b)
-      return reify(a) + reify(b)
-   end
-
-   getmetatable("").__mul = function(a, b)
-      return reify(a) * reify(b)
-   end
-
-   getmetatable("").__div = function(a, b)
-      return reify(a) / reify(b)
-   end
-
-   getmetatable("").__sub = function(a, b)
-      return reify(a) - reify(b)
-   end
-
-   getmetatable("").__pow = function(a, b)
-      return reify(a) ^ reify(b)
-   end
-
-   getmetatable("").__mod = function(a, b)
-      return reify(a) % reify(b)
-   end
-
-   getmetatable("").__concat = function(a, b)
-      return reify(a) .. reify(b)
-   end
-
-   getmetatable("").__index = function(a, b)
-      return reify(a)[b]
-   end
-end
-
 setmetatable(modal, {
    __call = function(t, override)
       for k, v in pairs(t) do
