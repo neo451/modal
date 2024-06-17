@@ -1,27 +1,35 @@
 # modal
 
-lua port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
+Lua port of tidal, this project is at early alpha stage, all kinds of things can go wrong, but trying out and feedbacks are appreciated!
+
+See [Wiki](https://github.com/noearc/modal/wiki) for more desgin highlights and future plans.
+
 
 ## Install
 
-1. install luarocks
-2. `luarocks install modal` **not ready yet**
+1. Install luarocks
+2. May need to manually install `libasio-dev` for abletonlink to work
+3. **not ready yet**
+```
+sudo luarocks install modal 
+```
 
-## Building
+## Build and Develop
 
-1. clone or download the project zip from github
-2. open a terminal in the project directory
-3. run `sudo make install`
+1. Clone or download the project zip from github
+2. Open a terminal in the project directory
+3. Run `sudo make install`
+4. Install [busted](https://luarocks.org/modules/lunarmodules/busted) to run tests with `busted`
 
-## Trying out
+## Play
 
-1. start supercollider and (in supercollider) run `SuperDirt.start`
-2. get [modal.nvim](https://github.com/noearc/modal.nvim)
-3. or in terminal, launch `mods` (server backend) and `modal` (repl)
+1. Start supercollider and run `SuperDirt.start`.
+2. Use [modal.nvim](https://github.com/noearc/modal.nvim) in neovim.
+3. Or in terminal, launch `mods` (server backend) and `modal` (repl) side by side.
 
 ## History
 
-This porject works on top of the working prototype port of [tranquility]( https://github.com/XiNNiW/tranquility ), the og lua port. I originally intended this as a moonscript port, but as this one went larger and larger, lua tooling is obviously better. plus I wrote the custom parser to replace it as the user code parser. So this project is the current lua port of Tidal that went the furtherest for now :)
+This porject works on top of the working prototype port of [tranquility]( https://github.com/XiNNiW/tranquility ), the og lua port. I originally intended this as a moonscript port, because it has a more tarse syntax. But as this project grew larger, lua tooling is obviously better. Plus I wrote the custom parser to replace it as the user code parser. So this project is the current lua port of Tidal that went the furtherest for now :)
 
 ## Collaboration
 
