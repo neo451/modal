@@ -8,13 +8,15 @@ local fun = require "modal.fun"
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
 
+local loadstring = loadstring or load
+local unpack = unpack or table.unpack
+local setfenv = setfenv or ut.setfenv
+local tremove = table.remove
+local type = type
 local filter = ut.filter
 local map = ut.map
 local iter = fun.iter
 local reduce = fun.reduce
-local tremove = table.remove
-local type = type
-local unpack = unpack or table.unpack
 
 local sequence = V "sequence"
 local slice = V "slice"

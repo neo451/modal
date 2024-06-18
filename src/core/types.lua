@@ -1,10 +1,11 @@
+local Time, Span, Event, State
 local T = require("modal.utils").T
 local decimaltofraction, gcd, lcm
 local ut = require "modal.utils"
-local compare = ut.compare
-local Time, Span, Event, State
 local abs = math.abs
 local floor = math.floor
+local setmetatable = setmetatable
+local compare = ut.compare
 
 local mt = { __class = "fraction" }
 local span_mt = { __class = "span" }
@@ -159,7 +160,7 @@ function event_mt:__tostring()
       h = (self.whole._begin ~= self.part._begin) and self.whole._begin:show() .. "-" or ""
       t = (self.whole._end ~= self.part._end) and "-" .. self.whole._end:show() or ""
    end
-   return string.format("%s(%s)%s | %s", h, part, t, ut.tdump(self.value))
+   return ("%s(%s)%s | %s"):format(h, part, t, ut.tdump(self.value))
 end
 
 function event_mt:spanEquals(other)
@@ -456,7 +457,7 @@ function mt:asFloat()
 end
 
 function mt:__tostring()
-   return string.format("%d/%d", self.numerator, self.denominator)
+   return ("%d/%d"):format(self.numerator, self.denominator)
 end
 
 function mt:show()

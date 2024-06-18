@@ -1,4 +1,5 @@
 local types = require "modal.types"
+local ut = require "modal.utils"
 local Span, Event, Time = types.Span, types.Event, types.Time
 local describe = require("busted").describe
 local it = require("busted").it
@@ -96,11 +97,11 @@ describe("Event", function()
    describe("show", function()
       it("should produce string representation of event times", function()
          local event = Event(Span(1 / 2, 2), Span(1 / 2, 1), 5)
-         assert.are.equals(event:show(), "(1/2 → 1/1)-2/1 | 5")
+         assert.are.equals(event:show(), "(1/2 → 1/1)-2/1 | " .. ut.colors.red "5")
          event = Event(Span(1 / 2, 1), Span(1 / 2, 1), 6)
-         assert.are.equals(event:show(), "(1/2 → 1/1) | 6")
+         assert.are.equals(event:show(), "(1/2 → 1/1) | " .. ut.colors.red "6")
          event = Event(Span(1 / 2, 1), Span(3 / 4, 1), 6)
-         assert.are.equals(event:show(), "1/2-(3/4 → 1/1) | 6")
+         assert.are.equals(event:show(), "1/2-(3/4 → 1/1) | " .. ut.colors.red "6")
       end)
    end)
    describe("withValue", function()

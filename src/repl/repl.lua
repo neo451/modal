@@ -6,9 +6,11 @@ local RL = require "readline"
 local M = require "modal"
 local maxi = require "modal.maxi"
 
+local loadstring = loadstring or load
+
 local keywords = {}
 for i, _ in pairs(M) do
-   table.insert(keywords, i)
+   keywords[#keywords + 1] = i
 end
 
 RL.set_complete_list(keywords)
@@ -39,8 +41,7 @@ local evalf = maxi(_G, true)
 local eval = function(a)
    if a then
       if a:sub(1, 1) == ":" then
-         -- print(a:sub(1, #a))
-         local name, param = string.match(a, "(%a+)%s(%a*)")
+         local name, param = a:match "(%a+)%s(%a*)"
          name = name and name or a:sub(2, #a)
          param = param and param or nil
          print(optf[name](param))
@@ -64,7 +65,6 @@ RL.set_readline_name "modal"
 
 local line
 while true do
-   -- c = assert(socket.connect(host, port))
    line = RL.readline "modal> "
    if not line then
       break
