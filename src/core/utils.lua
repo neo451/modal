@@ -20,6 +20,11 @@ local floor = math.floor
 local abs = math.abs
 local debug_info = debug.getinfo
 
+local reduce = fun.reduce
+local map = fun.map
+local filter = fun.filter
+local chain = fun.chain
+
 local setfenv = setfenv or M.setfenv
 
 ---@table term colors
@@ -171,7 +176,7 @@ M.bit = bit
 -- general utilities
 
 ---return size of hash table
----@paraam t table
+---@param t table
 local tsize = function(t)
    local size = 0
    for _ in pairs(t) do
@@ -180,6 +185,10 @@ local tsize = function(t)
    return size
 end
 
+---structually compare two table, TODO: needed?
+---@param rhs table
+---@param lhs table
+---@return boolean
 function M.compare(rhs, lhs)
    if type(lhs) ~= type(rhs) then
       return false
@@ -200,6 +209,8 @@ function M.compare(rhs, lhs)
    return true
 end
 
+---@param value any
+---@return string
 function M.T(value)
    local base_type = type(value)
    if base_type == "table" then
@@ -227,14 +238,25 @@ function M.flatten(t)
    return flat
 end
 
-function M.filter(func, tab)
-   return fun.filter(func, tab):totable()
+---list filter
+---@param f function
+---@param list table
+---@return table
+function M.filter(f, list)
+   return filter(f, list):totable()
 end
 
-function M.map(func, tab)
-   return fun.map(func, tab):totable()
+---list map
+---@param f function
+---@param list table
+---@return table
+function M.map(f, list)
+   return map(f, list):totable()
 end
 
+---dump table as key value pairs
+---@param o table
+---@return string
 function M.tdump(o)
    if M.T(o) == "table" then
       local s = {}
@@ -250,6 +272,9 @@ function M.tdump(o)
    end
 end
 
+---dump table of events the tidal way
+---@param o table
+---@return string
 function M.dump(o)
    if M.T(o) == "table" then
       local s = {}
@@ -265,6 +290,11 @@ function M.dump(o)
    end
 end
 
+---zip two list (xs, ys) with f(xs, ys)
+---@param f function
+---@param xs table
+---@param ys table
+---@return table
 function M.zipWith(f, xs, ys)
    local acc = {}
    for i = 1, #xs do
@@ -273,14 +303,25 @@ function M.zipWith(f, xs, ys)
    return acc
 end
 
+---concat two lists
+---@param a table
+---@param b table
+---@return table
 function M.concat(a, b)
-   return fun.chain(a, b):totable()
+   return chain(a, b):totable()
 end
 
+---concat two hashmaps
+---@param a table
+---@param b table
+---@return table
 function M.union(a, b)
-   return fun.chain(a, b):tomap()
+   return chain(a, b):tomap()
 end
 
+---@param index number
+---@param list table
+---@return table, table
 function M.splitAt(index, list)
    local fst, lst = {}, {}
    for k, v in pairs(list) do
@@ -293,40 +334,27 @@ function M.splitAt(index, list)
    return fst, lst
 end
 
+---@param step number
+---@param list table
+---@return table
 function M.rotate(step, list)
    local a, b = M.splitAt(step, list)
    return M.concat(b, a)
 end
 
+---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
+---@param ... unknown
+---@return unknown
 function M.pipe(...)
    local funcs = { ... }
-   return fun.reduce(function(f, g)
+   return reduce(function(f, g)
       return function(...)
          return f(g(...))
       end
    end, M.id, funcs)
 end
 
-function M.curry(func, num_args)
-   num_args = num_args or 2
-   if num_args <= 1 then
-      return func
-   end
-   local function curry_h(argtrace, n)
-      if 0 == n then
-         return func(M.reverse(argtrace()))
-      else
-         return function(onearg)
-            return curry_h(function()
-               return onearg, argtrace()
-            end, n - 1)
-         end
-      end
-   end
-   return curry_h(function() end, num_args)
-end
-
-function M.reverse(...)
+local function reverse(...)
    local function reverse_h(acc, v, ...)
       if 0 == select("#", ...) then
          return v, acc()
@@ -339,6 +367,32 @@ function M.reverse(...)
    return reverse_h(function() end, ...)
 end
 
+---curry given function -> f(a, b, c) -> f(a)(b)(c)
+---@param func function
+---@param num_args number
+---@return function
+function M.curry(func, num_args)
+   num_args = num_args or 2
+   if num_args <= 1 then
+      return func
+   end
+   local function curry_h(argtrace, n)
+      if 0 == n then
+         return func(reverse(argtrace()))
+      else
+         return function(onearg)
+            return curry_h(function()
+               return onearg, argtrace()
+            end, n - 1)
+         end
+      end
+   end
+   return curry_h(function() end, num_args)
+end
+
+---flip two args of f
+---@param f function
+---@return function
 function M.flip(f)
    return function(a, b)
       return f(b, a)
@@ -367,6 +421,9 @@ function M.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
 
+---turn string in format of "x -> body" to function(x) return body end | or the tidal preifx function calling syntax like "+| note 1"
+---@param env table
+---@return function
 function M.string_lambda(env)
    return function(f)
       if type(f) == "function" or M.T(f) == "pattern" then
@@ -414,8 +471,6 @@ function M.memoize(func)
       return res
    end
 end
--- TODO:
--- M.string_lambda = M.memoize(_string_lambda)
 
 ---returns num_param, is_vararg
 ---@param func function
@@ -434,6 +489,9 @@ function M.nparams(func)
    end
 end
 
+---register a f(..., pat) as a method for Pattern.f(self, ...), essentially switch the order of args
+---@param f function
+---@return function
 function M.method_wrap(f)
    return function(...)
       local args = { ... }
@@ -443,6 +501,7 @@ function M.method_wrap(f)
    end
 end
 
+---if f gets less args then arity, then curry the f and pass the current amount of args into it
 ---@param arity number
 ---@param f function
 ---@return function
@@ -465,6 +524,10 @@ function M.id(x)
    return x
 end
 
+---for lua5.1 compatibility
+---@param f any
+---@param env any
+---@return any
 function M.setfenv(f, env)
    local i = 1
    while true do

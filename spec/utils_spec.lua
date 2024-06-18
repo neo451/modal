@@ -1,4 +1,5 @@
 local M = require "modal.utils"
+local drawLine = require "modal.drawline"
 local pat = require "modal.pattern"
 local describe = require("busted").describe
 local it = require("busted").it
@@ -75,5 +76,11 @@ describe("auto curry", function()
    it("shoudl do felixable curry", function()
       assert.same(pat.fast(2, 1)(0, 1), pat.fast(2)(1)(0, 1))
       assert.same(pat.fast(2, 1)(0, 1), pat.fast(2)(1)(0, 1))
+   end)
+end)
+
+describe("drawLine", function()
+   it("should return a line representation of pattern", function()
+      assert.same("|aaa|aaa", drawLine(pat.fast(3, "a"), 6))
    end)
 end)

@@ -124,7 +124,6 @@ local rawiter = function(obj, param, state)
       end
       return string_gen, obj, 0
    end
-   require "moon.all"
    error(string.format('object %s of type "%s" is not iterable', obj, type(obj)))
 end
 

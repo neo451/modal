@@ -1,23 +1,27 @@
 local Time = require("modal.types").Time
+local fun = require "modal.fun"
 local ut = require "modal.utils"
 
+local reduce = fun.reduce
+local iter = fun.iter
+local filter = ut.filter
+local tconcat = table.concat
+
 local gcd_reduce = function(tab)
-   return ut.reduce(function(acc, value)
+   return reduce(function(acc, value)
       return acc:gcd(value)
    end, tab[1], tab)
 end
 
-local map = function(func, items)
-   local _accum_0 = {}
-   local _len_0 = 1
-   for i, v in ipairs(items) do
-      _accum_0[_len_0] = func(v, i)
-      _len_0 = _len_0 + 1
+local function map(func, items)
+   local acc = {}
+   for i, v in iter(items) do
+      acc[i] = func(v, i)
    end
-   return _accum_0
+   return acc
 end
 
-local drawline = function(pat, chars)
+local function drawLine(pat, chars)
    chars = chars or 60
    local cycle = 0
    local pos = Time(0)
@@ -25,33 +29,30 @@ local drawline = function(pat, chars)
    local emptyLine = ""
    while #lines[1] < chars do
       local events = pat(cycle, cycle + 1)
-      local filterfunc = function(event)
+      local events_with_onset = filter(function(event)
          return event:hasOnset()
-      end
-      local events_with_onset = ut.filter(filterfunc, events)
-      local mapfunc = function(event)
-         return event:duration()
-      end
-      local durations = map(mapfunc, events_with_onset)
+      end, events)
+      local durations = map(function(ev)
+         return ev:duration()
+      end, events_with_onset)
       local charFraction = gcd_reduce(durations)
-      local totalSlots = Time(1) / charFraction
+      local totalSlots = charFraction:reverse()
       lines = map(function(line)
          return line .. "|"
       end, lines)
       emptyLine = emptyLine .. "|"
       for _ = 1, totalSlots:asFloat() do
          local _begin, _end = pos, pos + charFraction
-         filterfunc = function(event)
+         local matches = filter(function(event)
             return event.whole._begin <= _begin and event.whole._end >= _end
-         end
-         local matches = ut.filter(filterfunc, events)
+         end, events)
          local missingLines = #matches - #lines
          if missingLines > 0 then
             for _ = 1, missingLines do
                lines = lines .. missingLines
             end
          end
-         mapfunc = function(line, index)
+         lines = map(function(line, index)
             local event = matches[index]
             if event ~= nil then
                local isOnset = event.whole._begin == _begin
@@ -64,14 +65,13 @@ local drawline = function(pat, chars)
                return line .. char
             end
             return line .. "."
-         end
-         lines = map(mapfunc, lines)
+         end, lines)
          emptyLine = emptyLine .. "."
          pos = pos + charFraction
       end
       cycle = cycle + 1
    end
-   return table.concat(lines)
+   return tconcat(lines)
 end
 
-return drawline
+return drawLine

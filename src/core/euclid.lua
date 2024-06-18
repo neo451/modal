@@ -1,9 +1,7 @@
-local flatten, zipWith, concat, splitAt, rotate
-do
-   local _obj_0 = require "modal.utils"
-   flatten, zipWith, concat, splitAt, rotate =
-      _obj_0.flatten, _obj_0.zipWith, _obj_0.concat, _obj_0.splitAt, _obj_0.rotate
-end
+local ut = require "modal.utils"
+local flatten, zipWith, concat, splitAt, rotate = ut.flatten, ut.zipWith, ut.concat, ut.splitAt, ut.rotate
+
+local min = math.min
 
 local function left(n, m)
    local ons, offs = n[1], n[2]
@@ -21,7 +19,7 @@ end
 
 local function _bjork(n, m)
    local ons, offs = n[1], n[2]
-   if math.min(ons, offs) <= 1 then
+   if min(ons, offs) <= 1 then
       return { n, m }
    else
       if ons > offs then
