@@ -450,7 +450,7 @@ function M.string_lambda(env)
          -- print(fstr)
          local fn, err = loadstring(fstr)
          if not fn then
-            return error(err)
+            return false
          end
          fn = fn()
          setfenv(fn, env)

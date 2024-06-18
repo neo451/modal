@@ -469,29 +469,29 @@ end)
 
 describe("off", function()
    -- TODO:
-   -- it("should offset applying f", function()
-   --    local inc1 = function(a)
-   --       return a + 1
-   --    end
-   --    local pat = M.off(0.5, inc1, 1)
-   --    local expected = {
-   --       Event(Span(0, 1), Span(0, 1), 1),
-   --       Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
-   --       Event(Span(0.5, 1.5), Span(0.5, 1), 2),
-   --    }
-   --    assert.same(expected, pat(0, 1))
-   -- end)
-   --
-   -- it("should take string lambda that gets lib funcs env", function()
-   --    local pat = M.off(0.5, "x -> x + 1", 1)
-   --    local expected = {
-   --       Event(Span(0, 1), Span(0, 1), 1),
-   --       Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
-   --       Event(Span(0.5, 1.5), Span(0.5, 1), 2),
-   --    }
-   --
-   --    assert.same(expected, pat(0, 1))
-   -- end)
+   it("should offset applying f", function()
+      local inc1 = function(a)
+         return a + 1
+      end
+      local pat = M.off(0.5, inc1, 1)
+      local expected = {
+         Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
+         Event(Span(0.5, 1.5), Span(0.5, 1), 2),
+         Event(Span(0, 1), Span(0, 1), 1),
+      }
+      assert.same(expected, pat(0, 1))
+   end)
+
+   it("should take string lambda that gets lib funcs env", function()
+      local pat = M.off(0.5, "x -> x + 1", 1)
+      local expected = {
+         Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
+         Event(Span(0.5, 1.5), Span(0.5, 1), 2),
+         Event(Span(0, 1), Span(0, 1), 1),
+      }
+
+      assert.same(expected, pat(0, 1))
+   end)
 end)
 
 describe("every", function()
@@ -505,14 +505,20 @@ describe("every", function()
    end)
 
    it("should take pattern of functions as second param", function()
-      local pat = M.every(3, M.stack { M.fast(2), "x -> x + 1" }, 1)
+      local pat = M.every(3, M.stack { M.fast(2), M.sl "x -> x + 1" }, 1)
       local expected = M.stack { M.slowcat { M.fast(2, 1), 1, 1 }, M.slowcat { 2, 1, 1 } }
       assert.pat(expected, pat)
    end)
 
-   -- it("should take string lambda that gets lib funcs env", function()
-   --    local pat = M.every(3, "x -> x:fast(2)", 1)
-   --    local expected = M.slowcat { M.fast(2, 1), 1, 1 }
+   it("should take string lambda that gets lib funcs env", function()
+      local pat = M.every(3, "x -> x:fast(2)", 1)
+      local expected = M.slowcat { M.fast(2, 1), 1, 1 }
+      assert.pat(expected, pat)
+   end)
+
+   -- it("should take mini-notation of functions", function()
+   --    local pat = M.every(3, "[(fast 2), (+ 1)]", 1)
+   --    local expected = M.stack { M.slowcat { M.fast(2, 1), 1, 1 }, M.slowcat { 2, 1, 1 } }
    --    assert.pat(expected, pat)
    -- end)
 end)

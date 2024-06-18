@@ -1,5 +1,7 @@
 -- TODO: proper arithemtic
 -- TODO: proper expr and application
+-- local pat = M.every(3, "[(fast 2), (+ 1)]", 1)
+-- need to do (+ 1) (+| note 1), currying superpower!!
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local ut = require "modal.utils"

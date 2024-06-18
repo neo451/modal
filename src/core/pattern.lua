@@ -37,6 +37,11 @@ M.sl = ut.string_lambda(M)
 local function reify(thing)
    local t = T(thing)
    if "string" == t then
+      -- TODO: try to read as a string_lambda before pattern, make two structure diff
+      -- local ok, f = pcall(M.sl, thing)
+      -- if ok then
+      --    return f
+      -- end
       local res = M.mini("[" .. thing .. "]")
       if res then
          return res()
@@ -625,7 +630,7 @@ local function typecheck(f, name)
                end
             end
          else
-            if T(tvar) == "table" then
+            if T(tvar) == "table" or tvar == "f" then
                v = M.sl(v)
             end
             if tvar == "Time" then
@@ -1283,17 +1288,6 @@ local function _every(t, f, pat)
    end, f, pat)
 end
 
-register {
-   "every",
-   "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
-   function(tp, f, pat)
-      return fmap(tp, function(t)
-         return _every(t, f, pat)
-      end):innerJoin()
-   end,
-   false,
-}
-
 local slowcatPrime = function(pats)
    local query = function(_, state)
       local len = #pats
@@ -1310,7 +1304,6 @@ register {
    -- "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    "Pattern Int -> Pattern f -> Pattern a -> Pattern a",
    function(n, f, pat)
-      f = M.sl(f)
       local acc = {}
       for i = 1, n do
          acc[i] = (i == 1) and f(pat) or pat
@@ -1323,7 +1316,6 @@ register {
    "off",
    "Pattern Time -> Pattern f -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      f = M.sl(f)
       return pat:overlay(f(pat:late(tp)))
    end,
 }
