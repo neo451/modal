@@ -466,7 +466,6 @@ local function squeezeBind(pat, func)
    return squeezeJoin(fmap(pat, func))
 end
 mt.squeezeBind = squeezeBind
-
 local _op = {}
 function _op.In(f)
    return function(a, b)
