@@ -2,12 +2,21 @@ local fun = require "modal.fun"
 local bit = require "modal.bitop"
 local M = {}
 
+local pairs = pairs
+local ipairs = ipairs
+local tostring = tostring
+local setmetatable = setmetatable
+local str_dump = string.dump
+local str_match = string.match
+local str_format = string.format
+local str_char = string.char
 local tconcat = table.concat
+local tremove = table.remove
 local floor = math.floor
 local abs = math.abs
-local tsize
+local debug_info = debug.getinfo
 
-tsize = function(t)
+local tsize = function(t)
    local size = 0
    for _ in pairs(t) do
       size = size + 1
@@ -86,7 +95,7 @@ M.tdump = function(o)
       local s = { "{" }
       for k, v in pairs(o) do
          s[#s + 1] = " "
-         s[#s + 1] = k
+         s[#s + 1] = M.colors.red(k)
          s[#s + 1] = ": "
          s[#s + 1] = M.tdump(v)
       end
@@ -101,7 +110,7 @@ M.dump = function(o)
    if M.T(o) == "table" then
       local s = {}
       for k, v in pairs(o) do
-         s[#s + 1] = k
+         s[#s + 1] = M.colors.red(k)
          s[#s + 1] = ": "
          s[#s + 1] = M.dump(v)
          s[#s + 1] = (k ~= #o) and "\n" or ""
@@ -230,12 +239,12 @@ M.string_lambda = function(env)
          setfenv(fn, env)
          return fn
       else
-         local op, param, arg = string.match(f, "([%+%-%*|]*)%s*(%S+)%s*(%S+)")
+         local op, param, arg = str_match(f, "([%+%-%*|]*)%s*(%S+)%s*(%S+)")
          -- print(op, param, arg)
          if not (op or param or arg) then
             return error "not a string lambda"
          end
-         local body = string.format("op['%s'](x, %s(%s))", op, param, arg)
+         local body = str_format("op['%s'](x, %s(%s))", op, param, arg)
          local fstr = "return function(x) return " .. body .. " end"
          -- print(fstr)
          local fn, err = loadstring(fstr)
@@ -269,14 +278,14 @@ end
 ---@return number, boolean
 M.nparams = function(func)
    if _VERSION == "Lua 5.1" and not jit then
-      local s = string.dump(func)
+      local s = str_dump(func)
       assert(s:sub(1, 6) == "\27LuaQ\0", "This code works only in Lua 5.1")
       local int_size = s:byte(8)
       local ptr_size = s:byte(9)
       local pos = 14 + ptr_size + (s:byte(7) > 0 and s:byte(13) or s:byte(12 + ptr_size)) + 2 * int_size
       return s:byte(pos), s:byte(pos + 1) > 0
    else
-      local info = debug.getinfo(func)
+      local info = debug_info(func)
       return info.nparams, info.isvararg
    end
 end
@@ -284,7 +293,7 @@ end
 function M.method_wrap(f)
    return function(...)
       local args = { ... }
-      local pat = table.remove(args, 1)
+      local pat = tremove(args, 1)
       args[#args + 1] = pat
       return f(unpack(args))
    end
@@ -297,7 +306,7 @@ function M.auto_curry(arity, f)
    return function(...)
       local args = { ... }
       if #args < arity then
-         cf = M.curry(f, arity)
+         local cf = M.curry(f, arity)
          for _, v in ipairs(args) do
             cf = cf(v)
          end
@@ -311,5 +320,64 @@ end
 function M.id(x)
    return x
 end
+
+local colors = {}
+
+local colormt = {}
+
+function colormt:__tostring()
+   return self.value
+end
+
+function colormt:__concat(other)
+   return tostring(self) .. tostring(other)
+end
+
+function colormt:__call(s)
+   return self .. s .. colors.reset
+end
+
+local function makecolor(value)
+   return setmetatable({ value = str_char(27) .. "[" .. tostring(value) .. "m" }, colormt)
+end
+
+local colorvalues = {
+   -- attributes
+   reset = 0,
+   clear = 0,
+   default = 0,
+   bright = 1,
+   dim = 2,
+   underscore = 4,
+   blink = 5,
+   reverse = 7,
+   hidden = 8,
+
+   -- foreground
+   black = 30,
+   red = 31,
+   green = 32,
+   yellow = 33,
+   blue = 34,
+   magenta = 35,
+   cyan = 36,
+   white = 37,
+
+   -- background
+   onblack = 40,
+   onred = 41,
+   ongreen = 42,
+   onyellow = 43,
+   onblue = 44,
+   onmagenta = 45,
+   oncyan = 46,
+   onwhite = 47,
+}
+
+for c, v in pairs(colorvalues) do
+   colors[c] = makecolor(v)
+end
+
+M.colors = colors
 
 return M

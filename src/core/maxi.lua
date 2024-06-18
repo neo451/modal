@@ -1,6 +1,5 @@
---d4 $ every 3 (fast 2) $ s [cp ~ ~ rim ~ casio ~ ~]
-
 -- TODO: proper arithemtic
+-- TODO: proper expr and application
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local ut = require "modal.utils"
@@ -8,6 +7,14 @@ local fun = require "modal.fun"
 
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
+
+local filter = ut.filter
+local map = ut.map
+local iter = fun.iter
+local reduce = fun.reduce
+local tremove = table.remove
+local type = type
+local unpack = unpack or table.unpack
 
 local sequence = V "sequence"
 local slice = V "slice"
@@ -88,14 +95,14 @@ local function pStep(chars)
 end
 
 local function rTails(args)
-   local f = table.remove(args, 1)
+   local f = tremove(args, 1)
    if f.tag == "String" then
       f.tag = "Id"
    end
-   local params = ut.filter(function(a)
+   local params = filter(function(a)
       return type(a) ~= "function"
    end, args)
-   local tails = ut.filter(function(a)
+   local tails = filter(function(a)
       return type(a) == "function"
    end, args)
    local main = { tag = "Call", f, unpack(params) }
@@ -187,7 +194,7 @@ end
 
 local function rReps(ast)
    local res = {}
-   for _, node in ipairs(ast) do
+   for _, node in iter(ast) do
       if node.reps then
          local reps = node.reps
          for _ = 1, reps do
@@ -206,7 +213,7 @@ local function rReps(ast)
 end
 
 local function pSlices(sli, ...)
-   for _, v in ipairs { ... } do
+   for _, v in iter { ... } do
       sli = v(sli)
    end
    return sli
@@ -219,7 +226,7 @@ end
 
 local function rWeight(args)
    local acc = {}
-   for _, v in ipairs(args) do
+   for _, v in iter(args) do
       acc[#acc + 1] = v.weight and Num(v.weight) or Num(1)
       acc[#acc + 1] = v
    end
@@ -228,7 +235,7 @@ end
 
 local function pSeq(isSlow)
    return function(args)
-      local weightSum = fun.reduce(addWeight, 0, args)
+      local weightSum = reduce(addWeight, 0, args)
       if weightSum > #args then
          return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
       else
@@ -238,12 +245,12 @@ local function pSeq(isSlow)
 end
 
 local function pStack(...)
-   local args = ut.map(rReps, { ... })
+   local args = map(rReps, { ... })
    return rReps(args), "Stack"
 end
 
 local function pChoose(...)
-   local args = ut.map(rReps, { ... })
+   local args = map(rReps, { ... })
    return rReps(args), "Choose"
 end
 
@@ -254,7 +261,7 @@ local opsymb = {
    ["/"] = { "div", true },
    ["^"] = { "pow", true },
    ["%"] = { "mod", true },
-   ["."] = { "pipe", false }, -- TODO: proper expr and application
+   ["."] = { "pipe", false },
 }
 
 local function is_op(a)
@@ -274,16 +281,16 @@ local function pList(...)
    if #args == 3 then
       if is_op(args[2][1]) then
          local opname, is_native = opsymb[args[2][1]][1], opsymb[args[2][1]][2]
-         table.remove(args, 2)
+         tremove(args, 2)
          if is_native then
             return { tag = "Op", opname, unpack(args) }
          else
             -- TODO: check??
-            return Call(opname, unpack(ut.map(string2id, args)))
+            return Call(opname, unpack(map(string2id, args)))
          end
       elseif is_op(args[1][1]) then
          local opname = opsymb[args[1][1]]
-         table.remove(args, 1)
+         tremove(args, 1)
          return { tag = "Op", opname, unpack(args) }
       end
    end
@@ -292,7 +299,7 @@ end
 
 local function pTailop(...)
    local args = { ... }
-   local symb = table.remove(args, 1)
+   local symb = tremove(args, 1)
    args = pDollar(unpack(args))
    return function(x)
       return { tag = "Call", { tag = "Index", Id "op", Str(symb) }, x, args }
@@ -301,10 +308,10 @@ end
 
 local function pSubCycle(args, tag)
    if tag == "Stack" then
-      args = ut.map(pSeq(false), args)
+      args = map(pSeq(false), args)
       return Call("stack", Table(args))
    elseif tag == "Choose" then
-      args = ut.map(pSeq(false), args)
+      args = map(pSeq(false), args)
       return Call("randcat", unpack(args))
    end
 end
@@ -313,9 +320,9 @@ local function pPolymeterSteps(s)
    return (s ~= "") and s or -1
 end
 
-local function pPolymeter(args, _, steps) -- TODO: what about choose?
+local function pPolymeter(args, _, steps)
    steps = (steps == -1) and Num(#args[1]) or steps
-   args = ut.map(pSeq(false), args)
+   args = map(pSeq(false), args)
    return Call("polymeter", steps, Table(args))
 end
 
@@ -326,7 +333,7 @@ end
 
 local function pRoot(...)
    local stats = { ... }
-   for i, a in ipairs(stats) do
+   for i, a in iter(stats) do
       stats[i] = a
    end
    ---@diagnostic disable-next-line: inject-field

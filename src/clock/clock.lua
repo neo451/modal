@@ -2,12 +2,9 @@ local socket = require "socket"
 local al = require "abletonlink"
 local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
-local timetag = require "losc.timetag"
 local Stream = require "modal.stream"
-local ut = require "modal.utils"
 
 local floor = math.floor
-local tremove = table.remove
 
 local sleep = function(sec)
    return socket.sleep(sec)
@@ -59,10 +56,8 @@ end
 local mt = { __class = "clock" }
 
 function mt:start()
-   print "Clock: started"
    if not self.running then
       self.running = true
-      print("running " .. tostring(self.running))
       return self:createNotifyCoroutine()
    end
 end

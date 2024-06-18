@@ -12,8 +12,14 @@ local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 local fun = require "modal.fun"
 
+local unpack = unpack or table.unpack
+local pairs = pairs
+local ipairs = ipairs
+local setmetatable = setmetatable
 local iter = fun.iter
 local reduce = fun.reduce
+local tremove = table.remove
+local str_format = string.format
 local sin = math.sin
 local min = math.min
 local max = math.max
@@ -108,7 +114,7 @@ end
 mt.__index = mt
 
 setmetatable(M, {
-   __index = function(t, k)
+   __index = function(_, k)
       return mt[k]
    end,
 })
@@ -519,7 +525,7 @@ for k, f in pairs(ops) do
    for _, v in ipairs(hows) do
       op[k][v] = _op[v](f)
       if op_set[k] and how_format[v] then
-         local symb = string.format(how_format[v], op_set[k])
+         local symb = str_format(how_format[v], op_set[k])
          op[symb] = _op[v](f)
       end
    end
@@ -560,11 +566,11 @@ local patternify = function(func)
       -- TODO:
       -- local pats = map(reify, { ... })
       local pats = { ... }
-      local pat = table.remove(pats, #pats)
+      local pat = tremove(pats, #pats)
       if arity == 1 then
          return func(pat)
       end
-      local left = table.remove(pats, 1)
+      local left = tremove(pats, 1)
       local mapFn = function(...)
          local args = { ... }
          args[#args + 1] = pat

@@ -5,7 +5,6 @@ local port = 9000
 local RL = require "readline"
 local M = require "modal"
 local maxi = require "modal.maxi"
-local ut = require "modal.utils"
 
 local keywords = {}
 for i, _ in pairs(M) do
