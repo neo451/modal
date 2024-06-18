@@ -1202,14 +1202,6 @@ register {
 }
 
 register {
-   "palindrome",
-   "Pattern a -> Pattern a",
-   function(pat)
-      return M.slowcat { pat, U.rev(pat) }
-   end,
-}
-
-register {
    "iter",
    "Pattern Int -> Pattern a -> Pattern a",
    function(n, pat)
@@ -1302,16 +1294,38 @@ register {
    false,
 }
 
+local slowcatPrime = function(pats)
+   local query = function(_, state)
+      local len = #pats
+      local index = state.span._begin:sam():asFloat() % len + 1
+      local pat = pats[index]
+      return pat:query(state)
+   end
+   return Pattern(query):splitQueries()
+end
+
+register {
+   "every",
+   -- TODO: change sig?
+   -- "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   "Pattern Int -> Pattern f -> Pattern a -> Pattern a",
+   function(n, f, pat)
+      f = M.sl(f)
+      local acc = {}
+      for i = 1, n do
+         acc[i] = (i == 1) and f(pat) or pat
+      end
+      return slowcatPrime(acc)
+   end,
+}
+
 register {
    "off",
-   "Pattern Time -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   "Pattern Time -> Pattern f -> Pattern a -> Pattern a",
    function(tp, f, pat)
-      local _off = function(t)
-         return M.overlay(pat, M.late(t, f(pat)))
-      end
-      return fmap(tp, _off):innerJoin()
+      f = M.sl(f)
+      return pat:overlay(f(pat:late(tp)))
    end,
-   false,
 }
 
 register {
