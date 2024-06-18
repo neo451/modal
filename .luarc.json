@@ -1,0 +1,26 @@
+{
+    "runtime": {
+        "version": "Lua 5.1",
+        "path": [
+            "script/?.lua",
+            "script/?/init.lua",
+            "test/?.lua",
+            "test/?/init.lua",
+            "script/meta/?.lua"
+        ],
+        "pathStrict": true
+    },
+    "workspace": {
+        "maxPreload": 1600,
+        "preloadFileSize": 1000,
+        "ignoreDir": [
+            "/locale/",
+            "/libs/",
+            "/3rd",
+            "/.vscode",
+            "/meta"
+        ],
+        "checkThirdParty": false,
+        "library": ["/src/core/cats.lua"],
+    },
+}
