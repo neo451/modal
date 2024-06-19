@@ -515,9 +515,9 @@ describe("every", function()
       local expected = M.slowcat { M.fast(2, 1), 1, 1 }
       assert.pat(expected, pat)
    end)
-
+   -- TODO:
    -- it("should take mini-notation of functions", function()
-   --    local pat = M.every(3, "[(fast 2), (+ 1)]", 1)
+   --    local pat = M.every(3, "[(+ 1), (fast 2)]", 1)
    --    local expected = M.stack { M.slowcat { M.fast(2, 1), 1, 1 }, M.slowcat { 2, 1, 1 } }
    --    assert.pat(expected, pat)
    -- end)

@@ -3,25 +3,35 @@ local maxi = require "modal.maxi"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
--- TODO: test toplevel func calls
 
 assert.pat = function(a, b)
    assert.same(a(0, 1), b(0, 1))
 end
--- describe("symb", function()
---    it("should parse steps to lua String or Id", function()
---       assert.same([["hello"]], to_lua("hello"))
---    end)
---    it("should parse steps to lua String or Id", function()
---       assert.same([[42]], to_lua("42"))
---    end)
--- end)
---
--- TODO: should everything just be default mini?? quote to get literal???
+local to_f, to_str = maxi(M, true)
+
+local eval = function(str)
+   return M.mini(str)()
+end
+
+local eval_top = function(str)
+   return to_f(str)()
+end
+
+describe("symb", function()
+   it("should parse steps to lua String or Id", function()
+      local hello
+      assert.same("hello", eval "hello")
+      assert.same(hello, eval "^hello")
+   end)
+   it("should parse steps to lua String or Id", function()
+      assert.same(42, eval "42")
+   end)
+end)
+
 describe("set", function()
-   -- it("should parse set to lua var set in only top level????", function()
-   --    assert.same("a = 1; ", to_str [[ a = 1 ]])
-   -- end)
+   it("should parse set to lua var set in only top level????", function()
+      assert.same("a = 1; ", to_str [[ a = 1 ]])
+   end)
    -- it("should parse set a func call to var", function()
    --    assert.same("a = fast(pure2(2), pure2(1)); ", to_str " a = $ fast 2 1 ")
    -- end)
@@ -33,24 +43,8 @@ describe("set", function()
    -- end)
 end)
 
--- describe("type checks", function()
---    it("should gen warnings and errors based on type signature", function()
---       -- assert.has_error(M.run "sd")
---       assert.has_error(eval_top "run sd")
---    end)
--- end)
--- local eval = maxi(M, false)
-local eval = function(str)
-   return M.mini(str)()
-end
-
-local eval_top = function(str)
-   return maxi(M, true)(str)()
-end
-
 describe("step", function()
    it("numbers", function()
-      -- assert.same(M.pure(-1), eval "-1")
       assert.same(-1, eval "-1")
    end)
 end)
@@ -118,22 +112,28 @@ describe("tidal ops", function()
    it("should parse tidal ops as a first class", function()
       assert.pat(M.note(3), eval_top [[note 2 +| note 1]])
       assert.pat(M.pure { s = "bd", room = "0.2" }, eval_top [[s bd |> room 0.2]])
-      -- TODO:
-      -- assert.same(M.pure { s = "bd", room = "0.2" }, eval_top [[s bd >|| room 0.2]])
+      assert.pat(M.pure { s = "bd", room = "0.2" }, eval_top [[s bd >|| room 0.2]])
    end)
 end)
 
 describe("list(p)", function()
+   it("should parse sexp as a first class", function()
+      assert.same(3, eval "(+ 1 2)")
+      assert.same(-1, eval "(- 1 2)")
+   end)
+   it("should parse sexp func call as a first class", function()
+      assert.pat(M.fast(1, 2), eval "(fast 1 2)")
+      assert.pat(M.fast(1, M.pure(2)), eval "(fast 1 (pure 2))")
+   end)
    it("should parse nested function calls", function()
       assert.same(M.fast(2, 1)(1, 2), eval "((fast 2 1) 1 2)")
    end)
+   it("should do prefix operator", function()
+      assert.same(2, eval "(+ 1 1)")
+   end)
+   it("should do currying for arithmetic", function()
+      assert.same(2, eval "((+ 1) 1)")
+      assert.same(2, eval "((+) 1 1)")
+   end)
+   -- TODO: curry for all functions
 end)
---    it("should parse sexp as a first class", function()
---       assert.same(3, eval("(+ 1 2)"))
---       assert.same(3, eval("(1 + 2)"))
---       assert.same(-1, eval("(- 1 2)"))
---    end)
---    it("should parse sexp func call as a first class", function()
---       assert.same("fast(1, 2)", to_lua("(fast 1 2)"))
---       assert.same("fast(1, pure(2))", to_lua("(fast 1 (pure 2))"))
---    end)

@@ -116,9 +116,10 @@ local function rTails(args)
    return main
 end
 
-local step_char = R("09", "AZ", "az") + S [[-~^'._]]
+local step_char = R("09", "AZ", "az") + S [[~^'._]]
 local tidalop = S "|+-*/^%><" ^ 2 / id
-local step = ws * (step_char ^ 1 / pStep) * ws
+local arith = (S "+-*/^%" - P "|") / id
+local step = ws * ((step_char ^ 1) / pStep) * ws
 local minus = P "-"
 local plus = P "+"
 local zero = P "0"
@@ -259,13 +260,19 @@ local function pChoose(...)
 end
 
 local opsymb = {
-   ["+"] = { "add", true },
-   ["-"] = { "sub", true },
-   ["*"] = { "mul", true },
-   ["/"] = { "div", true },
-   ["^"] = { "pow", true },
-   ["%"] = { "mod", true },
-   ["."] = { "pipe", false },
+   ["+"] = "add",
+   ["-"] = "sub",
+   ["*"] = "mul",
+   ["/"] = "div",
+   ["^"] = "pow",
+   ["%"] = "mod",
+   -- ["+"] = { "add", true },
+   -- ["-"] = { "sub", true },
+   -- ["*"] = { "mul", true },
+   -- ["/"] = { "div", true },
+   -- ["^"] = { "pow", true },
+   -- ["%"] = { "mod", true },
+   -- ["."] = { "pipe", false },
 }
 
 local function is_op(a)
@@ -282,20 +289,18 @@ end
 
 local function pList(...)
    local args = { ... }
-   if #args == 3 then
-      if is_op(args[2][1]) then
-         local opname, is_native = opsymb[args[2][1]][1], opsymb[args[2][1]][2]
-         tremove(args, 2)
-         if is_native then
-            return { tag = "Op", opname, unpack(args) }
-         else
-            -- TODO: check??
-            return Call(opname, unpack(map(string2id, args)))
-         end
-      elseif is_op(args[1][1]) then
-         local opname = opsymb[args[1][1]]
+   if is_op(args[1]) then
+      local opname = opsymb[args[1]]
+      if #args == 3 then
          tremove(args, 1)
          return { tag = "Op", opname, unpack(args) }
+      elseif #args == 2 then
+         return {
+            tag = "Paren",
+            { tag = "Function", { Id "x" }, { { tag = "Return", { tag = "Op", opname, args[2], Id "x" } } } },
+         }
+      else
+         return args[1]
       end
    end
    return rTails(args)
@@ -355,6 +360,12 @@ local function pSet(lhs, rhs)
 end
 
 local function pStat(...)
+   if select("#", ...) == 1 then
+      return pRet { ... }
+   end
+   if select(2, ...) == "=" then
+      return pSet(select(1, ...), select(3, ...))
+   end
    return pRet(rTails { ... })
 end
 
@@ -365,10 +376,9 @@ end
 local semi = P ";" ^ -1
 local grammar = {
    [1] = "root",
-   root = ((set + ret) * semi) ^ 1 / pRoot,
-   set = step * P "=" * expr / pSet,
+   root = (ret * semi) ^ 1 / pRoot,
    ret = (list + mini + dollar) / pRet,
-   list = ws * P "(" * ws * expr ^ 1 * ws * P ")" * ws / pList,
+   list = ws * P "(" * ws * (expr + arith) * expr ^ 0 * ws * P ")" * ws / pList,
    dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
    expr = ws * (mini + list + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pDot,
@@ -377,7 +387,7 @@ local grammar = {
    -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
    tailop = tidalop * ws * step * ws * mini * ws / pTailop,
    mini = (slice * op ^ 0) / pSlices,
-   slice = step + sub_cycle + polymeter + slow_sequence + list,
+   slice = step + number + sub_cycle + polymeter + slow_sequence + list,
    sub_cycle = P "[" * ws * (choose + stack) * ws * P "]" / pSubCycle,
    slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
    polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
@@ -399,10 +409,10 @@ local grammar = {
 ---@param top_level boolean
 return function(env, top_level)
    if top_level then
-      stat = ws * step * (expr - S "=") ^ 0 * expr ^ 0 * ws / pStat
-      grammar.root = ((stat + set + ret) * semi) ^ 1 / pRoot
+      stat = expr * (P "=" / id) ^ -1 * expr ^ 0 * ws / pStat
+      grammar.root = (stat * semi) ^ 1 / pRoot
    else
-      grammar.root = ((set + ret) * semi) ^ 1 / pRoot
+      grammar.root = (ret * semi) ^ 1 / pRoot
    end
 
    local rules = Ct(C(grammar))
@@ -424,9 +434,19 @@ return function(env, top_level)
       if not ok then
          return false
       end
+      -- HACK:
+      env.print = print
       fn = setfenv(fstr and fstr or function()
          print "not a valid maxi notation"
       end, env)
       return fn
+   end, function(src)
+      local ok, ast, fstr, fn
+      ok, ast = pcall(read, src)
+      if not ok then
+         return false
+      end
+      local lua_src = ast_to_src(ast)
+      return lua_src
    end
 end

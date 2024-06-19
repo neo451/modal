@@ -50,11 +50,11 @@ local eval = function(a)
          local fn = evalf(a)
          if fn then
             local fok, res = pcall(fn)
-            if fok then
-               print(res)
+            if fok and res then
+               io.write(tostring(res))
             end
          else
-            print(fn)
+            io.write(fn)
          end
       end
    end

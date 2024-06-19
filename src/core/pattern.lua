@@ -1300,8 +1300,7 @@ end
 
 register {
    "every",
-   -- TODO: change sig?
-   -- "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+   -- HACK: "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    "Pattern Int -> Pattern f -> Pattern a -> Pattern a",
    function(n, f, pat)
       local acc = {}
