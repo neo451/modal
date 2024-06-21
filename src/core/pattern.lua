@@ -572,7 +572,7 @@ local function silence()
 end
 M.silence = silence
 
-function M.pure(value)
+function pure(value)
    if value == "~" then
       return silence()
    end
@@ -586,6 +586,7 @@ function M.pure(value)
    end
    return Pattern(query)
 end
+M.pure = pure
 
 function M.purify(value)
    if T(value) == "pattern" then
@@ -677,10 +678,50 @@ local function register(args)
 end
 M.register = register
 
+local function register2(args)
+   local type_sig, f, nify = unpack(args)
+   local tdef, name = TDef(type_sig)
+   if T(nify) == "nil" then
+      nify = true
+   end
+   local arity = ut.nparams(f)
+   if nify then
+      TYPES[name] = tdef
+      U[name] = f
+      local f_p = patternify(f)
+      local f_p_t = typecheck(f_p, name)
+      local f_c_p_t = ut.auto_curry(arity, f_p_t)
+      M[name] = f_c_p_t
+      rawset(mt, name, ut.method_wrap(f_c_p_t))
+   else
+      TYPES[name] = TDef(type_sig)
+      local f_t = typecheck(f, name)
+      local f_t_c = ut.auto_curry(arity, f_t)
+      M[name] = f_t_c
+      rawset(mt, name, ut.method_wrap(f_t))
+   end
+end
+M.register = register
+
+---stack two patterns
+---@param a any
+---@param b any
+---@return Pattern
+local function overlay(a, b)
+   local query = function(_, st)
+      return ut.concat(a:query(st), b:query(st))
+   end
+   return Pattern(query)
+end
+register2 { "overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false }
+
+---stack a table of patterns
+---@param pats table<any>
+---@return Pattern
 local function stack(pats)
    return reduce(M.overlay, silence(), iter(pats))
 end
-register { "stack", "[Pattern a] -> Pattern a", stack, false }
+register2 { "stack :: [Pattern a] -> Pattern a", stack, false }
 
 -- register {
 --    "polymeter",
@@ -698,6 +739,9 @@ end
 --    false,
 -- }
 
+---cat pattern per cycle
+---@param pats any
+---@return Pattern
 local function slowcat(pats)
    local query = function(_, state)
       local a = state.span
@@ -717,12 +761,12 @@ local function slowcat(pats)
    end
    return Pattern(query):splitQueries()
 end
-register { "slowcat", "[Pattern a] -> Pattern a", slowcat, false }
+register2 { "slowcat :: [Pattern a] -> Pattern a", slowcat, false }
 
 local function fastcat(pats)
    return U.fast(#pats, M.slowcat(pats))
 end
-register { "fastcat", "[Pattern a] -> Pattern a", fastcat, false }
+register2 { "fastcat :: [Pattern a] -> Pattern a", fastcat, false }
 
 function M.timecat(tups)
    local total = 0
@@ -758,71 +802,47 @@ function M.arrange(args)
    return M.slow(total, M.timecat(args))
 end
 
-register {
-   "overlay",
-   "Pattern a -> Pattern a -> Pattern a",
-   function(a, b)
-      local query = function(_, st)
-         return ut.concat(a:query(st), b:query(st))
-      end
-      return Pattern(query)
-   end,
-   false,
-}
+local function superimpose(f, pat)
+   return stack { pat, f(pat) }
+end
 
-register {
-   "superimpose",
-   "(Pattern a -> Pattern a) -> Pattern a -> Pattern a",
-   function(f, pat)
-      return stack { pat, f(pat) }
-   end,
-   false,
-}
+register2 { "superimpose :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", superimpose, false }
 
-register {
-   "layer",
-   "[(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", -- a little ugly lol
-   function(tf, pat)
-      local acc = {}
-      for i, f in iter(tf) do
-         acc[i] = f(pat)
-      end
-      return stack(acc)
-   end,
-   false,
-}
+local function layer(tf, pat)
+   local acc = {}
+   for i, f in iter(tf) do
+      acc[i] = f(pat)
+   end
+   return stack(acc)
+end
+register2 { "layer :: [(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", layer } -- a little ugly lol layer, false,
 
-register {
-   "fast",
-   "Pattern Time -> Pattern a -> Pattern a",
-   function(factor, pat)
-      factor = Time(factor)
-      if factor:eq(0) then
-         return silence()
-      elseif factor:lt(0) then
-         return M.rev(U.fast(-factor, pat))
-      else
-         return withTime(pat, function(t)
-            return t * factor
-         end, function(t)
-            return t / factor
-         end)
-      end
-   end,
-}
+local function fast(factor, pat)
+   factor = Time(factor) -- TODO:
+   if factor:eq(0) then
+      return silence()
+   elseif factor:lt(0) then
+      return M.rev(U.fast(-factor, pat))
+   else
+      return withTime(pat, function(t)
+         return t * factor
+      end, function(t)
+         return t / factor
+      end)
+   end
+end
+register2 { "fast :: Pattern Time -> Pattern a -> Pattern a", fast }
 
-register {
-   "slow",
-   "Pattern Time -> Pattern a -> Pattern a",
-   function(factor, pat)
-      -- factor = Time(factor)
-      if factor:eq(0) then
-         return silence()
-      else
-         return U.fast(factor:reverse(), pat)
-      end
-   end,
-}
+local function slow(factor, pat)
+   -- factor = Time(factor)
+   if factor:eq(0) then
+      return silence()
+   else
+      return U.fast(factor:reverse(), pat)
+   end
+end
+
+register2 { "slow :: Pattern Time -> Pattern a -> Pattern a", slow }
 
 -- rotL
 register {
@@ -963,14 +983,14 @@ local _run = function(n)
    return fastcat(list)
 end
 
-register {
-   "run",
-   "Pattern Int -> Pattern Int",
-   function(n)
-      return fmap(n, _run):join()
-   end,
-   false,
-}
+---generate 1 .. n fastcated
+---@param n any
+---@return Pattern
+local function run(n)
+   return fmap(n, _run):join()
+end
+
+register2 { "run :: Pattern Int -> Pattern Int", run, false }
 
 local _scan = function(n)
    local res = {}
@@ -980,14 +1000,10 @@ local _scan = function(n)
    return slowcat(res)
 end
 
-register {
-   "scan",
-   "Pattern Int -> Pattern Int",
-   function(n)
-      return fmap(n, _scan):join()
-   end,
-   false,
-}
+local function scan(n)
+   return fmap(n, _scan):join()
+end
+register2 { "scan :: Pattern Int -> Pattern Int", scan, false }
 
 local waveform = function(func)
    local query = function(_, state)
@@ -1160,90 +1176,77 @@ local function struct(boolpat, pat)
 end
 register { "struct", "[Pattern bool] -> Pattern a -> Pattern a", struct, false }
 
-register {
-   "euclid",
-   "Pattern Int -> Pattern Int -> Pattern a -> Pattern a",
-   function(n, k, pat)
-      return struct(bjork(n, k, 0), pat)
-   end,
-}
+local function euclid(n, k, pat)
+   return struct(bjork(n, k, 0), pat)
+end
 
-register {
-   "euclidRot",
-   "Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a",
-   function(n, k, rot, pat)
-      return struct(bjork(n, k, rot), pat)
-   end,
-}
+local function euclidRot(n, k, rot, pat)
+   return struct(bjork(n, k, rot), pat)
+end
+register2 { "euclid :: Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclid }
 
-register {
-   "rev",
-   "Pattern a -> Pattern a",
-   function(pat)
-      local query = function(_, state)
-         local span = state.span
-         local cycle = span._begin:sam()
-         local nextCycle = span._begin:nextSam()
-         local reflect
-         reflect = function(to_reflect)
-            local reflected = to_reflect:withTime(function(t)
-               return cycle + (nextCycle - t)
-            end)
-            local tmp = reflected._begin
-            reflected._begin = reflected._end
-            reflected._end = tmp
-            return reflected
-         end
-         local events = pat:query(state:setSpan(reflect(span)))
-         return map(function(event)
-            return event:withSpan(reflect)
-         end, events)
+register2 { "euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot }
+
+---reverse pattern in every cycle
+---@param pat any
+---@return Pattern
+local function rev(pat)
+   local query = function(_, state)
+      local span = state.span
+      local cycle = span._begin:sam()
+      local nextCycle = span._begin:nextSam()
+      local reflect
+      reflect = function(to_reflect)
+         local reflected = to_reflect:withTime(function(t)
+            return cycle + (nextCycle - t)
+         end)
+         local tmp = reflected._begin
+         reflected._begin = reflected._end
+         reflected._end = tmp
+         return reflected
       end
-      return Pattern(query)
-   end,
-}
+      local events = pat:query(state:setSpan(reflect(span)))
+      return map(function(event)
+         return event:withSpan(reflect)
+      end, events)
+   end
+   return Pattern(query)
+end
 
-register {
-   "iter",
-   "Pattern Int -> Pattern a -> Pattern a",
-   function(n, pat)
-      local acc = {}
-      for i = 1, n do
-         acc[i] = U.early((i - 1) / n, pat)
-      end
-      return M.fromList(acc)
-   end,
-}
+register2 { "rev :: Pattern a -> Pattern a", rev }
 
-register {
-   "reviter",
-   "Pattern Int -> Pattern a -> Pattern a",
-   function(n, pat)
-      local acc = {}
-      for i = 1, n do
-         acc[i] = M.late((i - 1) / n, pat)
-      end
-      return M.fromList(acc)
-   end,
-}
+local function iter_(n, pat)
+   local acc = {}
+   for i = 1, n do
+      acc[i] = U.early((i - 1) / n, pat)
+   end
+   return slowcat(acc)
+end
+register2 { "iter :: Pattern Int -> Pattern a -> Pattern a", iter_ }
 
-register {
-   "segment",
-   "Pattern Time -> Pattern a -> Pattern a",
-   function(n, pat)
-      return M.appLeft(M.fast(n, M.pure(id)), pat)
-   end,
-}
+local function reviter(n, pat)
+   local acc = {}
+   for i = 1, n do
+      acc[i] = M.late((i - 1) / n, pat)
+   end
+   return slowcat(acc)
+end
+register2 { "reviter :: Pattern Int -> Pattern a -> Pattern a", reviter }
 
--- TODO: see tidal impl
-register {
-   "range",
-   "Pattern a -> Pattern a -> Pattern a -> Pattern a",
-   function(mi, ma, pat)
-      return pat * (ma - mi) + mi
-   end,
-   false,
-}
+local function segment(n, pat)
+   return appLeft(M.fast(n, id), pat)
+end
+register2 { "segment :: Pattern Time -> Pattern a -> Pattern a", segment }
+
+---limit value in pattern to a range TODO: see tidal impl
+---@param mi number
+---@param ma number
+---@param pat number
+---@return unknown
+local function range(mi, ma, pat)
+   return pat * (ma - mi) + mi
+end
+register2 { "range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range, false }
 
 -- register("echoWith", function(times, time, func, pat)
 --    local f = function(index)
@@ -1278,12 +1281,6 @@ register {
    end,
    false,
 }
-
-local function _every(t, f, pat)
-   return M.when(function(i)
-      return i % t == 0
-   end, f, pat)
-end
 
 local slowcatPrime = function(pats)
    local query = function(_, state)
@@ -1327,22 +1324,22 @@ register {
    false,
 }
 
-register {
-   "concat",
-   "Pattern a -> Pattern a -> Pattern a",
-   function(pat, other)
-      return fmap(pat, function(a)
-         return function(b)
-            if T(a) == "table" then
-               a[#a + 1] = b
-               return a
-            end
-            return { a, b }
+---union two value maps .. bit weird ...
+---@param pat ValueMap
+---@param other ValueMap
+---@return Pattern
+local function concat(pat, other)
+   return fmap(pat, function(a)
+      return function(b)
+         if T(a) == "table" then
+            a[#a + 1] = b
+            return a
          end
-      end):appLeft(other)
-   end,
-   false,
-}
+         return { a, b }
+      end
+   end):appLeft(other)
+end
+register2 { "concat :: Pattern a -> Pattern a -> Pattern a", concat, false }
 
 M.id = id
 M.T = T

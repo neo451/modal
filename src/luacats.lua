@@ -5,6 +5,7 @@
 ---@field numerator number
 
 ---@alias Time Fraction | number | Pattern
+---@alias ValueMap table<string, any>
 ---@alias Int number | Pattern
 ---@alias State table
 ---@alias Event {value: any, }

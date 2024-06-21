@@ -1,6 +1,9 @@
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 
+local tremove = table.remove
+local tconcat = table.concat
+
 -- TODO: "struct", "[Pattern bool] -> Pattern a -> Pattern a"
 -- TODO: "struct :: [Pattern bool] -> Pattern a -> Pattern a"
 
@@ -11,11 +14,15 @@ end
 local function pComp(const, tvar)
    return { constructor = const[1], tvar[1] }
 end
-
+require "moon.all"
 local function pDef(...)
    local args = { ... }
-   local ret = table.remove(args, #args)
-   return { ret = ret, unpack(args) }
+   local name
+   if args[1].isname then
+      name = tremove(args, 1)[1]
+   end
+   local ret = tremove(args, #args)
+   return { ret = ret, name = name, unpack(args) }
 end
 
 local function pTab(a)
@@ -29,12 +36,17 @@ local tab = V "tab"
 local elem = V "elem"
 local comp_type = V "comp_type"
 local char = R("AZ", "az")
+local name = V "name"
 local ws = S " \n\r\t" ^ 0
 local id = ws * ((char ^ 1) / pId) * ws
 
 local rules = {
    [1] = "typedef",
-   typedef = (elem * ws * P "->" * ws) ^ 1 * elem / pDef,
+   name = id * ws * P "::" * ws / function(a)
+      a.isname = true
+      return a
+   end,
+   typedef = name ^ -1 * (elem * ws * P "->" * ws) ^ 1 * elem / pDef,
    elem = comp_type + id + fdef + tab,
    fdef = P "(" * ws * typedef * ws * P ")",
    tab = P "[" * ws * elem * ws * P "]" / pTab,
@@ -61,11 +73,13 @@ local function show_sig(t)
 end
 
 local TDef = function(a)
-   return setmetatable(grammar:match(a)[2], {
+   local tdef = grammar:match(a)[2]
+   return setmetatable(tdef, {
       __tostring = function(self)
          return show_sig(self)
       end,
-   })
+   }),
+      tdef.name
 end
 
 return TDef
