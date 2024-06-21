@@ -603,7 +603,7 @@ local function purify(value)
 end
 
 local patternify = function(func)
-   local patterned = function(...)
+   return function(...)
       local arity = nparams(func)
       local pats = { ... }
       local pat = tremove(pats, #pats)
@@ -619,7 +619,6 @@ local patternify = function(func)
       mapFn = curry(mapFn, arity - 1)
       return reduce(appLeft, fmap(left, mapFn), pats):innerJoin()
    end
-   return patterned
 end
 
 local function typecheck(f, name)

@@ -7,6 +7,7 @@ local drawLine = require "modal.drawline"
 local lib = require "modal.lib"
 local mt = pattern.mt
 local maxi = require "modal.maxi"
+local types = require "modal.types"
 
 local modal = {
    _VERSION = "modal dev-1",
@@ -19,6 +20,10 @@ modal.drawLine = drawLine
 for name, func in pairs(factory) do
    modal[name] = func
    mt[name] = ut.method_wrap(func)
+end
+
+for name, func in pairs(types) do
+   modal[name] = func
 end
 
 for name, pat in pairs(lib) do

@@ -4,9 +4,7 @@ local host = "localhost"
 local port = 9000
 local RL = require "readline"
 local M = require "modal"
-local maxi = require "modal.maxi"
-
-local loadstring = loadstring or load
+local maxi = M.maxi
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -14,6 +12,10 @@ for i, _ in pairs(M) do
 end
 
 RL.set_complete_list(keywords)
+
+local ok, c = pcall(socket.connect, host, port)
+
+M()
 
 local optf = {
    ["?"] = function()
@@ -23,38 +25,37 @@ local optf = {
 :q  quit repl ]]
    end,
    t = function(a)
-      return M.t[a]
+      return tostring(M.t[a])
    end,
    v = function()
       return M._VERSION
    end,
    q = function()
+      if c then
+         c:close()
+      end
       os.exit()
    end,
 }
-
-local ok, c = pcall(socket.connect, host, port)
-
-M()
-
 local evalf = maxi(_G, true)
+
+-- TODO: see luaish, first run as lua with multiline? no ambiguiaty?>
 local eval = function(a)
    if a then
       if a:sub(1, 1) == ":" then
          local name, param = a:match "(%a+)%s(%a*)"
          name = name and name or a:sub(2, #a)
          param = param and param or nil
-         print(optf[name](param))
-         return
+         return optf[name](param)
       else
          local fn = evalf(a)
          if fn then
             local fok, res = pcall(fn)
             if fok and res then
-               io.write(tostring(res))
+               return tostring(res)
             end
          else
-            io.write(fn)
+            return fn
          end
       end
    end
@@ -66,29 +67,25 @@ RL.set_readline_name "modal"
 local line
 while true do
    line = RL.readline "> "
-   if not line then
-      break
-   end
-   RL.add_history(line)
    if line == "exit" then
+      if c then
+         c:close()
+      end
       break
    end
 
-   if line == ">>lua" then
-      eval = function(x)
-         return loadstring(x)()
+   if line ~= "" then
+      local res = eval(line)
+      if res then
+         print(res)
       end
-   elseif line == ">>modal" then
-      eval = maxi(_G, true)
-   elseif line ~= "" then
-      print(eval(line))
+      RL.add_history(line)
+      RL.save_history()
       if c then
          c:send(line .. "\n")
       end
    end
-   RL.save_history()
 end
 
-RL.save_history()
 c:close()
 os.exit()

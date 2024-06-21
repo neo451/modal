@@ -52,33 +52,15 @@ local rules = {
 
 local grammar = Ct(C(rules))
 
-local function show_sig(t)
-   local function format(a)
-      if type(a[1]) == "table" then
-         return ("(%s)"):format(show_sig(a))
-      elseif a.constructor then
-         return ("%s %s"):format(a.constructor, a[1])
-      elseif type(a) == "string" then
-         return a
-      end
-   end
-   local s = {}
-   for i = 1, #t do
-      s[#s + 1] = format(t[i])
-      s[#s + 1] = " -> "
-   end
-   s[#s + 1] = format(t.ret)
-   return tconcat(s)
-end
-
 local TDef = function(a)
    local tdef = grammar:match(a)[2]
-   return setmetatable(tdef, {
+   tdef.source = a
+   setmetatable(tdef, {
       __tostring = function(self)
-         return show_sig(self)
+         return self.source
       end,
-   }),
-      tdef.name
+   })
+   return tdef, tdef.name
 end
 
 return TDef
