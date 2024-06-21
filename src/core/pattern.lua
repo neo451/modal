@@ -524,7 +524,7 @@ local ops = {
    pow = function(a, b) return a ^ b end,
    concat = function (a, b) return a .. b end,
    keepif = function (a, b) return b and a or nil end,
-   uni = function (a, b) return ut.union(a, b) end,
+   uni = function (a, b) return ut.union(a, b) end, -- TODO: use local
    funi = function (a, b) return ut.flip(ut.union)(a, b) end,
 }
 -- stylua: ignore end
@@ -1183,6 +1183,7 @@ end
 local function euclidRot(n, k, rot, pat)
    return struct(bjork(n, k, rot), pat)
 end
+
 register2 { "euclid :: Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclid }
 
 register2 { "euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot }

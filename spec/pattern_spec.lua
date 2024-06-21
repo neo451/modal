@@ -2,7 +2,10 @@ local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 
+require "modal"()
 local M = require "modal"
+-- HACK:
+local struct = M.struct
 local types = require "modal.types"
 local Span, State, Event = types.Span, types.State, types.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
@@ -86,7 +89,7 @@ end)
 
 describe("filterEvents", function()
    return it("should return new pattern with values removed based on filter func", function()
-      local pat = M.slowcat { "bd", "sd", "hh", "mt" }
+      local pat = slowcat { "bd", "sd", "hh", "mt" }
       local newPat = pat:filterEvents(function(e)
          return e.value == "bd" or e.value == "hh"
       end)
@@ -246,7 +249,7 @@ describe("outerJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern",
       function()
-         local patOfPats = pure(M.fastcat { "a", "b" })
+         local patOfPats = pure(fastcat { "a", "b" })
          local pat = patOfPats:outerJoin()
          local expected = {
             Event(Span(0, 1), Span(0, 1 / 2), "a"),
@@ -261,7 +264,7 @@ describe("squeezeJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each Event in the outer pattern.\n ",
       function()
-         local patOfPats = M.fastcat { M.fastcat { 1, 2, 3 }, M.fastcat { 1, 2, 3 } }
+         local patOfPats = fastcat { fastcat { 1, 2, 3 }, fastcat { 1, 2, 3 } }
          local pat = patOfPats:squeezeJoin()
          local expected = {
             Event(Span(0, 1 / 6), Span(0, 1 / 6), 1),
@@ -296,7 +299,7 @@ end)
 
 describe("slowcat", function()
    it("should alternate between the patterns in the list, one pattern per cycle", function()
-      local pat = M.slowcat { 1, 2, 3 }
+      local pat = slowcat { 1, 2, 3 }
       local expected = {
          Event(Span(0, 1), Span(0, 1), 1),
          Event(Span(1, 2), Span(1, 2), 2),
@@ -308,7 +311,7 @@ end)
 
 describe("fastcat", function()
    it("should alternate between the patterns in the list, all in one cycle", function()
-      local pat = M.fastcat { 1, 2, 3 }
+      local pat = fastcat { 1, 2, 3 }
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 1),
          Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 2),
@@ -320,7 +323,7 @@ end)
 
 describe("stack", function()
    it("should stack up the pats to be played together", function()
-      local pat = M.stack { pure "bd", pure "sd", pure "hh" }
+      local pat = stack { pure "bd", pure "sd", pure "hh" }
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
          Event(Span(0, 1), Span(0, 1), "sd"),
@@ -332,7 +335,7 @@ end)
 
 describe("timecat", function()
    it("should return a pattern based one the time-pat 'tuples' passed in", function()
-      local pat = M.timecat { 3, M.fast(4, pure "bd"), 1, M.fast(8, pure "hh") }
+      local pat = timecat { 3, fast(4, pure "bd"), 1, fast(8, pure "hh") }
       local expected = {
          Event(Span(0, 3 / 16), Span(0, 3 / 16), "bd"),
          Event(Span(3 / 16, 3 / 8), Span(3 / 16, 3 / 8), "bd"),
@@ -353,17 +356,17 @@ end)
 
 describe("polymeter", function()
    it("should stack up pats with right time compress ratios", function()
-      local pat = M.polymeter(2, { reify { "bd", "sd" }, reify { "1", "2", "3" } })
-      local expected1 = M.stack { reify { "bd", "sd" }, reify { 1, 2 } }
+      local pat = polymeter(2, { reify { "bd", "sd" }, reify { "1", "2", "3" } })
+      local expected1 = stack { reify { "bd", "sd" }, reify { 1, 2 } }
       assert.same(expected1(0, 1), pat(0, 1))
-      local expected2 = M.stack { reify { "bd", "sd" }, reify { 3, 1 } }
+      local expected2 = stack { reify { "bd", "sd" }, reify { 3, 1 } }
       assert.same(expected2(1, 2), pat(1, 2))
    end)
 end)
 
 describe("fast", function()
    it("should return a pattern whose Events closer together in time", function()
-      local pat = M.fast(2, pure "bd")
+      local pat = fast(2, pure "bd")
       local expected = {
          Event(Span(0, 0.5), Span(0, 0.5), "bd"),
          Event(Span(0.5, 1), Span(0.5, 1), "bd"),
@@ -371,19 +374,19 @@ describe("fast", function()
       assert.same(expected, pat(0, 1))
    end)
    it("should return silence with factor 0", function()
-      local pat = M.fast(0, "sd")
+      local pat = fast(0, "sd")
       assert.same({}, pat(0, 1))
    end)
    it("should return reversed with negative factor", function()
-      local pat = M.fast(-2, "bd sd")
-      local expected = M.rev(M.fast(2, "bd sd"))
+      local pat = fast(-2, "bd sd")
+      local expected = rev(fast(2, "bd sd"))
       assert.same(expected(0, 1), pat(0, 1))
    end)
 end)
 
 describe("slow", function()
    it("should return a pattern whose Events closer together in time", function()
-      local pat = M.slow(2, reify { "bd", "sd" })
+      local pat = slow(2, reify { "bd", "sd" })
       local expected = {
          Event(Span(0, 1), Span(0, 1), "bd"),
          Event(Span(1, 2), Span(1, 2), "sd"),
@@ -394,7 +397,7 @@ end)
 
 describe("early", function()
    it("should return a pattern whose Events moved backword in time", function()
-      local pat = M.early(0.5, reify { "bd", "sd" })
+      local pat = early(0.5, reify { "bd", "sd" })
       local expected = reify { "sd", "bd" }
       assert.pat(expected, pat)
    end)
@@ -402,39 +405,39 @@ end)
 
 describe("fastgap", function()
    it("should bring pattern closer together", function()
-      local pat = M.fastgap(4, reify { "bd", "sd" })
-      local expected = M.fastcat { "bd", "sd", "~", "~", "~", "~", "~", "~" }
+      local pat = fastgap(4, reify { "bd", "sd" })
+      local expected = fastcat { "bd", "sd", "~", "~", "~", "~", "~", "~" }
       assert.pat(expected, pat)
    end)
 end)
 
 describe("compress", function()
    it("should bring pattern closer together", function()
-      local pat = M.compress(0.25, 0.75, M.fastcat { "bd", "sd" })
-      local expected = M.fastcat { "~", "bd", "sd", "~" }
+      local pat = compress(0.25, 0.75, fastcat { "bd", "sd" })
+      local expected = fastcat { "~", "bd", "sd", "~" }
       assert.pat(expected, pat)
    end)
 end)
 
 describe("focus", function()
    it("should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", function()
-      local pat = M.focus(1 / 4, 3 / 4, reify { "bd", "sd" })
-      local expected = M.fastcat { "sd", "bd", "sd", "bd" }
+      local pat = focus(1 / 4, 3 / 4, reify { "bd", "sd" })
+      local expected = fastcat { "sd", "bd", "sd", "bd" }
       assert.pat(expected, pat)
    end)
 end)
 
 describe("zoom", function()
    it("should play a portion of a pattern", function()
-      local pat = M.zoom(1 / 4, 3 / 4, reify { "x", "bd", "sd", "x" })
-      local expected = M.fastcat { "bd", "sd" }
+      local pat = zoom(1 / 4, 3 / 4, reify { "x", "bd", "sd", "x" })
+      local expected = fastcat { "bd", "sd" }
       assert.pat(expected, pat)
    end)
 end)
 
 describe("degrade_by", function()
    it("should randomly drop Events from a pattern", function()
-      local pat = M.degradeBy(0.75, M.fast(8, "sd"))
+      local pat = degradeBy(0.75, fast(8, "sd"))
       local expected = {
          Event(Span(1 / 8, 1 / 4), Span(1 / 8, 1 / 4), "sd"),
          Event(Span(1 / 2, 5 / 8), Span(1 / 2, 5 / 8), "sd"),
@@ -446,7 +449,7 @@ end)
 
 describe("run", function()
    it("should gen 0 - n numbers", function()
-      local pat = M.run(3)
+      local pat = run(3)
       local expected = {
          Event(Span(0, 1 / 3), Span(0, 1 / 3), 0),
          Event(Span(1 / 3, 2 / 3), Span(1 / 3, 2 / 3), 1),
@@ -459,8 +462,8 @@ end)
 describe("euclid", function()
    it("shoudl gen euclid pats", function()
       local bjork = require "modal.euclid"
-      local pat = M.euclidRot(3, 8, 1, "bd")
-      local expected = M.struct(bjork(3, 8, 1), "bd")
+      local pat = euclidRot(3, 8, 1, "bd")
+      local expected = struct(bjork(3, 8, 1), "bd")
       assert.pat(expected, pat)
    end)
 end)
@@ -471,7 +474,7 @@ describe("off", function()
       local inc1 = function(a)
          return a + 1
       end
-      local pat = M.off(0.5, inc1, 1)
+      local pat = off(0.5, inc1, 1)
       local expected = {
          Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
          Event(Span(0.5, 1.5), Span(0.5, 1), 2),
@@ -481,7 +484,7 @@ describe("off", function()
    end)
 
    it("should take string lambda that gets lib funcs env", function()
-      local pat = M.off(0.5, "x -> x + 1", 1)
+      local pat = off(0.5, "x -> x + 1", 1)
       local expected = {
          Event(Span(-0.5, 0.5), Span(0, 0.5), 2),
          Event(Span(0.5, 1.5), Span(0.5, 1), 2),
@@ -497,26 +500,26 @@ describe("every", function()
       local inc1 = function(a)
          return a + 1
       end
-      local pat = M.every(3, inc1, 1)
-      local expected = M.slowcat { 2, 1, 1 }
+      local pat = every(3, inc1, 1)
+      local expected = slowcat { 2, 1, 1 }
       assert.pat(expected, pat)
    end)
 
    it("should take pattern of functions as second param", function()
-      local pat = M.every(3, M.stack { M.fast(2), M.sl "x -> x + 1" }, 1)
-      local expected = M.stack { M.slowcat { M.fast(2, 1), 1, 1 }, M.slowcat { 2, 1, 1 } }
+      local pat = every(3, stack { fast(2), sl "x -> x + 1" }, 1)
+      local expected = stack { slowcat { fast(2, 1), 1, 1 }, slowcat { 2, 1, 1 } }
       assert.pat(expected, pat)
    end)
 
    it("should take string lambda that gets lib funcs env", function()
-      local pat = M.every(3, "x -> x:fast(2)", 1)
-      local expected = M.slowcat { M.fast(2, 1), 1, 1 }
+      local pat = every(3, "x -> x:fast(2)", 1)
+      local expected = slowcat { fast(2, 1), 1, 1 }
       assert.pat(expected, pat)
    end)
    -- TODO:
    -- it("should take mini-notation of functions", function()
-   --    local pat = M.every(3, "[(+ 1), (fast 2)]", 1)
-   --    local expected = M.stack { M.slowcat { M.fast(2, 1), 1, 1 }, M.slowcat { 2, 1, 1 } }
+   --    local pat = every(3, "[(+ 1), (fast 2)]", 1)
+   --    local expected = stack { slowcat { fast(2, 1), 1, 1 }, slowcat { 2, 1, 1 } }
    --    assert.pat(expected, pat)
    -- end)
 end)
@@ -524,13 +527,13 @@ end)
 describe("scale", function()
    it("should `quantise` notes in scale", function()
       -- gong : { 0, 2, 4, 7, 9 }
-      local pat = M.note("1 2 3"):scale "gong"
-      local expected = M.note "2 4 7"
+      local pat = note("1 2 3"):scale "gong"
+      local expected = note "2 4 7"
       assert.pat(expected, pat)
    end)
    it("should do mod", function()
-      local pat = M.note("5 6 7"):scale "gong"
-      local expected = M.note "12 14 16" -- 0, 2, 4 + 12
+      local pat = note("5 6 7"):scale "gong"
+      local expected = note "12 14 16" -- 0, 2, 4 + 12
       assert.pat(expected, pat)
    end)
 end)
@@ -545,8 +548,8 @@ end)
 describe("Tidal operators", function()
    it("", function() end)
    -- it("register ops as pattern methods", function()
-   --    local pat = M.n(1)["|>"](M.s "bd")
-   --    local expected = M.op["|>"](M.n(1), M.s "bd")
+   --    local pat = n(1)["|>"](s "bd")
+   --    local expected = op["|>"](n(1), s "bd")
    --    assert.pat(expected, pat)
    -- end)
 end)
