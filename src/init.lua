@@ -26,9 +26,10 @@ for name, pat in pairs(lib) do
    modal[name] = pattern.reify(pat)
 end
 
-for _, func in pairs(ui) do
-   pattern.register(func)
-end
+-- TODO:
+-- for _, func in pairs(ui) do
+--    pattern.register(func)
+-- end
 
 for name, func in pairs(pattern) do
    if name ~= "Pattern" then

@@ -19,7 +19,7 @@ c:settimeout(0)
 
 print "Connected"
 
-M()
+M(true)
 
 local evalf = maxi(_G, true)
 

@@ -11,20 +11,19 @@ local Span, State, Event = types.Span, types.State, types.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
 
 assert.pat = function(a, b)
-   -- assert.same(a(0, 1), b(0, 1))
    assert.same(a:show(), b:show())
 end
 
 describe("new", function()
    it("should initialize with defaults", function()
       local pat = Pattern()
-      assert.same({}, pat:query(State()))
+      assert.same({}, pat.query(State()))
    end)
    it("should create with specified query", function()
       local pat = Pattern(function()
          return { Event() }
       end)
-      local Events = pat:query(State())
+      local Events = pat.query(State())
       assert.same({ Event() }, Events)
    end)
 end)
@@ -117,14 +116,12 @@ end)
 
 describe("splitQueries", function()
    it("should break a query that Spans multiple cycles into multiple queries each Spanning one cycle", function()
-      local query = function(_, state)
+      local query = function(state)
          return { Event(state.span, state.span, "a") }
       end
       local pat = Pattern(query)
       local splitPat = pat:splitQueries()
-      local expectedPat = {
-         Event(Span(0, 2), Span(0, 2), "a"),
-      }
+      local expectedPat = { Event(Span(0, 2), Span(0, 2), "a") }
       local expectedSplit = {
          Event(Span(0, 1), Span(0, 1), "a"),
          Event(Span(1, 2), Span(1, 2), "a"),
@@ -139,8 +136,7 @@ describe("withQueryTime", function()
       "should return new pattern whose query function will pass the query timeSpan through a function before mapping it to Events",
       function()
          local pat = pure(5)
-         local add1
-         add1 = function(other)
+         local add1 = function(other)
             return other + 1
          end
          local newPat = pat:withQueryTime(add1)
@@ -542,6 +538,12 @@ describe("struct", function()
    it("should give bool struct to pat", function()
       assert.pat(reify { 1, 1 }, M.struct({ true, true }, 1))
       assert.pat(reify { 1, "~", 1 }, M.struct({ true, false, true }, 1))
+   end)
+end)
+
+describe("ply", function()
+   it("should repeat every element in the cycle with give times", function()
+      assert.pat(reify { 1, 1, 1, 2, 2, 2 }, ply(3, reify { 1, 2 }))
    end)
 end)
 

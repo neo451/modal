@@ -159,7 +159,7 @@ end
 
 local function pTail(b)
    return function(a)
-      return Call("concat", a, b)
+      return Call("chain", a, b)
    end
 end
 

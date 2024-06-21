@@ -3,6 +3,9 @@
 ---@class Fraction
 ---@field denomenator number
 ---@field numerator number
+---@field reverse function
+---@field cyclePos function
+---@operator sub (Fraction) : Fraction
 
 ---@alias Time Fraction | number | Pattern
 ---@alias ValueMap table<string, any>
