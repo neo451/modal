@@ -1,6 +1,9 @@
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 
+-- TODO: "struct", "[Pattern bool] -> Pattern a -> Pattern a"
+-- TODO: "struct :: [Pattern bool] -> Pattern a -> Pattern a"
+
 local function pId(...)
    return { table.concat { ... } }
 end

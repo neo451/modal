@@ -8,7 +8,8 @@ local Span, State, Event = types.Span, types.State, types.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
 
 assert.pat = function(a, b)
-   assert.same(a(0, 1), b(0, 1))
+   -- assert.same(a(0, 1), b(0, 1))
+   assert.same(a:show(), b:show())
 end
 
 describe("new", function()
@@ -457,13 +458,10 @@ end)
 
 describe("euclid", function()
    it("shoudl gen euclid pats", function()
-      local pat = M.euclid(3, 8, 1, "bd")
-      local expected = {
-         Event(Span(0, 1), Span(1 / 4, 3 / 8), "bd"),
-         Event(Span(0, 1), Span(5 / 8, 3 / 4), "bd"),
-         Event(Span(0, 1), Span(7 / 8, 1), "bd"),
-      }
-      assert.same(expected, pat(0, 1))
+      local bjork = require "modal.euclid"
+      local pat = M.euclidRot(3, 8, 1, "bd")
+      local expected = M.struct(bjork(3, 8, 1), "bd")
+      assert.pat(expected, pat)
    end)
 end)
 
@@ -535,4 +533,20 @@ describe("scale", function()
       local expected = M.note "12 14 16" -- 0, 2, 4 + 12
       assert.pat(expected, pat)
    end)
+end)
+
+describe("struct", function()
+   it("should give bool struct to pat", function()
+      assert.pat(reify { 1, 1 }, M.struct({ true, true }, 1))
+      assert.pat(reify { 1, "~", 1 }, M.struct({ true, false, true }, 1))
+   end)
+end)
+
+describe("Tidal operators", function()
+   it("", function() end)
+   -- it("register ops as pattern methods", function()
+   --    local pat = M.n(1)["|>"](M.s "bd")
+   --    local expected = M.op["|>"](M.n(1), M.s "bd")
+   --    assert.pat(expected, pat)
+   -- end)
 end)

@@ -1,7 +1,3 @@
--- TODO: proper arithemtic
--- TODO: proper expr and application
--- local pat = M.every(3, "[(fast 2), (+ 1)]", 1)
--- need to do (+ 1) (+| note 1), currying superpower!!
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local ut = require "modal.utils"
@@ -43,7 +39,6 @@ local dollar = V "dollar"
 local tailop = V "tailop"
 local expr = V "expr"
 local ret = V "ret"
-local set = V "set"
 local stat = V "stat"
 local choose = V "choose"
 
@@ -171,7 +166,7 @@ end
 local function pEuclid(p, s, r)
    r = r or Num(0)
    return function(x)
-      return Call("euclid", p, s, r, x)
+      return Call("euclidRot", p, s, r, x)
    end
 end
 

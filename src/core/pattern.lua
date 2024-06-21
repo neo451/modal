@@ -43,12 +43,7 @@ local function reify(thing)
       --    return f
       -- end
       local res = M.mini("[" .. thing .. "]")
-      if res then
-         return res()
-      else
-         return M.silence()
-      end
-      -- return res and res() or M.silence()
+      return res and res() or M.silence()
    elseif "table" == t then
       return M.fastcat(thing)
    elseif "pattern" == t then
@@ -67,6 +62,10 @@ end
 
 function mt:__tostring()
    return dump(self(0, 1))
+end
+
+function mt:show()
+   return tostring(self)
 end
 
 -- TODO: not triggered in busted
@@ -119,6 +118,7 @@ end
 
 mt.__index = mt
 
+-- automatically export pattern methods
 setmetatable(M, {
    __index = function(_, k)
       return mt[k]
@@ -471,6 +471,7 @@ local function squeezeBind(pat, func)
    return squeezeJoin(fmap(pat, func))
 end
 mt.squeezeBind = squeezeBind
+
 local _op = {}
 function _op.In(f)
    return function(a, b)
@@ -562,16 +563,18 @@ for k, f in pairs(ops) do
       end
    end
 end
+op["#"] = op["|>"]
 
 M.op = op
 
-function M.silence()
+local function silence()
    return Pattern()
 end
+M.silence = silence
 
 function M.pure(value)
    if value == "~" then
-      return M.silence()
+      return silence()
    end
    local query = function(_, state)
       local cycles = state.span:spanCycles()
@@ -674,14 +677,10 @@ local function register(args)
 end
 M.register = register
 
-register {
-   "stack",
-   "[Pattern a] -> Pattern a",
-   function(pats)
-      return reduce(M.overlay, M.silence(), iter(pats))
-   end,
-   false,
-}
+local function stack(pats)
+   return reduce(M.overlay, silence(), iter(pats))
+end
+register { "stack", "[Pattern a] -> Pattern a", stack, false }
 
 -- register {
 --    "polymeter",
@@ -694,44 +693,36 @@ function M.polymeter(steps, pats)
       ratio = steps / #((pat)(0, 1))
       res[#res + 1] = U.fast(ratio, pat)
    end
-   return M.stack(res)
+   return stack(res)
 end
 --    false,
 -- }
 
-register {
-   "slowcat",
-   "[Pattern a] -> Pattern a",
-   function(pats)
-      local query = function(_, state)
-         local a = state.span
-         local cyc = a._begin:sam():asFloat()
-         local n = #pats
-         local i = cyc % n
-         local pat = pats[i + 1]
-         if not pat then
-            return {}
-         end
-         local offset = cyc - (cyc - i) / n
-         return withEventTime(pat, function(t)
-            return t + offset
-         end):query(state:setSpan(a:withTime(function(t)
-            return t - offset
-         end)))
+local function slowcat(pats)
+   local query = function(_, state)
+      local a = state.span
+      local cyc = a._begin:sam():asFloat()
+      local n = #pats
+      local i = cyc % n
+      local pat = pats[i + 1]
+      if not pat then
+         return {}
       end
-      return Pattern(query):splitQueries()
-   end,
-   false,
-}
+      local offset = cyc - (cyc - i) / n
+      return withEventTime(pat, function(t)
+         return t + offset
+      end):query(state:setSpan(a:withTime(function(t)
+         return t - offset
+      end)))
+   end
+   return Pattern(query):splitQueries()
+end
+register { "slowcat", "[Pattern a] -> Pattern a", slowcat, false }
 
-register {
-   "fastcat",
-   "[Pattern a] -> Pattern a",
-   function(pats)
-      return U.fast(#pats, M.slowcat(pats))
-   end,
-   false,
-}
+local function fastcat(pats)
+   return U.fast(#pats, M.slowcat(pats))
+end
+register { "fastcat", "[Pattern a] -> Pattern a", fastcat, false }
 
 function M.timecat(tups)
    local total = 0
@@ -749,7 +740,7 @@ function M.timecat(tups)
       pats[#pats + 1] = M.compress(b, e, pat)
       accum = accum + time
    end
-   return M.stack(pats)
+   return stack(pats)
 end
 
 function M.arrange(args)
@@ -783,7 +774,7 @@ register {
    "superimpose",
    "(Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(f, pat)
-      return M.stack { pat, f(pat) }
+      return stack { pat, f(pat) }
    end,
    false,
 }
@@ -796,7 +787,7 @@ register {
       for i, f in iter(tf) do
          acc[i] = f(pat)
       end
-      return M.stack(acc)
+      return stack(acc)
    end,
    false,
 }
@@ -807,7 +798,7 @@ register {
    function(factor, pat)
       factor = Time(factor)
       if factor:eq(0) then
-         return M.silence()
+         return silence()
       elseif factor:lt(0) then
          return M.rev(U.fast(-factor, pat))
       else
@@ -826,7 +817,7 @@ register {
    function(factor, pat)
       -- factor = Time(factor)
       if factor:eq(0) then
-         return M.silence()
+         return silence()
       else
          return U.fast(factor:reverse(), pat)
       end
@@ -895,7 +886,7 @@ register {
    function(factor, pat)
       factor = Time(factor)
       if factor <= Time(0) then
-         return M.silence()
+         return silence()
       end
       factor = factor:max(1)
       local mungeQuery = function(t)
@@ -929,7 +920,7 @@ register {
    "Time -> Time -> Pattern a -> Pattern a",
    function(b, e, pat)
       if b > e or e > Time(1) or b > Time(1) or b < Time(0) or e < Time(0) then
-         return M.silence()
+         return silence()
       end
       local fasted = U.fastgap((e - b):reverse(), pat)
       return M.late(b, fasted)
@@ -969,7 +960,7 @@ register {
 
 local _run = function(n)
    local list = fun.totable(fun.range(0, n - 1))
-   return M.fastcat(list)
+   return fastcat(list)
 end
 
 register {
@@ -986,7 +977,7 @@ local _scan = function(n)
    for _, v in fun.range(1, n) do
       res[#res + 1] = M.run(v)
    end
-   return M.slowcat(res)
+   return slowcat(res)
 end
 
 register {
@@ -1036,8 +1027,8 @@ M.saw = waveform(function(t)
    return t % 1
 end)
 M.saw2 = toBipolar(M.saw)
-M.tri = M.fastcat { M.isaw, M.saw }
-M.tri2 = M.fastcat { M.isaw2, M.saw2 }
+M.tri = fastcat { M.isaw, M.saw }
+M.tri2 = fastcat { M.isaw2, M.saw2 }
 M.time = waveform(id)
 M.rand = waveform(ut.timeToRand)
 
@@ -1054,7 +1045,7 @@ end
 local _chooseWith = function(pat, ...)
    local vals = { ... }
    if #vals == 0 then
-      return M.silence()
+      return silence()
    end
    return fmap(M.range(1, #vals + 1, pat), function(i)
       local key = min(max(floor(i), 0), #vals)
@@ -1147,7 +1138,7 @@ register {
    "Pattern Double -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
    function(by, func, pat)
       return fmap(by, function()
-         return M.stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
+         return stack { U.degradeBy(by, pat), func(U.undegradeBy(1 - by, pat)) }
       end):innerJoin()
    end,
 }
@@ -1160,22 +1151,28 @@ register {
    end,
 }
 
--- TODO: ? register
-function M.struct(boolpat, pat)
-   local f = function(b)
-      return function(val)
-         return b and val or nil
-      end
-   end
-   local bools = M.fastFromList(boolpat)
-   return M.appLeft(fmap(bools, f), pat):removeNils()
+--- Applies the given structure to the pattern, alias to op.keepif.Out
+---@param boolpat table<boolean>
+---@param pat any
+---@return Pattern
+local function struct(boolpat, pat)
+   return op.keepif.Out(pat, boolpat)
 end
+register { "struct", "[Pattern bool] -> Pattern a -> Pattern a", struct, false }
 
 register {
    "euclid",
+   "Pattern Int -> Pattern Int -> Pattern a -> Pattern a",
+   function(n, k, pat)
+      return struct(bjork(n, k, 0), pat)
+   end,
+}
+
+register {
+   "euclidRot",
    "Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a",
-   function(n, k, offset, pat)
-      return op["|?"](pat, bjork(n, k, offset))
+   function(n, k, rot, pat)
+      return struct(bjork(n, k, rot), pat)
    end,
 }
 
@@ -1262,7 +1259,7 @@ register {
 --       end
 --       ts = _accum_0
 --    end
---    return M.stack(map(f, ts))
+--    return stack(map(f, ts))
 -- end)
 --
 register {
