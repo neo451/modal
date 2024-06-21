@@ -58,6 +58,7 @@ local function drawLine(pat, chars)
                local isOnset = event.whole._begin == _begin
                local char = nil
                if isOnset then
+                  -- TODO: proper dump
                   char = ut.dump(event.value)
                else
                   char = "-"

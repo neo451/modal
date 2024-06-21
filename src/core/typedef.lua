@@ -4,17 +4,14 @@ local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local tremove = table.remove
 local tconcat = table.concat
 
--- TODO: "struct", "[Pattern bool] -> Pattern a -> Pattern a"
--- TODO: "struct :: [Pattern bool] -> Pattern a -> Pattern a"
-
 local function pId(...)
-   return { table.concat { ... } }
+   return { tconcat { ... } }
 end
 
 local function pComp(const, tvar)
    return { constructor = const[1], tvar[1] }
 end
-require "moon.all"
+
 local function pDef(...)
    local args = { ... }
    local name
@@ -58,18 +55,20 @@ local grammar = Ct(C(rules))
 local function show_sig(t)
    local function format(a)
       if type(a[1]) == "table" then
-         return string.format("(%s)", show_sig(a))
+         return ("(%s)"):format(show_sig(a))
       elseif a.constructor then
-         return string.format("%s %s", a.constructor, a[1])
+         return ("%s %s"):format(a.constructor, a[1])
       elseif type(a) == "string" then
          return a
       end
    end
-   local s = ""
+   local s = {}
    for i = 1, #t do
-      s = s .. format(t[i]) .. " -> "
+      s[#s + 1] = format(t[i])
+      s[#s + 1] = " -> "
    end
-   return s .. format(t.ret)
+   s[#s + 1] = format(t.ret)
+   return tconcat(s)
 end
 
 local TDef = function(a)

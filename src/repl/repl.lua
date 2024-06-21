@@ -65,7 +65,7 @@ RL.set_readline_name "modal"
 
 local line
 while true do
-   line = RL.readline "modal> "
+   line = RL.readline "> "
    if not line then
       break
    end

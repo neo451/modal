@@ -7,7 +7,7 @@ local getScale = require "modal.scales"
 local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 
-local unpack = unpack or table.unpack
+local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
 local ipairs = ipairs
 local setmetatable = setmetatable
@@ -130,9 +130,12 @@ end
 mt.__index = mt
 
 -- automatically export pattern methods
-setmetatable(M, {
+setmetatable(mt, {
+   __newindex = function(_, k, v)
+      M[k] = v
+   end,
    __index = function(_, k)
-      return mt[k]
+      return M[k]
    end,
 })
 
@@ -571,6 +574,7 @@ op["#"] = op["|>"]
 
 M.op = op
 
+---@type Pattern
 silence = Pattern()
 M.silence = silence
 
@@ -1099,7 +1103,7 @@ local function sometimes(func, pat)
 end
 register("sometimes :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimes)
 
---- Applies the given structure to the pattern, alias to op.keepif.Out
+---applies the given structure to the pattern, alias to op.keepif.Out
 ---@param boolpat table<boolean>
 ---@param pat any
 ---@return Pattern

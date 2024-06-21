@@ -6,7 +6,6 @@ local P = require "modal.params"
 local drawLine = require "modal.drawline"
 local lib = require "modal.lib"
 local mt = pattern.mt
-local Pattern = pattern.Pattern
 local maxi = require "modal.maxi"
 
 local modal = {
@@ -32,9 +31,7 @@ end
 -- end
 
 for name, func in pairs(pattern) do
-   if name ~= "Pattern" then
-      modal[name] = func
-   end
+   modal[name] = func
 end
 
 for name, func in pairs(P) do
@@ -50,18 +47,6 @@ modal.sl = pattern.sl
 
 pattern.mini = maxi(modal, false)
 modal.mini = pattern.mini
-
----@class Pattern
-function Pattern(query)
-   local new_obj = setmetatable({}, mt)
-   new_obj.query = query or function()
-      return {}
-   end
-   new_obj.__class = "pattern"
-   return new_obj
-end
-
-modal.Pattern = Pattern
 
 setmetatable(modal, {
    __call = function(t, override)
