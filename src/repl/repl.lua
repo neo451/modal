@@ -5,6 +5,9 @@ local port = 9000
 local RL = require "readline"
 local M = require "modal"
 local maxi = M.maxi
+local doc = require "modal.doc"
+local ut = require "modal.utils"
+local dump = ut.dump
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -29,6 +32,9 @@ local optf = {
    end,
    v = function()
       return M._VERSION
+   end,
+   info = function(name)
+      return dump(doc[name])
    end,
    q = function()
       if c then
