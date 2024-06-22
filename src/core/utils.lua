@@ -505,7 +505,7 @@ end
 ---@param arity number
 ---@param f function
 ---@return function
-function M.auto_curry(arity, f)
+function M.curry_wrap(arity, f)
    return function(...)
       local args = { ... }
       if #args < arity then
