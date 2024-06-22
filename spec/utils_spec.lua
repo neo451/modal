@@ -79,6 +79,17 @@ describe("auto curry", function()
    end)
 end)
 
+describe("get_args", function()
+   it("should print the name of function's args", function()
+      assert.same(
+         { "x", "y" },
+         M.get_args(function(x, y)
+            return x + y
+         end)
+      )
+   end)
+end)
+
 describe("drawLine", function()
    it("should return a line representation of pattern", function()
       assert.same("|aaa|aaa", drawLine(pat.fast(3, "a"), 6))

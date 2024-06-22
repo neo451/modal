@@ -32,6 +32,7 @@ local flip = ut.flip
 local method_wrap = ut.method_wrap
 local curry_wrap = ut.curry_wrap
 local nparams = ut.nparams
+local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local T = ut.T
 
@@ -660,6 +661,10 @@ local function register(type_sig, f, nify)
       nify = true
    end
    local arity = nparams(f)
+   local arg_names = get_args(f)
+   for i, v in pairs(arg_names) do
+      tdef[i].name = v
+   end
    if nify then
       TYPES[name] = tdef
       local f_p = patternify(f)
@@ -710,9 +715,6 @@ function M.polymeter(steps, pats)
 end
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
----cat pattern per cycle
----@param pats any
----@return Pattern
 function slowcat(pats)
    local query = function(state)
       local a = state.span

@@ -55,7 +55,9 @@ build = {
       ["modal.repl"] = "src/repl/repl.lua",
       ["modal.luv_repl"] = "src/repl/luv_repl.lua",
       ["modal.server"] = "src/repl/server.lua",
+
       ["modal.doc"] = "src/repl/doc.lua",
+      ["modal.gendef"] = "src/ideas/gendef.lua",
    },
    install = {
       bin = {
