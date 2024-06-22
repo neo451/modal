@@ -139,7 +139,7 @@ setmetatable(mt, {
    end,
 })
 
----@class Pattern
+---class Pattern
 local function Pattern(query)
    query = query or function()
       return {}
@@ -574,7 +574,7 @@ op["#"] = op["|>"]
 
 M.op = op
 
----@type Pattern
+---type Pattern
 silence = Pattern()
 M.silence = silence
 
@@ -680,9 +680,9 @@ end
 M.register = register
 
 ---stack two patterns
----@param a any
----@param b any
----@return Pattern
+---param a any
+---param b any
+---return Pattern
 local function overlay(a, b)
    local query = function(st)
       return concat(a.query(st), b.query(st))
@@ -692,17 +692,17 @@ end
 register("overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false)
 
 ---stack a table of patterns
----@param pats table<any>
----@return Pattern
+---param pats table<any>
+---return Pattern
 function stack(pats)
    return reduce(overlay, silence, iter(pats))
 end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
 ---aligns one or more given sequences to the given number of steps per cycle.
----@param steps number
----@param pats table
----@return Pattern
+---param steps number
+---param pats table
+---return Pattern
 function M.polymeter(steps, pats)
    local res = {}
    for i, pat in iter(pats) do
@@ -713,8 +713,8 @@ end
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
 ---cat pattern per cycle
----@param pats any
----@return Pattern
+---param pats any
+---return Pattern
 function slowcat(pats)
    local query = function(state)
       local a = state.span
@@ -847,9 +847,9 @@ end
 register("outside :: Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", outside, false)
 
 ---repeats each event the given number of times.
----@param n number
----@param pat any
----@return Pattern
+---param n number
+---param pat any
+---return Pattern
 local function ply(n, pat)
    pat = fmap(pat, function(x)
       return fast(n, pure(x))
@@ -859,9 +859,9 @@ end
 register("ply :: Pattern Time -> Pattern a -> Pattern a", ply)
 
 ---speeds up a pattern like fast, but rather than it playing multiple times as fast would it instead leaves a gap in the remaining space of the cycle. For example, the following will play the sound pattern "bd sn" only once but compressed into the first half of the cycle, i.e. twice as fast.
----@param factor number
----@param pat any
----@return Pattern
+---param factor number
+---param pat any
+---return Pattern
 local function fastgap(factor, pat)
    factor = Time(factor)
    if factor <= Time(0) then
@@ -895,10 +895,10 @@ end
 register("fastgap :: Pattern Time -> Pattern a -> Pattern a", fastgap)
 
 ---Compress each cycle into the given timespan, leaving a gap
----@param b Time
----@param e Time
----@param pat any
----@return Pattern
+---param b Time
+---param e Time
+---param pat any
+---return Pattern
 local function compress(b, e, pat)
    if b > e or e > Time(1) or b > Time(1) or b < Time(0) or e < Time(0) then
       return silence
@@ -909,10 +909,10 @@ end
 register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
 
 ---similar to `compress`, but doesn't leave gaps, and the 'focus' can be bigger than a cycle
----@param b Time
----@param e Time
----@param pat any
----@return Pattern
+---param b Time
+---param e Time
+---param pat any
+---return Pattern
 function focus(b, e, pat)
    local fasted = fast((e - b):reverse(), pat)
    return M.late(b:cyclePos(), fasted)
@@ -941,12 +941,40 @@ local _run = function(n)
 end
 
 ---generate 1 .. n fastcated
----@param n any
----@return Pattern
+---param n any
+---return Pattern
 local function run(n)
    return fmap(n, _run):join()
 end
 register("run :: Pattern Int -> Pattern Int", run, false)
+
+---randrun n generates a pattern of random integers less than n.
+local function randrun(n)
+   if n == 0 then
+      return silence
+   else
+      local query = function(state)
+         local a = state.span
+         local s = a._begin
+         local fractions = {}
+         for i = 0, n do
+            fractions[i] = Time(i, n) + s:sam()
+         end
+         local rs = timeToRand(n)
+      end
+      return Pattern(query)
+   end
+end
+
+-- randrun n' =
+--   splitQueries $ pattern (\(State a@(Arc s _) _) -> events a (sam s))
+--   where events a seed = mapMaybe toEv $ zip arcs shuffled
+--           where shuffled = map snd $ sortOn fst $ zip rs [0 .. (n'-1)]
+--                 rs = timeToRands seed n' :: [Double]
+--                 arcs = zipWith Arc fractions (tail fractions)
+--                 fractions = map (+ (sam $ start a)) [0, 1 / fromIntegral n' .. 1]
+--                 toEv (a',v) = do a'' <- subArc a a'
+--                                  return $ Event (Context []) (Just a') a'' v
 
 local _scan = function(n)
    local res = {}
@@ -1103,9 +1131,9 @@ end
 register("sometimes :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimes)
 
 ---applies the given structure to the pattern, alias to op.keepif.Out
----@param boolpat table<boolean>
----@param pat any
----@return Pattern
+---param boolpat table<boolean>
+---param pat any
+---return Pattern
 local function struct(boolpat, pat)
    return op.keepif.Out(pat, boolpat)
 end
@@ -1122,8 +1150,8 @@ end
 register("euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot)
 
 ---reverse pattern in every cycle
----@param pat any
----@return Pattern
+---param pat any
+---return Pattern
 local function rev(pat)
    local query = function(state)
       local span = state.span
@@ -1172,10 +1200,10 @@ end
 register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 
 ---limit value in pattern to a range TODO: see tidal impl
----@param mi number
----@param ma number
----@param pat number
----@return unknown
+---param mi number
+---param ma number
+---param pat number
+---return unknown
 local function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
@@ -1243,9 +1271,9 @@ end
 register("scale :: String -> Pattern a -> Pattern a", scale, false)
 
 ---union two value maps .. bit weird ...
----@param pat ValueMap
----@param other ValueMap
----@return Pattern
+---param pat ValueMap
+---param other ValueMap
+---return Pattern
 local function chain(pat, other)
    return fmap(pat, function(a)
       return function(b)

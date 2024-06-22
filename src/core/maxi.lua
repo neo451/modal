@@ -112,7 +112,7 @@ local function rTails(args)
 end
 
 local step_char = R("09", "AZ", "az") + S [[~^'._]]
-local tidalop = S "|+-*/^%><" ^ 2 / id
+local tidalop = (S "|+-*/^%><" ^ 2 + P "#") / id
 local arith = (S "+-*/^%" - P "|") / id
 local step = ws * ((step_char ^ 1) / pStep) * ws
 local minus = P "-"
