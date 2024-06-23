@@ -942,7 +942,7 @@ end
 ---@param n any
 ---@return Pattern
 local function run(n)
-   return fmap(n, _run):join()
+   return join(fmap(n, _run))
 end
 register("run :: Pattern Int -> Pattern Int", run, false)
 
@@ -955,7 +955,7 @@ local _scan = function(n)
 end
 
 local function scan(n)
-   return fmap(n, _scan):join()
+   return join(fmap(n, _scan))
 end
 register("scan :: Pattern Int -> Pattern Int", scan, false)
 
@@ -1011,7 +1011,7 @@ end
 -- TODO: use in maxi?
 -- TODO: register
 local irand = function(ipat)
-   return fmap(reify(ipat), _irand):innerJoin()
+   return fmap(ipat, _irand):innerJoin()
 end
 register("irand :: Pattern Num -> Pattern Num", irand)
 
