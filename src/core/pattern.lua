@@ -36,7 +36,7 @@ local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local T = ut.T
 
-local fast, pure, fastcat, slowcat, stack, silence, focus, range
+local fast, pure, fastcat, slowcat, stack, silence, focus, range, rev, compress
 
 local M = {}
 local TYPES = {}
@@ -682,10 +682,6 @@ local function register(type_sig, f, nify)
 end
 M.register = register
 
----stack two patterns
----@param a any
----@param b any
----@return Pattern
 local function overlay(a, b)
    local query = function(st)
       return concat(a.query(st), b.query(st))
@@ -694,18 +690,11 @@ local function overlay(a, b)
 end
 register("overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false)
 
----stack a table of patterns
----@param pats table<any>
----@return Pattern
 function stack(pats)
    return reduce(overlay, silence, iter(pats))
 end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
----aligns one or more given sequences to the given number of steps per cycle.
----@param steps number
----@param pats table
----@return Pattern
 function M.polymeter(steps, pats)
    local res = {}
    for i, pat in iter(pats) do
@@ -741,39 +730,41 @@ function fastcat(pats)
 end
 register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
 
-function M.timecat(tups)
+local function timecat(tups)
    local total = 0
    for i, v in iter(tups) do
       if i % 2 == 1 then
          total = total + v
       end
    end
-   local accum = 0
+   local accum = Time(0)
    local pats = {}
    local time, pat, b, e
    for i = 1, #tups, 2 do
-      time, pat = tups[i], tups[i + 1]
+      time, pat = tups[i], reify(tups[i + 1])
       b, e = accum / total, (accum + time) / total
-      pats[#pats + 1] = M.compress(b, e, pat)
+      pats[#pats + 1] = compress(b, e, pat)
       accum = accum + time
    end
    return stack(pats)
 end
+M.timecat = timecat
 
-function M.arrange(args)
+local function arrange(tups)
    local total = 0
-   for i, v in iter(args) do
+   for i, v in iter(tups) do
       if i % 2 == 1 then
          total = total + v
       end
    end
    local cycles, pat
-   for i = 1, #args, 2 do
-      cycles, pat = args[i], args[i + 1]
-      args[i + 1] = M.fast(cycles, pat)
+   for i = 1, #tups, 2 do
+      cycles, pat = tups[i], reify(tups[i + 1])
+      tups[i + 1] = fast(cycles, pat)
    end
-   return slow(total, M.timecat(args))
+   return slow(total, timecat(tups))
 end
+M.arrange = arrange
 
 local function superimpose(f, pat)
    return overlay(pat, f(pat))
@@ -781,20 +772,19 @@ end
 register("superimpose :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", superimpose, false)
 
 local function layer(tf, pat)
-   local acc = {}
    for i, f in iter(tf) do
-      acc[i] = f(pat)
+      tf[i] = f(pat)
    end
-   return stack(acc)
+   return stack(tf)
 end
-register("layer :: [(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", layer) -- a little ugly lol layer, false,
+register("layer :: [(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", layer, false) -- a little ugly lol layer
 
 function fast(factor, pat)
    factor = Time(factor) -- TODO:
    if factor:eq(0) then
       return silence
    elseif factor:lt(0) then
-      return M.rev(fast(-factor, pat))
+      return rev(fast(-factor, pat))
    else
       return withTime(pat, function(t)
          return t * factor
@@ -806,7 +796,6 @@ end
 register("fast :: Pattern Time -> Pattern a -> Pattern a", fast)
 
 local function slow(factor, pat)
-   -- factor = Time(factor)
    if factor:eq(0) then
       return silence
    else
@@ -845,10 +834,6 @@ local function outside(factor, f, pat)
 end
 register("outside :: Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", outside, false)
 
----repeats each event the given number of times.
----@param n number
----@param pat any
----@return Pattern
 local function ply(n, pat)
    pat = fmap(pat, function(x)
       return fast(n, pure(x))
@@ -857,10 +842,6 @@ local function ply(n, pat)
 end
 register("ply :: Pattern Time -> Pattern a -> Pattern a", ply)
 
----speeds up a pattern like fast, but rather than it playing multiple times as fast would it instead leaves a gap in the remaining space of the cycle. For example, the following will play the sound pattern "bd sn" only once but compressed into the first half of the cycle, i.e. twice as fast.
----@param factor number
----@param pat any
----@return Pattern
 local function fastgap(factor, pat)
    factor = Time(factor)
    if factor <= Time(0) then
@@ -892,12 +873,7 @@ local function fastgap(factor, pat)
 end
 register("fastgap :: Pattern Time -> Pattern a -> Pattern a", fastgap)
 
----Compress each cycle into the given timespan, leaving a gap
----@param b Time
----@param e Time
----@param pat any
----@return Pattern
-local function compress(b, e, pat)
+function compress(b, e, pat)
    if b > e or e > Time(1) or b > Time(1) or b < Time(0) or e < Time(0) then
       return silence
    end
@@ -906,11 +882,6 @@ local function compress(b, e, pat)
 end
 register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
 
----similar to `compress`, but doesn't leave gaps, and the 'focus' can be bigger than a cycle
----@param b Time
----@param e Time
----@param pat any
----@return Pattern
 function focus(b, e, pat)
    local fasted = fast((e - b):reverse(), pat)
    return late(b:cyclePos(), fasted)
@@ -938,9 +909,6 @@ local _run = function(n)
    return fastcat(list)
 end
 
----generate 1 .. n fastcated
----@param n any
----@return Pattern
 local function run(n)
    return join(fmap(n, _run))
 end
@@ -1007,7 +975,7 @@ local _irand = function(i)
       return floor(x * i)
    end)
 end
---@randrun n@ generates a pattern of random integers less than @n@.
+
 -- TODO: use in maxi?
 -- TODO: register
 local irand = function(ipat)
@@ -1103,10 +1071,6 @@ local function sometimes(func, pat)
 end
 register("sometimes :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimes)
 
----applies the given structure to the pattern, alias to op.keepif.Out
----@param boolpat table<boolean>
----@param pat any
----@return Pattern
 local function struct(boolpat, pat)
    return op.keepif.Out(pat, boolpat)
 end
@@ -1122,10 +1086,7 @@ local function euclidRot(n, k, rot, pat)
 end
 register("euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot)
 
----reverse pattern in every cycle
----@param pat any
----@return Pattern
-local function rev(pat)
+function rev(pat)
    local query = function(state)
       local span = state.span
       local cycle = span._begin:sam()
@@ -1172,11 +1133,6 @@ local function segment(n, pat)
 end
 register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 
----limit value in pattern to a range TODO: see tidal impl
----@param mi number
----@param ma number
----@param pat number
----@return unknown
 function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
@@ -1243,10 +1199,6 @@ end
 -- TODO: "Pattern String -> Pattern a -> Pattern a",
 register("scale :: String -> Pattern a -> Pattern a", scale, false)
 
----union two value maps .. bit weird ...
----@param pat ValueMap
----@param other ValueMap
----@return Pattern
 local function chain(pat, other)
    return fmap(pat, function(a)
       return function(b)

@@ -555,3 +555,12 @@ describe("Tidal operators", function()
    --    assert.pat(expected, pat)
    -- end)
 end)
+
+describe("layer", function()
+   it("", function()
+      local inc1 = function(x)
+         return x + 1
+      end
+      assert.pat(stack { 2, 1 }, layer({ inc1, id }, 1))
+   end)
+end)
