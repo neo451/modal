@@ -543,6 +543,16 @@ function M.setfenv(f, env)
    return f
 end
 
+--- Iterize
+--- debug in 51
+-- function M.get_args(f)
+--    local args = {}
+--    for i = 1, M.nparams(f) do
+--       table.insert(args, debug.getlocal(f, i))
+--    end
+--    return args
+-- end
+
 function M.get_args(f)
    local args = {}
    local hook = debug.gethook()

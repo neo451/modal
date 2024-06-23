@@ -579,16 +579,16 @@ silence = Pattern()
 M.silence = silence
 
 function pure(value)
-   if value == "~" then
-      return silence
-   end
    local query = function(state)
       local cycles = state.span:spanCycles()
       local f = function(span)
          local whole = span._begin:wholeCycle()
          return Event(whole, span, value)
       end
-      return map(f, cycles)
+      for i, v in iter(cycles) do
+         cycles[i] = f(v)
+      end
+      return cycles
    end
    return Pattern(query)
 end
@@ -883,8 +883,7 @@ local function fastgap(factor, pat)
       end
       local new_state = State(new_span)
       local events = pat.query(new_state)
-      local f
-      f = function(event)
+      local f = function(event)
          return event:withSpan(eventSpanFunc)
       end
       return map(f, events)
@@ -914,7 +913,7 @@ register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
 ---@return Pattern
 function focus(b, e, pat)
    local fasted = fast((e - b):reverse(), pat)
-   return M.late(b:cyclePos(), fasted)
+   return late(b:cyclePos(), fasted)
 end
 register("focus :: Time -> Time -> Pattern a -> Pattern a", focus, false)
 
@@ -946,24 +945,6 @@ local function run(n)
    return fmap(n, _run):join()
 end
 register("run :: Pattern Int -> Pattern Int", run, false)
-
---@randrun n@ generates a pattern of random integers less than @n@.
-local function randrun(n)
-   if n == 0 then
-      return silence
-   else
-      local query = function(state)
-         local a = state.span
-         local s = a._begin
-         local fractions = {}
-         for i = 0, n do
-            fractions[i] = Time(i, n) + s:sam()
-         end
-         local rs = timeToRand(n)
-      end
-      return Pattern(query)
-   end
-end
 
 local _scan = function(n)
    local res = {}
@@ -1026,6 +1007,8 @@ M._irand = function(i)
       return floor(x * i)
    end)
 end
+--@randrun n@ generates a pattern of random integers less than @n@.
+-- TODO: use in maxi?
 -- TODO: register
 M.irand = function(ipat)
    return fmap(reify(ipat), M._irand):innerJoin()

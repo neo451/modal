@@ -1,0 +1,4 @@
+-- TODO: fetch sample from url
+-- TODO: read strudel.json file
+-- TODO: map samples and auto switch symbols
+-- TODO: add sample names to auto completion sources

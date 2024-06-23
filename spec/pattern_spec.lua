@@ -402,7 +402,7 @@ end)
 describe("fastgap", function()
    it("should bring pattern closer together", function()
       local pat = fastgap(4, reify { "bd", "sd" })
-      local expected = fastcat { "bd", "sd", "~", "~", "~", "~", "~", "~" }
+      local expected = timecat { 1, "bd", 1, "sd", 6, silence }
       assert.pat(expected, pat)
    end)
 end)
@@ -410,7 +410,7 @@ end)
 describe("compress", function()
    it("should bring pattern closer together", function()
       local pat = compress(0.25, 0.75, fastcat { "bd", "sd" })
-      local expected = fastcat { "~", "bd", "sd", "~" }
+      local expected = fastcat { silence, "bd", "sd", silence }
       assert.pat(expected, pat)
    end)
 end)
@@ -537,7 +537,7 @@ end)
 describe("struct", function()
    it("should give bool struct to pat", function()
       assert.pat(reify { 1, 1 }, M.struct({ true, true }, 1))
-      assert.pat(reify { 1, "~", 1 }, M.struct({ true, false, true }, 1))
+      assert.pat(reify { 1, silence, 1 }, M.struct({ true, false, true }, 1))
    end)
 end)
 

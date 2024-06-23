@@ -66,13 +66,6 @@ local function Call(name, ...)
    return { tag = "Call", Id(name), ... }
 end
 
-local function string2id(v)
-   if v.tag == "String" then
-      v.tag = "Id"
-   end
-   return v
-end
-
 local seed = -1 -- TODO: use this?
 local ws = S " \n\r\t" ^ 0
 local comma = ws * P "," * ws
@@ -84,10 +77,11 @@ local function pNumber(num)
 end
 
 local function pStep(chars)
-   if tonumber(chars) then
+   if chars == "~" then
+      return Id "silence"
+   elseif tonumber(chars) then
       return Num(tonumber(chars))
-   end
-   if chars:sub(0, 1) == "^" then
+   elseif chars:sub(0, 1) == "^" then
       return Id(chars:sub(2, #chars))
    end
    return Str(chars)
@@ -146,7 +140,7 @@ end
 --       return Num(math.random(lower, x[1]))
 --    end
 -- end
---
+
 local function pDegrade(a)
    if a == "?" then
       a = Num(0.5)
