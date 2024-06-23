@@ -36,7 +36,7 @@ local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local T = ut.T
 
-local fast, pure, fastcat, slowcat, stack, silence, focus
+local fast, pure, fastcat, slowcat, stack, silence, focus, range
 
 local M = {}
 local TYPES = {}
@@ -1002,7 +1002,7 @@ M.tri2 = fastcat { M.isaw2, M.saw2 }
 M.time = waveform(id)
 M.rand = waveform(timeToRand)
 
-M._irand = function(i)
+local _irand = function(i)
    return fmap(M.rand, function(x)
       return floor(x * i)
    end)
@@ -1010,16 +1010,17 @@ end
 --@randrun n@ generates a pattern of random integers less than @n@.
 -- TODO: use in maxi?
 -- TODO: register
-M.irand = function(ipat)
-   return fmap(reify(ipat), M._irand):innerJoin()
+local irand = function(ipat)
+   return fmap(reify(ipat), _irand):innerJoin()
 end
+register("irand :: Pattern Num -> Pattern Num", irand)
 
 local _chooseWith = function(pat, ...)
    local vals = { ... }
    if #vals == 0 then
       return silence
    end
-   return fmap(M.range(1, #vals + 1, pat), function(i)
+   return fmap(range(1, #vals + 1, pat), function(i)
       local key = min(max(floor(i), 0), #vals)
       return vals[key]
    end)
@@ -1176,7 +1177,7 @@ register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 ---@param ma number
 ---@param pat number
 ---@return unknown
-local function range(mi, ma, pat)
+function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
 register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range, false)
@@ -1257,7 +1258,7 @@ local function chain(pat, other)
       end
    end):appLeft(other)
 end
-register("chain :: Pattern a -> Pattern a -> Pattern a", chain, false)
+register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
 
 M.id = id
 M.T = T
