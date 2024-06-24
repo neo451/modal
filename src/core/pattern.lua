@@ -21,10 +21,8 @@ local max = math.max
 local pi = math.pi
 local floor = math.floor
 local id = ut.id
-local map = ut.map
 local filter = ut.filter
 local dump = ut.dump
-local flatten = ut.flatten
 local curry = ut.curry
 local union = ut.union
 local concat = ut.concat
@@ -191,23 +189,26 @@ mt.removeNils = removeNils
 local function splitQueries(pat)
    local query = function(state)
       local cycles = state.span:spanCycles()
-      local f = function(subspan)
-         return pat.query(state:setSpan(subspan))
+      local res = {}
+      for i = 1, #cycles do
+         local evs = pat.query(state:setSpan(cycles[i]))
+         for j = 1, #evs do
+            res[#res + 1] = evs[j]
+         end
       end
-      -- TODO: replace
-      return flatten(map(f, cycles))
+      return res
    end
    return Pattern(query)
 end
 mt.splitQueries = splitQueries
 
-local function withValue(pat, func)
+local function withValue(pat, f)
    local query = function(state)
       local events = pat.query(state)
-      local f = function(event)
-         return event:withValue(func)
+      for i = 1, #events do
+         events[i] = events[i]:withValue(f)
       end
-      return map(f, events)
+      return events
    end
    return Pattern(query)
 end
@@ -216,57 +217,64 @@ mt.withValue = withValue
 local fmap = withValue
 mt.fmap = fmap
 
-local function withQuerySpan(pat, func)
+local function withQuerySpan(pat, f)
    local query = function(state)
-      local new_state = state:withSpan(func)
+      local new_state = state:withSpan(f)
       return pat.query(new_state)
    end
    return Pattern(query)
 end
 mt.withQuerySpan = withQuerySpan
 
-local function withQueryTime(pat, func)
+local function withQueryTime(pat, f)
    return withQuerySpan(pat, function(span)
-      return span:withTime(func)
+      return span:withTime(f)
    end)
 end
 mt.withQueryTime = withQueryTime
 
-local function withEvents(pat, func)
+local function withEvents(pat, f)
    return Pattern(function(state)
-      return func(pat.query(state))
+      return f(pat.query(state))
    end)
 end
 mt.withEvents = withEvents
 
-local function withEvent(pat, func)
+local function withEvent(pat, f)
    return withEvents(pat, function(events)
-      return map(func, events)
+      for i = 1, #events do
+         events[i] = f(events[i])
+      end
+      return events
    end)
 end
 mt.withEvent = withEvent
 
-local function withEventSpan(pat, func)
+local function withEventSpan(pat, f)
    local query = function(state)
       local events = pat.query(state)
-      return map(function(ev)
-         return ev:withSpan(func)
-      end, events)
+      for i = 1, #events do
+         events[i] = events[i]:withSpan(f)
+      end
+      return events
    end
    return Pattern(query)
 end
 mt.withEventSpan = withEventSpan
 
-local function withEventTime(pat, func)
+local function withEventTime(pat, f)
    local query = function(state)
       local events = pat.query(state)
       local time_func = function(span)
-         return span:withTime(func)
+         return span:withTime(f)
       end
       local event_func = function(event)
          return event:withSpan(time_func)
       end
-      return map(event_func, events)
+      for i = 1, #events do
+         events[i] = event_func(events[i])
+      end
+      return events
    end
    return Pattern(query)
 end
@@ -389,13 +397,20 @@ local function bindWhole(pat, choose_whole, func)
       end
       local match = function(a)
          local events = func(a.value).query(state:setSpan(a.part))
-         local f = function(b)
-            return withWhole(a, b)
+         for i = 1, #events do
+            events[i] = withWhole(a, events[i])
          end
-         return map(f, events)
+         return events
       end
       local events = pat.query(state)
-      return flatten(map(match, events))
+      local res = {}
+      for i = 1, #events do
+         local evs = match(events[i])
+         for j = 1, #evs do
+            res[#res + 1] = evs[j]
+         end
+      end
+      return res
    end
    return Pattern(query)
 end
@@ -462,12 +477,18 @@ local function squeezeJoin(pat)
             end
             return Event(whole, part, inner.value)
          end
-         local f = function(innerEvent)
-            return munge(outerEvent, innerEvent)
+         for i = 1, #innerEvents do
+            innerEvents[i] = munge(outerEvent, innerEvents[i])
          end
-         return map(f, innerEvents)
+         return innerEvents
       end
-      local result = flatten(map(flatEvent, events))
+      local result = {}
+      for i = 1, #events do
+         local evs = flatEvent(events[i])
+         for j = 1, #evs do
+            result[#result + 1] = evs[j]
+         end
+      end
       return filter(function(x)
          return x
       end, result)
@@ -860,10 +881,10 @@ local function fastgap(factor, pat)
       end
       local new_state = State(new_span)
       local events = pat.query(new_state)
-      local f = function(event)
-         return event:withSpan(eventSpanFunc)
+      for i = 1, #events do
+         events[i] = events[i]:withSpan(eventSpanFunc)
       end
-      return map(f, events)
+      return events
    end
    return Pattern(query):splitQueries()
 end
@@ -874,7 +895,7 @@ function compress(b, e, pat)
       return silence
    end
    local fasted = fastgap((e - b):reverse(), pat)
-   return M.late(b, fasted)
+   return late(b, fasted)
 end
 register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
 
@@ -930,6 +951,17 @@ local waveform = function(func)
    return Pattern(query)
 end
 
+local function segment(n, pat)
+   return appLeft(fast(n, pure(id)), pat)
+end
+register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
+
+function range(mi, ma, pat)
+   return pat * (ma - mi) + mi
+end
+
+register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
+
 M.steady = function(value)
    return Pattern(function(state)
       return { Event(nil, state.span, value) }
@@ -973,9 +1005,8 @@ local _irand = function(i)
 end
 
 -- TODO: use in maxi?
--- TODO: register
 local irand = function(ipat)
-   return fmap(ipat, _irand):innerJoin()
+   return innerJoin(fmap(ipat, _irand))
 end
 register("irand :: Pattern Num -> Pattern Num", irand)
 
@@ -989,9 +1020,9 @@ local _chooseWith = function(pat, vals)
    end)
 end
 
--- local chooseWith = function(pat, ...)
---    return _chooseWith(pat, ...):outerJoin()
--- end
+local chooseWith = function(pat, ...)
+   return _chooseWith(pat, ...):outerJoin()
+end
 
 local chooseInWith = function(pat, vals)
    return innerJoin(_chooseWith(pat, vals))
@@ -1001,12 +1032,8 @@ local choose = function(vals)
    return chooseInWith(M.rand, vals)
 end
 
-local chooseCycles = function(vals)
-   return M.segment(1, choose(vals))
-end
-
 local randcat = function(pats)
-   return chooseCycles(pats)
+   return segment(1, choose(pats))
 end
 register("randcat :: [Pattern a] -> Pattern a", randcat, false)
 
@@ -1087,8 +1114,7 @@ function rev(pat)
       local span = state.span
       local cycle = span._begin:sam()
       local nextCycle = span._begin:nextSam()
-      local reflect
-      reflect = function(to_reflect)
+      local reflect = function(to_reflect)
          local reflected = to_reflect:withTime(function(t)
             return cycle + (nextCycle - t)
          end)
@@ -1098,9 +1124,10 @@ function rev(pat)
          return reflected
       end
       local events = pat.query(state:setSpan(reflect(span)))
-      return map(function(event)
-         return event:withSpan(reflect)
-      end, events)
+      for i = 1, #events do
+         events[i] = events[i]:withSpan(reflect)
+      end
+      return events
    end
    return Pattern(query)
 end
@@ -1124,16 +1151,6 @@ local function reviter(n, pat)
 end
 register("reviter :: Pattern Int -> Pattern a -> Pattern a", reviter)
 
-local function segment(n, pat)
-   return appLeft(M.fast(n, id), pat)
-end
-register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
-
-function range(mi, ma, pat)
-   return pat * (ma - mi) + mi
-end
-register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
-
 -- register("echoWith", function(times, time, func, pat)
 --    local f = function(index)
 --       return func(M.late(time * index, pat))
@@ -1150,7 +1167,7 @@ register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern
 --    end
 --    return stack(map(f, ts))
 -- end)
---
+
 local function when(test, f, pat)
    local query = function(state)
       local cycle_idx = state.span._begin:sam()
