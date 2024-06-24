@@ -464,6 +464,15 @@ describe("run", function()
    end)
 end)
 
+describe("run", function()
+   it("should gen 0 - n numbers", function()
+      local pat = scan(3)
+      for i = 1, 3 do
+         assert.same(run(i)(i - 1, i), pat(i - 1, i))
+      end
+   end)
+end)
+
 describe("euclid", function()
    it("shoudl gen euclid pats", function()
       local bjork = require "modal.euclid"

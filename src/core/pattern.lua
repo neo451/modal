@@ -934,7 +934,7 @@ register("run :: Pattern Int -> Pattern Int", run, false)
 local _scan = function(n)
    local res = {}
    for i = 1, n do
-      res[i] = run(i)
+      res[i] = run(pure(i))
    end
    return slowcat(res)
 end
