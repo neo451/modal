@@ -92,7 +92,8 @@ local bit = {}
 local MOD = 2 ^ 32
 local MODM = MOD - 1
 
-local memoize = function(f)
+-- TODO: replace with memoize ...?
+local bit_memo = function(f)
    local mt = {}
    local t = setmetatable({}, mt)
    mt.__index = function(self, k)
@@ -122,8 +123,8 @@ end
 
 local make_bitop = function(t)
    local op1 = make_bitop_uncached(t, 2 ^ 1)
-   local op2 = memoize(function(a)
-      return memoize(function(b)
+   local op2 = bit_memo(function(a)
+      return bit_memo(function(b)
          return op1(a, b)
       end)
    end)
@@ -421,11 +422,27 @@ function M.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
 
+-- from https://www.lua.org/gems/sample.pdf
+-- TODO: smarter cache over time maybe
+local function memoize(f)
+   local mem = {} -- memoizing table
+   setmetatable(mem, { __mode = "kv" }) -- make it weak
+   return function(x) -- new version of ’f’, with memoizing
+      local r = mem[x]
+      if r == nil then -- no previous result?
+         r = f(x) -- calls original function
+         mem[x] = r -- store result for reuse
+      end
+      return r
+   end
+end
+M.memoize = memoize
+
 ---turn string in format of "x -> body" to function(x) return body end | or the tidal preifx function calling syntax like "+| note 1"
 ---@param env table
 ---@return function
 function M.string_lambda(env)
-   return function(f)
+   return memoize(function(f)
       if type(f) == "function" or M.T(f) == "pattern" then
          return f
       end
@@ -441,13 +458,11 @@ function M.string_lambda(env)
          return fn
       else
          local op, param, arg = str_match(f, "([%+%-%*|]*)%s*(%S+)%s*(%S+)")
-         -- print(op, param, arg)
          if not (op or param or arg) then
             return error "not a string lambda"
          end
          local body = str_format("op['%s'](x, %s(%s))", op, param, arg)
          local fstr = "return function(x) return " .. body .. " end"
-         -- print(fstr)
          local fn, err = loadstring(fstr)
          if not fn then
             return false
@@ -456,21 +471,10 @@ function M.string_lambda(env)
          setfenv(fn, env)
          return fn
       end
-   end
+   end)
 end
 
--- TODO:
-function M.memoize(func)
-   local cache = {}
-   return function(k)
-      local res = cache[k]
-      if res == nil then
-         res = func(k)
-         cache[k] = res
-      end
-      return res
-   end
-end
+M.loadstring = memoize(loadstring)
 
 ---returns num_param, is_vararg
 ---@param func function

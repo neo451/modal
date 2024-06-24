@@ -34,6 +34,7 @@ local curry_wrap = ut.curry_wrap
 local nparams = ut.nparams
 local get_args = ut.get_args
 local timeToRand = ut.timeToRand
+local memoize = ut.memoize
 local T = ut.T
 
 local fast, pure, fastcat, slowcat, stack, silence, focus, range, rev, compress
@@ -45,7 +46,7 @@ local op = {}
 local mini = maxi(M, false)
 local sl = ut.string_lambda(M)
 
-local function reify(thing)
+local reify = memoize(function(thing)
    local t = T(thing)
    if "string" == t then
       local res = mini("[" .. thing .. "]")
@@ -57,7 +58,7 @@ local function reify(thing)
    else
       return pure(thing)
    end
-end
+end)
 M.reify = reify
 
 local mt = { __class = "pattern" }

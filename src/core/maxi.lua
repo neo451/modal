@@ -6,7 +6,8 @@ local fun = require "modal.fun"
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
 
-local loadstring = loadstring or load
+local loadstring = ut.loadstring
+local memoize = ut.memoize
 local unpack = unpack or table.unpack
 local setfenv = setfenv or ut.setfenv
 local tremove = table.remove
@@ -410,15 +411,19 @@ return function(env, top_level)
       return rules:match(str)[2]
    end
 
-   ---@param src string
-   ---@return function | boolean
-   return function(src)
+   local to_str = function(src)
       local ok, ast, fstr, fn
       ok, ast = pcall(read, src)
       if not ok then
          return false
       end
       local lua_src = ast_to_src(ast)
+      return lua_src
+   end
+
+   local function to_f(src)
+      local ok, fstr, fn
+      local lua_src = to_str(src)
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
          return false
@@ -429,13 +434,6 @@ return function(env, top_level)
          print "not a valid maxi notation"
       end, env)
       return fn
-   end, function(src)
-      local ok, ast, fstr, fn
-      ok, ast = pcall(read, src)
-      if not ok then
-         return false
-      end
-      local lua_src = ast_to_src(ast)
-      return lua_src
    end
+   return memoize(to_f), memoize(to_str)
 end
