@@ -1,14 +1,11 @@
-local fun = require "modal.fun"
 local M = {}
-
--- TODO: memoize?
 
 local pairs = pairs
 local ipairs = ipairs
 local tostring = tostring
 local loadstring = loadstring or load
 local type = type
-local unpack = unpack or table.unpack
+local unpack = unpack or rawget(table, "unpack")
 local setmetatable = setmetatable
 local str_dump = string.dump
 local str_match = string.match
@@ -20,12 +17,23 @@ local floor = math.floor
 local abs = math.abs
 local debug_info = debug.getinfo
 
-local reduce = fun.reduce
-local map = fun.map
-local filter = fun.filter
-local chain = fun.chain
-
 local setfenv = setfenv or M.setfenv
+
+-- from https://www.lua.org/gems/sample.pdf
+-- TODO: smarter cache over time maybe
+local function memoize(f)
+   local mem = {} -- memoizing table
+   setmetatable(mem, { __mode = "kv" }) -- make it weak
+   return function(x) -- new version of ’f’, with memoizing
+      local r = mem[x]
+      if r == nil then -- no previous result?
+         r = f(x) -- calls original function
+         mem[x] = r -- store result for reuse
+      end
+      return r
+   end
+end
+M.memoize = memoize
 
 ---@table term colors
 local colors = {}
@@ -105,8 +113,7 @@ local bit_memo = function(f)
 end
 
 local make_bitop_uncached = function(t, m)
-   local bitop
-   bitop = function(a, b)
+   local bitop = function(a, b)
       local res, p = 0, 1
       while a ~= 0 and b ~= 0 do
          local am, bm = a % m, b % m
@@ -131,46 +138,49 @@ local make_bitop = function(t)
    return make_bitop_uncached(op2, 2 ^ (t.n or 1))
 end
 
-bit.tobit = function(x)
+local tobit = function(x)
    return x % 2 ^ 32
 end
+bit.tobit = tobit
 
-bit.bxor = make_bitop {
-   [0] = {
-      [0] = 0,
-      [1] = 1,
-   },
-   [1] = {
-      [0] = 1,
-      [1] = 0,
-   },
+local bxor = make_bitop {
+   [0] = { [0] = 0, [1] = 1 },
+   [1] = { [0] = 1, [1] = 0 },
    n = 4,
 }
+bit.bxor = bxor
 
-bit.bnot = function(a)
+local bnot = function(a)
    return MODM - a
 end
+bit.bnot = bnot
 
-bit.band = function(a, b)
-   return ((a + b) - bit.bxor(a, b)) / 2
+local band = function(a, b)
+   return ((a + b) - bxor(a, b)) / 2
 end
-bit.bor = function(a, b)
-   return MODM - bit.band(MODM - a, MODM - b)
-end
+bit.band = band
 
-bit.rshift = function(a, disp)
+local bor = function(a, b)
+   return MODM - band(MODM - a, MODM - b)
+end
+bit.bor = bor
+
+local lshift, rshift
+rshift = function(a, disp)
    if disp < 0 then
-      return bit.lshift(a, -disp)
+      return lshift(a, -disp)
    end
    return floor(a % 2 ^ 32 / 2 ^ disp)
 end
+bit.rshift = rshift
 
-bit.lshift = function(a, disp)
+lshift = function(a, disp)
    if disp < 0 then
-      return bit.rshift(a, -disp)
+      return rshift(a, -disp)
    end
    return (a * 2 ^ disp) % 2 ^ 32
 end
+bit.lshift = lshift
 
 M.bit = bit
 
@@ -244,15 +254,32 @@ end
 ---@param list table
 ---@return table
 function M.filter(f, list)
-   return filter(f, list):totable()
+   local res = {}
+   for i = 1, #list do
+      if f(list[i]) then
+         res[#res + 1] = list[i]
+      end
+   end
+   return res
 end
+
+local function reduce(f, acc, list)
+   for i = 1, #list do
+      acc = f(acc, list[i])
+   end
+   return acc
+end
+M.reduce = reduce
 
 ---list map
 ---@param f function
 ---@param list table
 ---@return table
 function M.map(f, list)
-   return map(f, list):totable()
+   for i = 1, #list do
+      list[i] = f(list[i], i)
+   end
+   return list
 end
 
 ---dump table as key value pairs
@@ -308,16 +335,24 @@ end
 ---@param a table
 ---@param b table
 ---@return table
-function M.concat(a, b)
-   return chain(a, b):totable()
+local function concat(a, b)
+   for i = 1, #b do
+      a[#a + 1] = b[i]
+   end
+   -- return chain(a, b):totable()
+   return a
 end
+M.concat = concat
 
 ---concat two hashmaps
 ---@param a table
 ---@param b table
 ---@return table
 function M.union(a, b)
-   return chain(a, b):tomap()
+   for k, v in pairs(b) do
+      a[k] = v
+   end
+   return a
 end
 
 ---@param index number
@@ -401,9 +436,9 @@ function M.flip(f)
 end
 
 local function xorwise(x)
-   local a = bit.bxor(bit.lshift(x, 13), x)
-   local b = bit.bxor(bit.rshift(a, 17), a)
-   return bit.bxor(bit.lshift(b, 5), b)
+   local a = bxor(lshift(x, 13), x)
+   local b = bxor(rshift(a, 17), a)
+   return bxor(lshift(b, 5), b)
 end
 
 local function _frac(x)
@@ -421,22 +456,6 @@ end
 function M.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
-
--- from https://www.lua.org/gems/sample.pdf
--- TODO: smarter cache over time maybe
-local function memoize(f)
-   local mem = {} -- memoizing table
-   setmetatable(mem, { __mode = "kv" }) -- make it weak
-   return function(x) -- new version of ’f’, with memoizing
-      local r = mem[x]
-      if r == nil then -- no previous result?
-         r = f(x) -- calls original function
-         mem[x] = r -- store result for reuse
-      end
-      return r
-   end
-end
-M.memoize = memoize
 
 ---turn string in format of "x -> body" to function(x) return body end | or the tidal preifx function calling syntax like "+| note 1"
 ---@param env table
@@ -547,7 +566,6 @@ function M.setfenv(f, env)
    return f
 end
 
---- Iterize
 --- debug in 51
 -- function M.get_args(f)
 --    local args = {}
@@ -574,7 +592,7 @@ function M.get_args(f)
             error ""
             return
          end
-         table.insert(args, name)
+         args[#args + 1] = name
       end
    end
 

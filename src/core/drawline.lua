@@ -1,24 +1,14 @@
 local Time = require("modal.types").Time
-local fun = require "modal.fun"
 local ut = require "modal.utils"
-
-local reduce = fun.reduce
-local iter = fun.iter
+local reduce = ut.reduce
 local filter = ut.filter
+local map = ut.map
 local tconcat = table.concat
 
 local gcd_reduce = function(tab)
    return reduce(function(acc, value)
       return acc:gcd(value)
    end, tab[1], tab)
-end
-
-local function map(func, items)
-   local acc = {}
-   for i, v in iter(items) do
-      acc[i] = func(v, i)
-   end
-   return acc
 end
 
 local function drawLine(pat, chars)

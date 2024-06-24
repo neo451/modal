@@ -231,16 +231,14 @@ grammar = Ct(C(grammar))
 local notes = { c = 0, d = 2, e = 4, f = 5, g = 7, a = 9, b = 11 }
 
 local pconcat = function(table1, pivot, table2)
-   table.insert(table1, pivot)
-   for _index_0 = 1, #table2 do
-      local elem = table2[_index_0]
-      table.insert(table1, elem)
+   table1[#table1 + 1] = pivot
+   for i = 1, #table2 do
+      table1[#table1 + 1] = table2[i]
    end
    return table1
 end
-local qsort
 
-qsort = function(table)
+local function qsort(table)
    if #table <= 1 then
       return table
    end
@@ -332,7 +330,7 @@ range = function(n, chord)
             index = #chord
          end
          local new_tone = chord[index] + (12 * octave)
-         table.insert(new_tones, new_tone)
+         new_tones[#new_tones + 1] = new_tone
       end
       return concat(chord, new_tones)
    end

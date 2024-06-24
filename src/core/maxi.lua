@@ -1,7 +1,6 @@
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 local ut = require "modal.utils"
-local fun = require "modal.fun"
 
 local ast_to_src = require "modal.ast_to_src"
 local mpp = require("metalua.pprint").print
@@ -11,11 +10,11 @@ local memoize = ut.memoize
 local unpack = unpack or table.unpack
 local setfenv = setfenv or ut.setfenv
 local tremove = table.remove
+local ipairs = ipairs
 local type = type
 local filter = ut.filter
 local map = ut.map
-local iter = fun.iter
-local reduce = fun.reduce
+local reduce = ut.reduce
 
 local sequence = V "sequence"
 local slice = V "slice"
@@ -190,7 +189,7 @@ end
 
 local function rReps(ast)
    local res = {}
-   for _, node in iter(ast) do
+   for _, node in ipairs(ast) do
       if node.reps then
          local reps = node.reps
          for _ = 1, reps do
@@ -209,7 +208,7 @@ local function rReps(ast)
 end
 
 local function pSlices(sli, ...)
-   for _, v in iter { ... } do
+   for _, v in ipairs { ... } do
       sli = v(sli)
    end
    return sli
@@ -222,7 +221,7 @@ end
 
 local function rWeight(args)
    local acc = {}
-   for _, v in iter(args) do
+   for _, v in ipairs(args) do
       acc[#acc + 1] = v.weight and Num(v.weight) or Num(1)
       acc[#acc + 1] = v
    end
@@ -352,7 +351,7 @@ end
 
 local function pRoot(...)
    local stats = { ... }
-   for i, a in iter(stats) do
+   for i, a in ipairs(stats) do
       stats[i] = a
    end
    ---@diagnostic disable-next-line: inject-field

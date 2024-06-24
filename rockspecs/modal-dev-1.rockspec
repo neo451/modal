@@ -30,7 +30,6 @@ build = {
       ["modal.luacats"] = "src/luacats.lua",
       ["modal.utils"] = "src/core/utils.lua",
       ["modal.log"] = "src/core/log.lua",
-      ["modal.fun"] = "src/core/fun.lua",
 
       ["modal.stream"] = "src/core/stream.lua",
       ["modal.drawline"] = "src/core/drawline.lua",

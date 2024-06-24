@@ -181,14 +181,10 @@ function event_mt:combineContext(other)
    end
    local loc1 = self.context.locations or {}
    local loc2 = other.context.locations or {}
-   local newloc = {}
-   for _, value in ipairs(loc1) do
-      table.insert(newloc, value)
+   for i = 1, #loc2 do
+      loc1[#loc1 + 1] = loc2[i]
    end
-   for _, value in ipairs(loc2) do
-      table.insert(newloc, value)
-   end
-   newContext.locations = newloc
+   newContext.locations = loc1
    return newContext
 end
 

@@ -95,3 +95,14 @@ describe("drawLine", function()
       assert.same("|aaa|aaa", drawLine(pat.fast(3, "a"), 6))
    end)
 end)
+
+describe("reduce", function()
+   it("should foldl", function()
+      assert.same(
+         10,
+         M.reduce(function(a, b)
+            return a + b
+         end, 0, { 1, 2, 3, 4 })
+      )
+   end)
+end)

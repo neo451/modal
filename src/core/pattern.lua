@@ -1,7 +1,6 @@
 local types = require "modal.types"
 local Event, Span, State, Time = types.Event, types.Span, types.State, types.Time
 local ut = require "modal.utils"
-local fun = require "modal.fun"
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
 local TDef = require "modal.typedef"
@@ -11,8 +10,7 @@ local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
 local ipairs = ipairs
 local setmetatable = setmetatable
-local iter = fun.iter
-local reduce = fun.reduce
+local reduce = ut.reduce
 local tremove = table.remove
 local str_format = string.format
 local sin = math.sin
@@ -596,14 +594,13 @@ op["#"] = op["|>"]
 
 M.op = op
 
----@type Pattern
 silence = Pattern()
 M.silence = silence
 
 function pure(value)
    local query = function(state)
       local cycles = state.span:spanCycles()
-      for i, v in iter(cycles) do
+      for i, v in ipairs(cycles) do
          cycles[i] = Event(v._begin:wholeCycle(), v, value)
       end
       return cycles
@@ -691,7 +688,7 @@ local function register(type_sig, f, nify)
       M[name] = f_c_p_t
       rawset(mt, name, method_wrap(f_c_p_t))
    else
-      TYPES[name] = TDef(type_sig)
+      TYPES[name] = tdef
       local f_t = type_wrap(f, name)
       local f_t_c = curry_wrap(arity, f_t)
       M[name] = f_t_c
@@ -709,12 +706,12 @@ end
 register("overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false)
 
 function stack(pats)
-   return reduce(overlay, silence, iter(pats))
+   return reduce(overlay, silence, pats)
 end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
 function M.polymeter(steps, pats)
-   for i, pat in iter(pats) do
+   for i, pat in ipairs(pats) do
       pats[i] = fast(steps / pat:len(), pat)
    end
    return stack(pats)
@@ -749,7 +746,7 @@ register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
 
 local function timecat(tups)
    local total = 0
-   for i, v in iter(tups) do
+   for i, v in ipairs(tups) do
       if i % 2 == 1 then
          total = total + v
       end
@@ -769,7 +766,7 @@ M.timecat = timecat
 
 local function arrange(tups)
    local total = 0
-   for i, v in iter(tups) do
+   for i, v in ipairs(tups) do
       if i % 2 == 1 then
          total = total + v
       end
@@ -789,7 +786,7 @@ end
 register("superimpose :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", superimpose, false)
 
 local function layer(tf, pat)
-   for i, f in iter(tf) do
+   for i, f in ipairs(tf) do
       tf[i] = f(pat)
    end
    return stack(tf)
@@ -922,7 +919,10 @@ end
 register("zoom :: Time -> Time -> Pattern a -> Pattern a", zoom, false)
 
 local _run = function(n)
-   local list = fun.range(0, n - 1):totable()
+   local list = {}
+   for i = 1, n do
+      list[i] = i - 1
+   end
    return fastcat(list)
 end
 
