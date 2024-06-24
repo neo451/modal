@@ -42,6 +42,7 @@ local expr = V "expr"
 local ret = V "ret"
 local stat = V "stat"
 local choose = V "choose"
+local dotStack = V "dotStack"
 
 local function Id(a)
    return { tag = "Id", a }
@@ -71,7 +72,7 @@ local seed = -1 -- TODO: use this?
 local ws = S " \n\r\t" ^ 0
 local comma = ws * P "," * ws
 local pipe = ws * P "|" * ws
--- dot = ws * P(".") * ws
+local dot = ws * P "." * ws
 
 local function pNumber(num)
    return Num(tonumber(num))
@@ -109,7 +110,7 @@ end
 local step_char = R("09", "AZ", "az") + S [[~^'._]]
 local tidalop = (S "|+-*/^%><" ^ 2 + P "#") / id
 local arith = (S "+-*/^%" - P "|") / id
-local step = ws * ((step_char ^ 1) / pStep) * ws
+local step = ws * ((step_char ^ 1 - P ".") / pStep) * ws
 local minus = P "-"
 local plus = P "+"
 local zero = P "0"
@@ -252,6 +253,11 @@ local function pChoose(...)
    return rReps(args), "Choose"
 end
 
+local function pDotStack(...)
+   local args = map(rReps, { ... })
+   return rReps(args), "DotStack"
+end
+
 local opsymb = {
    ["+"] = "add",
    ["-"] = "sub",
@@ -309,12 +315,13 @@ local function pTailop(...)
 end
 
 local function pSubCycle(args, tag)
+   args = map(pSeq(false), args)
    if tag == "Stack" then
-      args = map(pSeq(false), args)
       return Call("stack", Table(args))
    elseif tag == "Choose" then
-      args = map(pSeq(false), args)
       return Call("randcat", Table(args))
+   elseif tag == "DotStack" then
+      return Call("fastcat", Table(args))
    end
 end
 
@@ -328,9 +335,16 @@ local function pPolymeter(args, _, steps)
    return Call("polymeter", steps, Table(args))
 end
 
-local function pSlowSeq(args, _)
-   args = rReps(args)
-   return pSeq(true)(args)
+local function pSlowSeq(args, tag)
+   if tag then
+      args = map(pSeq(false), args)
+      if tag == "DotStack" then
+         return Call("slowcat", Table(args))
+      elseif tag == "Choose" then
+         return Call("randcat", Table(args))
+      end
+   end
+   return pSeq(true)(rReps(args))
 end
 
 local function pRoot(...)
@@ -377,12 +391,12 @@ local grammar = {
    sequence = (mini ^ 1) / pDot,
    stack = sequence * (comma * sequence) ^ 0 / pStack,
    choose = sequence * (pipe * sequence) ^ 1 / pChoose,
-   -- dotStack = sequence * (dot * sequence) ^ 1 / parseDotStack,
+   dotStack = sequence * (dot * sequence) ^ 1 / pDotStack,
    tailop = tidalop * ws * step * ws * mini * ws / pTailop,
    mini = (slice * op ^ 0) / pSlices,
    slice = step + number + sub_cycle + polymeter + slow_sequence + list,
-   sub_cycle = P "[" * ws * (choose + stack) * ws * P "]" / pSubCycle,
-   slow_sequence = P "<" * ws * sequence * ws * P ">" / pSlowSeq,
+   sub_cycle = P "[" * ws * (dotStack + choose + stack) * ws * P "]" / pSubCycle,
+   slow_sequence = P "<" * ws * (dotStack + choose + sequence) * ws * P ">" / pSlowSeq,
    polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
    polymeter_steps = (P "%" * slice) ^ -1 / pPolymeterSteps,
    -- op = fast + slow + tail + range + replicate + degrade + weight + euclid + rand,
