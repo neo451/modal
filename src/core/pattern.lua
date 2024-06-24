@@ -389,23 +389,12 @@ mt.appRight = appRight
 
 local function bindWhole(pat, choose_whole, func)
    local query = function(state)
-      local withWhole = function(a, b)
-         local new_whole = choose_whole(a.whole, b.whole)
-         return Event(new_whole, b.part, b.value)
-      end
-      local match = function(a)
-         local events = func(a.value).query(state:setSpan(a.part))
-         for i = 1, #events do
-            events[i] = withWhole(a, events[i])
-         end
-         return events
-      end
       local events = pat.query(state)
       local res = {}
-      for i = 1, #events do
-         local evs = match(events[i])
-         for j = 1, #evs do
-            res[#res + 1] = evs[j]
+      for _, a in ipairs(events) do
+         local evs = func(a.value).query(state:setSpan(a.part))
+         for _, b in ipairs(evs) do
+            res[#res + 1] = Event(choose_whole(a.whole, b.whole), b.part, b.value)
          end
       end
       return res
@@ -431,7 +420,7 @@ end
 mt.join = join
 
 local function outerBind(pat, func)
-   return bindWhole(pat, function(a)
+   return bindWhole(pat, function(a, _)
       return a
    end, func)
 end
@@ -1151,22 +1140,15 @@ local function reviter(n, pat)
 end
 register("reviter :: Pattern Int -> Pattern a -> Pattern a", reviter)
 
--- register("echoWith", function(times, time, func, pat)
---    local f = function(index)
---       return func(M.late(time * index, pat))
---    end
---    local ts
---    do
---       local _accum_0 = {}
---       local _len_0 = 1
---       for i = 0, times - 1 do
---          _accum_0[_len_0] = i
---          _len_0 = _len_0 + 1
---       end
---       ts = _accum_0
---    end
---    return stack(map(f, ts))
--- end)
+--- TODO:
+local function echoWith(times, time, f, pat)
+   local acc = {}
+   for i = 0, times - 1 do
+      acc[i] = f(M.late(time * i, pat))
+   end
+   return stack(acc)
+end
+register("echoWith :: Pattern Int -> Pattern Int -> Pattern f -> Pattern a -> Pattern a", echoWith)
 
 local function when(test, f, pat)
    local query = function(state)
@@ -1187,7 +1169,7 @@ local slowcatPrime = function(pats)
       local pat = pats[index]
       return pat.query(state)
    end
-   return Pattern(query):splitQueries()
+   return splitQueries(Pattern(query))
 end
 
 local function every(n, f, pat)

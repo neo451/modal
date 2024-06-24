@@ -358,7 +358,7 @@ end
 ---@param index number
 ---@param list table
 ---@return table, table
-function M.splitAt(index, list)
+local function splitAt(index, list)
    local fst, lst = {}, {}
    for k, v in pairs(list) do
       if k <= index then
@@ -369,13 +369,14 @@ function M.splitAt(index, list)
    end
    return fst, lst
 end
+M.splitAt = splitAt
 
 ---@param step number
 ---@param list table
 ---@return table
 function M.rotate(step, list)
-   local a, b = M.splitAt(step, list)
-   return M.concat(b, a)
+   local a, b = splitAt(step, list)
+   return concat(b, a)
 end
 
 ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
@@ -407,7 +408,7 @@ end
 ---@param func function
 ---@param num_args number
 ---@return function
-function M.curry(func, num_args)
+local function curry(func, num_args)
    num_args = num_args or 2
    if num_args <= 1 then
       return func
@@ -425,6 +426,7 @@ function M.curry(func, num_args)
    end
    return curry_h(function() end, num_args)
 end
+M.curry = curry
 
 ---flip two args of f
 ---@param f function
@@ -532,7 +534,7 @@ function M.curry_wrap(arity, f)
    return function(...)
       local args = { ... }
       if #args < arity then
-         local cf = M.curry(f, arity)
+         local cf = curry(f, arity)
          for _, v in ipairs(args) do
             cf = cf(v)
          end
@@ -565,6 +567,32 @@ function M.setfenv(f, env)
    end
    return f
 end
+
+local function partition(array, left, right, pivotIndex)
+   local pivotValue = array[pivotIndex]
+   array[pivotIndex], array[right] = array[right], array[pivotIndex]
+
+   local storeIndex = left
+
+   for i = left, right - 1 do
+      if array[i] <= pivotValue then
+         array[i], array[storeIndex] = array[storeIndex], array[i]
+         storeIndex = storeIndex + 1
+      end
+      array[storeIndex], array[right] = array[right], array[storeIndex]
+   end
+
+   return storeIndex
+end
+
+local function quicksort(array, left, right)
+   if right > left then
+      local pivotNewIndex = partition(array, left, right, left)
+      quicksort(array, left, pivotNewIndex - 1)
+      quicksort(array, pivotNewIndex + 1, right)
+   end
+end
+M.quicksort = quicksort
 
 --- debug in 51
 -- function M.get_args(f)

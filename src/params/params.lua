@@ -630,11 +630,10 @@ local aliasParams = {
    vcoegint = "vco",
    voice = "voi",
 }
-local reify, stack
-do
-   local _obj_0 = require "modal.pattern"
-   reify, stack = _obj_0.reify, _obj_0.stack
-end
+
+local pattern = require "modal.pattern"
+local reify, stack, pure = pattern.reify, pattern.stack, pattern.pure
+local T = require("modal.utils").T
 
 local P = {}
 local create = function(name)
@@ -676,7 +675,7 @@ for i = 1, #genericParams do
 end
 
 local parseChord = require "modal.chords"
-
+require "moon.all"
 P.note = function(pat)
    local notemt = {
       __add = function(self, other)
@@ -684,14 +683,27 @@ P.note = function(pat)
       end,
    }
 
-   local chordToStack = function(thing)
-      return stack(parseChord(thing))
+   local function chordToStack(thing)
+      if type(thing) == "string" then
+         if type(parseChord(thing)) == "table" then
+            return stack(parseChord(thing))
+         end
+         return reify(thing)
+      elseif T(thing) == "pattern" then
+         return thing
+            :fmap(function(chord)
+               return stack(parseChord(chord))
+            end)
+            :outerJoin()
+      else
+         return reify(thing)
+      end
    end
    local withVal = function(v)
       return setmetatable({ note = v }, notemt)
+      -- return { note = v }
    end
-   -- return fmap((fmap(reify(args), chordToStack)):outerJoin(), withVal)
-   return reify(pat):fmap(withVal)
+   return chordToStack(pat):fmap(withVal)
 end
 
 return P

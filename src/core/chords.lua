@@ -1,5 +1,6 @@
 local ut = require "modal.utils"
 local concat, map = ut.concat, ut.map
+local qsort = ut.quicksort
 
 local major = { 0, 4, 7 }
 local aug = { 0, 4, 8 }
@@ -185,13 +186,11 @@ local chordTable = {
    ["m11sharp"] = minor11sharp,
    ["m11s"] = minor11sharp,
 }
-local P, S, V, R, C, Ct, Cc
-do
-   local _obj_0 = require "lpeg"
-   P, S, V, R, C, Ct, Cc = _obj_0.P, _obj_0.S, _obj_0.V, _obj_0.R, _obj_0.C, _obj_0.Ct, _obj_0.Cc
-end
-local token
-token = function(id)
+
+local lpeg = require "lpeg"
+local P, S, V, R, C, Ct, Cc = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct, lpeg.Cc
+
+local token = function(id)
    return Ct(Cc(id) * C(V(id)))
 end
 local note = token "note"
@@ -230,60 +229,6 @@ grammar = Ct(C(grammar))
 
 local notes = { c = 0, d = 2, e = 4, f = 5, g = 7, a = 9, b = 11 }
 
-local pconcat = function(table1, pivot, table2)
-   table1[#table1 + 1] = pivot
-   for i = 1, #table2 do
-      table1[#table1 + 1] = table2[i]
-   end
-   return table1
-end
-
-local function qsort(table)
-   if #table <= 1 then
-      return table
-   end
-   local pivot = table[1]
-   local rest
-   do
-      local _accum_0 = {}
-      local _len_0 = 1
-      local _max_0 = #table
-      for _index_0 = 2, _max_0 < 0 and #table + _max_0 or _max_0 do
-         local elem = table[_index_0]
-         _accum_0[_len_0] = elem
-         _len_0 = _len_0 + 1
-      end
-      rest = _accum_0
-   end
-   local left
-   do
-      local _accum_0 = {}
-      local _len_0 = 1
-      for _index_0 = 1, #rest do
-         local elem = rest[_index_0]
-         if elem <= pivot then
-            _accum_0[_len_0] = elem
-            _len_0 = _len_0 + 1
-         end
-      end
-      left = _accum_0
-   end
-   local right
-   do
-      local _accum_0 = {}
-      local _len_0 = 1
-      for _index_0 = 1, #rest do
-         local elem = rest[_index_0]
-         if elem > pivot then
-            _accum_0[_len_0] = elem
-            _len_0 = _len_0 + 1
-         end
-      end
-      right = _accum_0
-   end
-   return pconcat((qsort(left)), pivot, (qsort(right)))
-end
-
 open = function(chord)
    chord[1] = chord[1] - 12
    chord[3] = chord[3] - 12
@@ -313,15 +258,11 @@ range = function(n, chord)
    local new_tones = {}
    n = tonumber(n)
    if #chord > n then
-      local _accum_0 = {}
-      local _len_0 = 1
-      local _max_0 = n
-      for _index_0 = 1, _max_0 < 0 and #chord + _max_0 or _max_0 do
-         local tone = chord[_index_0]
-         _accum_0[_len_0] = tone
-         _len_0 = _len_0 + 1
+      local acc = {}
+      for i = 1, n < 0 and #chord + n or n do
+         acc[i] = chord[i]
       end
-      return _accum_0
+      return acc
    else
       for i = #chord + 1, n do
          local index = i % #chord
@@ -341,6 +282,9 @@ local parseChord = function(chord)
       return chord
    end
    local ast = grammar:match(chord)
+   if not ast then
+      return false
+   end
    notename = notes[ast[2][3][2]]
    offset = 0
    octave = 5
