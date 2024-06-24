@@ -39,6 +39,11 @@ local M = {}
 local TYPES = {}
 local op = {}
 
+-- give mini access to global vars
+setmetatable(M, {
+   __index = _G,
+})
+
 local mini = maxi(M, false)
 local sl = ut.string_lambda(M)
 

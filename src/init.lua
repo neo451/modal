@@ -48,6 +48,10 @@ for name, func in pairs(P) do
    end
 end
 
+setmetatable(modal, {
+   __index = _G,
+})
+
 pattern.sl = ut.string_lambda(modal)
 modal.sl = pattern.sl
 

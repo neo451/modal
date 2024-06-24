@@ -21,7 +21,7 @@ describe("symb", function()
    it("should parse steps to lua String or Id", function()
       local hello
       assert.same("hello", eval "hello")
-      assert.same(hello, eval "^hello")
+      assert.same(hello, eval "'hello")
    end)
    it("should parse steps to lua String or Id", function()
       assert.same(42, eval "42")

@@ -82,7 +82,7 @@ local function pStep(chars)
       return Id "silence"
    elseif tonumber(chars) then
       return Num(tonumber(chars))
-   elseif chars:sub(0, 1) == "^" then
+   elseif chars:sub(0, 1) == "'" then
       return Id(chars:sub(2, #chars))
    end
    return Str(chars)
@@ -451,8 +451,6 @@ return function(env, top_level)
       if not ok then
          return false
       end
-      -- HACK:
-      env.print = print
       return setfenv(fstr and fstr or function()
          print "not a valid maxi notation"
       end, env)
