@@ -234,6 +234,9 @@ local function pSeq(isSlow)
       if weightSum > #args then
          return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
       else
+         if #args == 1 then
+            return Call("pure", unpack(args))
+         end
          return Call(isSlow and "slowcat" or "fastcat", Table(args))
       end
    end
@@ -311,7 +314,7 @@ local function pSubCycle(args, tag)
       return Call("stack", Table(args))
    elseif tag == "Choose" then
       args = map(pSeq(false), args)
-      return Call("randcat", unpack(args))
+      return Call("randcat", Table(args))
    end
 end
 
@@ -412,7 +415,7 @@ return function(env, top_level)
    end
 
    local to_str = function(src)
-      local ok, ast, fstr, fn
+      local ok, ast
       ok, ast = pcall(read, src)
       if not ok then
          return false
@@ -422,18 +425,20 @@ return function(env, top_level)
    end
 
    local function to_f(src)
-      local ok, fstr, fn
+      local ok, fstr
       local lua_src = to_str(src)
+      if not lua_src then
+         return false
+      end
       ok, fstr = pcall(loadstring, lua_src)
       if not ok then
          return false
       end
       -- HACK:
       env.print = print
-      fn = setfenv(fstr and fstr or function()
+      return setfenv(fstr and fstr or function()
          print "not a valid maxi notation"
       end, env)
-      return fn
    end
    return memoize(to_f), memoize(to_str)
 end

@@ -48,7 +48,6 @@ for name, func in pairs(P) do
    end
 end
 
--- TODO: update env??
 pattern.sl = ut.string_lambda(modal)
 modal.sl = pattern.sl
 

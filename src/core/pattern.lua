@@ -131,14 +131,14 @@ end
 mt.__index = mt
 
 -- automatically export pattern methods
-setmetatable(mt, {
-   __newindex = function(_, k, v)
-      M[k] = v
-   end,
-   __index = function(_, k)
-      return M[k]
-   end,
-})
+-- setmetatable(mt, {
+--    __newindex = function(_, k, v)
+--       M[k] = v
+--    end,
+--    __index = function(_, k)
+--       return M[k]
+--    end,
+-- })
 
 ---@class Pattern
 local function Pattern(query)
@@ -582,12 +582,8 @@ M.silence = silence
 function pure(value)
    local query = function(state)
       local cycles = state.span:spanCycles()
-      local f = function(span)
-         local whole = span._begin:wholeCycle()
-         return Event(whole, span, value)
-      end
       for i, v in iter(cycles) do
-         cycles[i] = f(v)
+         cycles[i] = Event(v._begin:wholeCycle(), v, value)
       end
       return cycles
    end
@@ -697,11 +693,10 @@ end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
 function M.polymeter(steps, pats)
-   local res = {}
    for i, pat in iter(pats) do
-      res[i] = fast(steps / pat:len(), pat)
+      pats[i] = fast(steps / pat:len(), pat)
    end
-   return stack(res)
+   return stack(pats)
 end
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
@@ -906,7 +901,7 @@ end
 register("zoom :: Time -> Time -> Pattern a -> Pattern a", zoom, false)
 
 local _run = function(n)
-   local list = fun.totable(fun.range(0, n - 1))
+   local list = fun.range(0, n - 1):totable()
    return fastcat(list)
 end
 
@@ -917,8 +912,8 @@ register("run :: Pattern Int -> Pattern Int", run, false)
 
 local _scan = function(n)
    local res = {}
-   for _, v in fun.range(1, n) do
-      res[#res + 1] = run(v)
+   for i = 1, n do
+      res[i] = run(i)
    end
    return slowcat(res)
 end
@@ -984,8 +979,7 @@ local irand = function(ipat)
 end
 register("irand :: Pattern Num -> Pattern Num", irand)
 
-local _chooseWith = function(pat, ...)
-   local vals = { ... }
+local _chooseWith = function(pat, vals)
    if #vals == 0 then
       return silence
    end
@@ -999,21 +993,22 @@ end
 --    return _chooseWith(pat, ...):outerJoin()
 -- end
 
-local chooseInWith = function(pat, ...)
-   return _chooseWith(pat, ...):innerJoin()
+local chooseInWith = function(pat, vals)
+   return innerJoin(_chooseWith(pat, vals))
 end
 
-local choose = function(...)
-   return chooseInWith(M.rand, ...)
+local choose = function(vals)
+   return chooseInWith(M.rand, vals)
 end
 
-local chooseCycles = function(...)
-   return M.segment(1, choose(...))
+local chooseCycles = function(vals)
+   return M.segment(1, choose(vals))
 end
 
-M.randcat = function(...)
-   return chooseCycles(...)
+local randcat = function(pats)
+   return chooseCycles(pats)
 end
+register("randcat :: [Pattern a] -> Pattern a", randcat, false)
 
 local function degradeByWith(prand, by, pat)
    if T(by) == "fraction" then
@@ -1032,7 +1027,7 @@ local function degradeByWith(prand, by, pat)
    )
 end
 
-register("degradeByWith :: Pattern Double -> Double -> Pattern a -> Pattern a", degradeByWith, false)
+register("degradeByWith :: Pattern Double -> Double -> Pattern a -> Pattern a", degradeByWith)
 
 local function degradeBy(by, pat)
    return degradeByWith(M.rand, by, pat)
@@ -1137,7 +1132,7 @@ register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
-register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range, false)
+register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
 
 -- register("echoWith", function(times, time, func, pat)
 --    local f = function(index)
@@ -1158,21 +1153,20 @@ register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern
 --
 local function when(test, f, pat)
    local query = function(state)
-      local cycle_idx = state.span._begin:sam():asFloat()
+      local cycle_idx = state.span._begin:sam()
       if test(cycle_idx) then
-         return (f(pat)).query(state)
+         return f(pat).query(state)
       else
          return pat.query(state)
       end
    end
    return Pattern(query):splitQueries()
 end
-register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", when, false)
+register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", when)
 
 local slowcatPrime = function(pats)
    local query = function(state)
-      local len = #pats
-      local index = state.span._begin:sam():asFloat() % len + 1
+      local index = state.span._begin:sam():asFloat() % #pats + 1
       local pat = pats[index]
       return pat.query(state)
    end
@@ -1190,7 +1184,7 @@ end
 register("every :: Pattern Int -> Pattern f -> Pattern a -> Pattern a", every)
 
 local function off(tp, f, pat)
-   return pat:overlay(f(pat:late(tp)))
+   return overlay(f(pat:late(tp)), pat)
 end
 register("off :: Pattern Time -> Pattern f -> Pattern a -> Pattern a", off)
 

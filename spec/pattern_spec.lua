@@ -317,6 +317,15 @@ describe("fastcat", function()
    end)
 end)
 
+describe("randcat", function()
+   it("should randomly alternate between the patterns in the list, all in one cycle", function()
+      local pat = randcat { 1, 2, 3 }
+      assert.same(pure(1)(0, 1), pat(0, 1))
+      assert.same(pure(2)(1, 2), pat(1, 2))
+      assert.same(pure(2)(2, 3), pat(2, 3))
+   end)
+end)
+
 describe("stack", function()
    it("should stack up the pats to be played together", function()
       local pat = stack { pure "bd", pure "sd", pure "hh" }

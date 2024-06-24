@@ -88,8 +88,8 @@ end)
 
 describe("choose", function()
    it("should parse mini choose as first class", function()
-      assert.pat(randcat(pure "bd", pure "sd", pure "cp"), eval "[bd | sd | cp]")
-      assert.pat(randcat(fastcat { "bd", "sd" }, pure "sd", pure "cp"), eval "[bd sd | sd | cp]")
+      assert.pat(randcat { pure "bd", pure "sd", pure "cp" }, eval "[bd | sd | cp]")
+      assert.pat(randcat { fastcat { "bd", "sd" }, pure "sd", pure "cp" }, eval "[bd sd | sd | cp]")
    end)
 end)
 
