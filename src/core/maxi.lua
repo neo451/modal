@@ -236,7 +236,10 @@ local function pSeq(isSlow)
          return Call(isSlow and "arrange" or "timecat", Table(rWeight(args)))
       else
          if #args == 1 then
-            return Call("pure", unpack(args))
+            if isSlow then
+               return Call("pure", args[1])
+            end
+            return args[1]
          end
          return Call(isSlow and "slowcat" or "fastcat", Table(args))
       end
@@ -441,6 +444,7 @@ return function(env, top_level)
    local function to_f(src)
       local ok, fstr
       local lua_src = to_str(src)
+      -- print(lua_src)
       if not lua_src then
          return false
       end
