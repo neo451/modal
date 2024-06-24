@@ -17,6 +17,8 @@ local modal = {
 
 modal.drawLine = drawLine
 
+local pairs = pairs
+
 for name, func in pairs(factory) do
    modal[name] = func
    mt[name] = ut.method_wrap(func)

@@ -1,6 +1,5 @@
 local Clock = require "modal.clock"
 local DefaultClock = Clock()
-local pat = require "modal.pattern"
 local M = {}
 
 function M.p(key, pattern)

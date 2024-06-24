@@ -2,9 +2,9 @@ local socket = require "socket"
 local maxi = require "modal.maxi"
 local log = require "modal.log"
 local M = require "modal"
-local ut = require "modal.utils"
 
-local clock = M.DefaultClock
+local clock = require("modal.factory").DefaultClock
+print(clock)
 clock:start()
 
 local host = "*"
