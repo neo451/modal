@@ -45,7 +45,6 @@ setmetatable(M, {
 })
 
 local mini = maxi(M, false)
-local sl = ut.string_lambda(M)
 
 local reify = memoize(function(thing)
    local t = T(thing)
@@ -183,7 +182,7 @@ end
 mt.filterValues = filterValues
 
 local function removeNils(pat)
-   return pat:filterValues(function(v)
+   return filterValues(pat, function(v)
       return v ~= nil
    end)
 end
@@ -646,14 +645,13 @@ local function type_wrap(f, name)
                end
             end
          else
-            if T(tvar) == "table" or tvar == "f" then
-               v = sl(v)
-            end
             if tvar == "Time" then
                v = Time(v)
             end
             if tc then
-               if tc == "Pattern" then
+               if tc == "Pattern" and tvar == "f" and type(v) == "string" then
+                  v = reify("(" .. v .. ")")
+               elseif tc == "Pattern" then
                   v = reify(v)
                end
             end
@@ -669,8 +667,8 @@ local function register(type_sig, f, nify)
    if T(nify) == "nil" then
       nify = true
    end
-   local arity = nparams(f)
    local arg_names = get_args(f)
+   local arity = #arg_names
    for i, v in pairs(arg_names) do
       tdef[i].name = v
    end
@@ -729,7 +727,7 @@ function slowcat(pats)
          return t - offset
       end)))
    end
-   return Pattern(query):splitQueries()
+   return splitQueries(Pattern(query))
 end
 register("slowcat :: [Pattern a] -> Pattern a", slowcat, false)
 
@@ -825,7 +823,7 @@ register("early :: Time -> Pattern a -> Pattern a", early, false) -- HACK: why n
 
 -- rotR
 local function late(offset, pat)
-   return M.early(-offset, pat)
+   return early(-offset, pat)
 end
 register("late :: Time -> Pattern a -> Pattern a", late, false)
 
@@ -833,7 +831,7 @@ local function inside(np, f, pat)
    local function _inside(n)
       return fast(n, f(slow(n, pat)))
    end
-   return fmap(np, _inside):innerJoin()
+   return innerJoin(fmap(np, _inside))
 end
 register("inside :: Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", inside, false)
 
@@ -851,7 +849,6 @@ end
 register("ply :: Pattern Time -> Pattern a -> Pattern a", ply)
 
 local function fastgap(factor, pat)
-   factor = Time(factor)
    if factor <= Time(0) then
       return silence
    end
@@ -877,7 +874,7 @@ local function fastgap(factor, pat)
       end
       return events
    end
-   return Pattern(query):splitQueries()
+   return splitQueries(Pattern(query))
 end
 register("fastgap :: Pattern Time -> Pattern a -> Pattern a", fastgap)
 
@@ -908,7 +905,7 @@ local function zoom(s, e, pat)
          return (t - s) / dur
       end)
    end
-   return withEventSpan(withQuerySpan(pat, qf), ef):splitQueries()
+   return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
 end
 register("zoom :: Time -> Time -> Pattern a -> Pattern a", zoom, false)
 
@@ -1044,7 +1041,7 @@ local function degradeByWith(prand, by, pat)
             return val
          end
       end),
-      prand:filterValues(f)
+      filterValues(prand, f)
    )
 end
 
@@ -1077,9 +1074,10 @@ end
 register("undegrade :: Pattern a -> Pattern a", undegrade)
 
 local function sometimesBy(by, func, pat)
-   return fmap(by, function()
+   local f = function()
       return overlay(degradeBy(by, pat), func(undegradeBy(1 - by, pat)))
-   end):innerJoin()
+   end
+   return innerJoin(fmap(by, f))
 end
 register("sometimesBy :: Pattern Double -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimesBy)
 
@@ -1164,7 +1162,7 @@ local function when(test, f, pat)
          return pat.query(state)
       end
    end
-   return Pattern(query):splitQueries()
+   return splitQueries(Pattern(query))
 end
 register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", when)
 
@@ -1184,13 +1182,15 @@ local function every(n, f, pat)
    end
    return slowcatPrime(acc)
 end
--- HACK: "Pattern Int -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a",
+-- nicer to write than f as ( -> ), just reify f
+-- register("every :: Pattern Int -> Pattern (a -> a) -> Pattern a -> Pattern a", every)
 register("every :: Pattern Int -> Pattern f -> Pattern a -> Pattern a", every)
 
 local function off(tp, f, pat)
-   return overlay(f(pat:late(tp)), pat)
+   return overlay(f(late(tp, pat)), pat)
 end
-register("off :: Pattern Time -> Pattern f -> Pattern a -> Pattern a", off)
+-- HACK:
+register("off :: Pattern Time -> Pattern b -> Pattern a -> Pattern a", off)
 
 local function scale(name, pat)
    return fmap(pat, getScale(name))
@@ -1219,6 +1219,5 @@ M.dump = ut.dump
 M.t = TYPES
 M.mt = mt
 M.mini = mini
-M.sl = sl
 
 return M

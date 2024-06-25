@@ -8,16 +8,12 @@ local type = type
 local unpack = unpack or rawget(table, "unpack")
 local setmetatable = setmetatable
 local str_dump = string.dump
-local str_match = string.match
-local str_format = string.format
 local str_char = string.char
 local tconcat = table.concat
 local tremove = table.remove
 local floor = math.floor
 local abs = math.abs
 local debug_info = debug.getinfo
-
-local setfenv = setfenv or M.setfenv
 
 -- from https://www.lua.org/gems/sample.pdf
 -- TODO: smarter cache over time maybe
@@ -34,6 +30,7 @@ local function memoize(f)
    end
 end
 M.memoize = memoize
+M.loadstring = memoize(loadstring)
 
 ---@table term colors
 local colors = {}
@@ -458,44 +455,6 @@ end
 function M.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
-
----turn string in format of "x -> body" to function(x) return body end | or the tidal preifx function calling syntax like "+| note 1"
----@param env table
----@return function
-function M.string_lambda(env)
-   return memoize(function(f)
-      if type(f) == "function" or M.T(f) == "pattern" then
-         return f
-      end
-      if f:find "->" then
-         local arg, body = f:match "%s*(%S+)%s*%-%>%s*(.+)"
-         local fstr = "return function(" .. arg .. ") return " .. body .. " end"
-         local fn, err = loadstring(fstr)
-         if not fn then
-            return error(err)
-         end
-         fn = fn()
-         setfenv(fn, env)
-         return fn
-      else
-         local op, param, arg = str_match(f, "([%+%-%*|]*)%s*(%S+)%s*(%S+)")
-         if not (op or param or arg) then
-            return error "not a string lambda"
-         end
-         local body = str_format("op['%s'](x, %s(%s))", op, param, arg)
-         local fstr = "return function(x) return " .. body .. " end"
-         local fn, err = loadstring(fstr)
-         if not fn then
-            return false
-         end
-         fn = fn()
-         setfenv(fn, env)
-         return fn
-      end
-   end)
-end
-
-M.loadstring = memoize(loadstring)
 
 ---returns num_param, is_vararg
 ---@param func function

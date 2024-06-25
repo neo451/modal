@@ -52,8 +52,8 @@ setmetatable(modal, {
    __index = _G,
 })
 
-pattern.sl = ut.string_lambda(modal)
-modal.sl = pattern.sl
+-- pattern.sl = ut.string_lambda(modal)
+-- modal.sl = pattern.sl
 
 pattern.mini = maxi(modal, false)
 modal.mini = pattern.mini

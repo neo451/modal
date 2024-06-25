@@ -679,6 +679,10 @@ require "moon.all"
 P.note = function(pat)
    local notemt = {
       __add = function(self, other)
+         -- HACK:
+         if type(other) ~= "table" then
+            other = { note = other }
+         end
          return { note = self.note + other.note }
       end,
    }
@@ -705,5 +709,7 @@ P.note = function(pat)
    end
    return chordToStack(pat):fmap(withVal)
 end
+
+P.n = P.note
 
 return P

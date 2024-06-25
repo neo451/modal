@@ -298,7 +298,7 @@ local function pList(...)
       elseif #args == 2 then
          return {
             tag = "Paren",
-            { tag = "Function", { Id "x" }, { { tag = "Return", { tag = "Op", opname, args[2], Id "x" } } } },
+            { tag = "Function", { Id "x" }, { { tag = "Return", { tag = "Op", opname, Id "x", args[2] } } } },
          }
       else
          return args[1]
