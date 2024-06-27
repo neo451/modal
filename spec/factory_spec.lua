@@ -1,4 +1,3 @@
-local Stream = require "modal.stream"
 local M = require "modal.factory"
 local pure = require("modal.pattern").pure
 local describe = require("busted").describe

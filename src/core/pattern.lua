@@ -1,16 +1,15 @@
 local types = require "modal.types"
-local Event, Span, State, Time = types.Event, types.Span, types.State, types.Time
+local Event, Span, State, Time, TDef = types.Event, types.Span, types.State, types.Time, types.TDef
 local ut = require "modal.utils"
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
-local TDef = require "modal.typedef"
 local maxi = require "modal.maxi"
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
 local ipairs = ipairs
 local setmetatable = setmetatable
-local reduce = ut.reduce
+local tconcat = table.concat
 local tremove = table.remove
 local str_format = string.format
 local sin = math.sin
@@ -18,6 +17,8 @@ local min = math.min
 local max = math.max
 local pi = math.pi
 local floor = math.floor
+local reduce = ut.reduce
+local map = ut.map
 local id = ut.id
 local filter = ut.filter
 local dump = ut.dump
@@ -131,14 +132,14 @@ end
 mt.__index = mt
 
 -- automatically export pattern methods
--- setmetatable(mt, {
---    __newindex = function(_, k, v)
---       M[k] = v
---    end,
---    __index = function(_, k)
---       return M[k]
---    end,
--- })
+setmetatable(mt, {
+   __newindex = function(_, k, v)
+      M[k] = v
+   end,
+   __index = function(_, k)
+      return M[k]
+   end,
+})
 
 ---@class Pattern
 local function Pattern(query)
@@ -1029,7 +1030,7 @@ end
 register("randcat :: [Pattern a] -> Pattern a", randcat, false)
 
 local function degradeByWith(prand, by, pat)
-   if T(by) == "fraction" then
+   if T(by) == "time" then
       by = by:asFloat()
    end
    local f = function(v)
@@ -1210,6 +1211,68 @@ local function chain(pat, other)
    end):appLeft(other)
 end
 register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
+
+local gcd_reduce = function(tab)
+   return reduce(function(acc, value)
+      return acc:gcd(value)
+   end, tab[1], tab)
+end
+
+local function drawLine(pat, chars)
+   chars = chars or 60
+   pat = reify(pat)
+   local cycle = 0
+   local pos = Time(0)
+   local lines = { "" }
+   local emptyLine = ""
+   while #lines[1] < chars do
+      local events = pat(cycle, cycle + 1)
+      local events_with_onset = filter(function(event)
+         return event:hasOnset()
+      end, events)
+      local durations = map(function(ev)
+         return ev:duration()
+      end, events_with_onset)
+      local charFraction = gcd_reduce(durations)
+      local totalSlots = charFraction:reverse()
+      lines = map(function(line)
+         return line .. "|"
+      end, lines)
+      emptyLine = emptyLine .. "|"
+      for _ = 1, totalSlots:asFloat() do
+         local _begin, _end = pos, pos + charFraction
+         local matches = filter(function(event)
+            return event.whole._begin <= _begin and event.whole._end >= _end
+         end, events)
+         local missingLines = #matches - #lines
+         if missingLines > 0 then
+            for _ = 1, missingLines do
+               lines = lines .. missingLines
+            end
+         end
+         lines = map(function(line, index)
+            local event = matches[index]
+            if event ~= nil then
+               local isOnset = event.whole._begin == _begin
+               local char = nil
+               if isOnset then
+                  -- TODO: proper dump
+                  char = ut.dump(event.value)
+               else
+                  char = "-"
+               end
+               return line .. char
+            end
+            return line .. "."
+         end, lines)
+         emptyLine = emptyLine .. "."
+         pos = pos + charFraction
+      end
+      cycle = cycle + 1
+   end
+   return tconcat(lines)
+end
+mt.drawLine = drawLine
 
 M.id = id
 M.T = T

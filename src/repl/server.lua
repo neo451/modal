@@ -1,6 +1,6 @@
 local socket = require "socket"
 local maxi = require "modal.maxi"
-local log = require "modal.log"
+local log = require("modal.utils").log
 local M = require "modal"
 
 local clock = require("modal.factory").DefaultClock

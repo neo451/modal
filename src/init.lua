@@ -3,19 +3,14 @@ local ut = require "modal.utils"
 local factory = require "modal.factory"
 local ui = require "modal.ui"
 local P = require "modal.params"
-local drawLine = require "modal.drawline"
-local lib = require "modal.lib"
 local mt = pattern.mt
 local maxi = require "modal.maxi"
 local types = require "modal.types"
 
 local modal = {
-   _VERSION = "modal dev-1",
-   _URL = "https://github.com/noearc/modal",
-   _DESCRIPTION = "A language for algorithmic pattern. Tidalcycles for moonscript",
+   version = "modal dev-1",
+   url = "https://github.com/noearc/modal",
 }
-
-modal.drawLine = drawLine
 
 local pairs = pairs
 
@@ -28,11 +23,7 @@ for name, func in pairs(types) do
    modal[name] = func
 end
 
-for name, pat in pairs(lib) do
-   modal[name] = pattern.reify(pat)
-end
-
--- TODO:
+-- todo:
 -- for _, func in pairs(ui) do
 --    pattern.register(func)
 -- end
@@ -55,6 +46,9 @@ setmetatable(modal, {
 -- pattern.sl = ut.string_lambda(modal)
 -- modal.sl = pattern.sl
 
+--- TODO:lib pats and funcs?
+modal.fonf = "bd [bd, sd] bd [bd, sd]"
+
 pattern.mini = maxi(modal, false)
 modal.mini = pattern.mini
 
@@ -63,6 +57,7 @@ setmetatable(modal, {
       for k, v in pairs(t) do
          if _G[k] ~= nil then
             local msg = "function " .. k .. " already exists in global scope."
+            print("WARNING: " .. msg)
             if override then
                _G[k] = v
                print("WARNING: " .. msg .. " Overwritten.")

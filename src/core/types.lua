@@ -7,16 +7,16 @@ local floor = math.floor
 local setmetatable = setmetatable
 local compare = ut.compare
 
-local mt = { __class = "fraction" }
-local span_mt = { __class = "span" }
-local state_mt = { __class = "state" }
-local event_mt = { __class = "event" }
-span_mt.__index = span_mt
-event_mt.__index = event_mt
-state_mt.__index = state_mt
-mt.__index = mt
+local time = { __class = "time" }
+local span = { __class = "span" }
+local state = { __class = "state" }
+local event = { __class = "event" }
+span.__index = span
+event.__index = event
+state.__index = state
+time.__index = time
 
-function span_mt:spanCycles()
+function span:spanCycles()
    local spans = {}
    local b, e = self._begin, self._end
    local e_sam = e:sam()
@@ -36,47 +36,47 @@ function span_mt:spanCycles()
    return spans
 end
 
-function span_mt:duration()
+function span:duration()
    return self._end - self._begin
 end
 
-function span_mt:midpoint()
+function span:midpoint()
    return self._begin + (self:duration() / 2)
 end
 
-function span_mt:cycleSpan()
+function span:cycleSpan()
    local b = self._begin:cyclePos()
    return Span(b, b + self:duration())
 end
 
-function span_mt:__eq(rhs)
+function span:__eq(rhs)
    return self._begin == rhs._begin and self._end == rhs._end
 end
 
-function span_mt:__tostring()
+function span:__tostring()
    return self._begin:show() .. " → " .. self._end:show()
 end
 
-function span_mt:show()
+function span:show()
    return self:__tostring()
 end
 
-function span_mt:withTime(func)
+function span:withTime(func)
    return Span(func(self._begin), func(self._end))
 end
 
-function span_mt:withEnd(func)
+function span:withEnd(func)
    return Span(self._begin, func(self._end))
 end
 
-function span_mt:withCycle(func)
+function span:withCycle(func)
    local sam = self._begin:sam()
    local b = sam + func(self._begin - sam)
    local e = sam + func(self._end - sam)
    return Span(b, e)
 end
 
-function span_mt:sect(other)
+function span:sect(other)
    local maxOfStart = self._begin:max(other._begin)
    local minOfEnd = self._end:min(other._end)
    if maxOfStart > minOfEnd then
@@ -93,7 +93,7 @@ function span_mt:sect(other)
    return Span(maxOfStart, minOfEnd)
 end
 
-function span_mt:sect_e(other)
+function span:sect_e(other)
    local result = self:sect(other)
    if not result then
       error "Span: spans do not intersect"
@@ -102,14 +102,14 @@ function span_mt:sect_e(other)
 end
 
 function Span(b, e)
-   local new_obj = setmetatable({}, span_mt)
+   local new_obj = setmetatable({}, span)
    b = b or 1
    e = e or 1
    new_obj._begin, new_obj._end = Time(b), Time(e)
    return new_obj
 end
 
-function event_mt:__eq(other)
+function event:__eq(other)
    --    return (self.part == other.part)
    --       and (self.whole == other.whole)
    --       and (compare(self.value, other.value))
@@ -118,26 +118,26 @@ function event_mt:__eq(other)
    return self:__tostring() == other:__tostring()
 end
 
-function event_mt:duration()
+function event:duration()
    return self.whole._end - self.whole._begin
 end
 
-function event_mt:wholeOrPart()
+function event:wholeOrPart()
    if self.whole ~= nil then
       return self.whole
    end
    return self.part
 end
 
-function event_mt:hasWhole()
+function event:hasWhole()
    return self.whole ~= nil
 end
 
-function event_mt:hasOnset()
+function event:hasOnset()
    return self.whole ~= nil and self.whole._begin == self.part._begin
 end
 
-function event_mt:withSpan(func)
+function event:withSpan(func)
    local whole = self.whole
    if whole ~= nil then
       whole = func(whole)
@@ -145,15 +145,15 @@ function event_mt:withSpan(func)
    return Event(whole, func(self.part), self.value, self.context, self.stateful)
 end
 
-function event_mt:withValue(func)
+function event:withValue(func)
    return Event(self.whole, self.part, func(self.value), self.context, self.stateful)
 end
 
-function event_mt:show()
+function event:show()
    return self:__tostring()
 end
 
-function event_mt:__tostring()
+function event:__tostring()
    local part = self.part:__tostring()
    local h, t = "", ""
    if self:hasWhole() then
@@ -163,15 +163,15 @@ function event_mt:__tostring()
    return ("%s(%s)%s | %s"):format(h, part, t, ut.tdump(self.value))
 end
 
-function event_mt:spanEquals(other)
+function event:spanEquals(other)
    return ((other.whole == nil) and (self.whole == nil)) or (other.whole == self.whole)
 end
 
-function event_mt:setContext(newContext)
+function event:setContext(newContext)
    return Event(self.whole, self.part, self.value, newContext, self.stateful)
 end
 
-function event_mt:combineContext(other)
+function event:combineContext(other)
    local newContext = {}
    for key, value in pairs(self.context) do
       newContext[key] = value
@@ -201,30 +201,30 @@ function Event(whole, part, value, context, stateful)
       value = value,
       context = context,
       stateful = stateful,
-   }, event_mt)
+   }, event)
 end
 
-function state_mt:setSpan(span)
+function state:setSpan(span)
    return State(span, self.controls)
 end
 
-function state_mt:withSpan(func)
+function state:withSpan(func)
    return self:setSpan(func(self.span))
 end
 
-function state_mt:setControls(controls)
+function state:setControls(controls)
    return State(self.span, controls)
 end
 
-function state_mt:__tostring()
+function state:__tostring()
    return "span: " .. self.span:show() .. " controls: " .. ut.tdump(self.controls)
 end
 
-function state_mt:show()
+function state:show()
    return self.__tostring(self)
 end
 
-function state_mt:__eq(other)
+function state:__eq(other)
    return self.span == other.span and compare(self.controls, other.controls)
 end
 
@@ -234,7 +234,7 @@ function State(span, controls)
    return setmetatable({
       span = span,
       controls = controls,
-   }, state_mt)
+   }, state)
 end
 
 decimaltofraction = function(x0, err)
@@ -268,15 +268,15 @@ lcm = function(a, b)
    return (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
 end
 
-function mt:wholeCycle()
+function time:wholeCycle()
    return Span(self:sam(), self:nextSam())
 end
 
-function mt:cyclePos()
+function time:cyclePos()
    return self - self:sam()
 end
 
-function mt:__add(f2)
+function time:__add(f2)
    f2 = Time(f2)
    local na = self.numerator
    local nb = f2.numerator
@@ -295,7 +295,7 @@ function mt:__add(f2)
    return Time(floor(t / g2), s * floor(db / g2), false)
 end
 
-function mt:__sub(f2)
+function time:__sub(f2)
    f2 = Time(f2)
    local na = self.numerator
    local nb = f2.numerator
@@ -314,7 +314,7 @@ function mt:__sub(f2)
    return Time(floor(t / g2), s * floor(db / g2), false)
 end
 
-function mt:__div(f2)
+function time:__div(f2)
    f2 = Time(f2)
    local na = self.numerator
    local nb = f2.numerator
@@ -339,7 +339,7 @@ function mt:__div(f2)
    return Time(n, d, false)
 end
 
-function mt:__mul(f2)
+function time:__mul(f2)
    f2 = Time(f2)
    local na = self.numerator
    local nb = f2.numerator
@@ -358,7 +358,7 @@ function mt:__mul(f2)
    return Time(na * nb, da * db, false)
 end
 
-function mt:__pow(f2)
+function time:__pow(f2)
    f2 = Time(f2)
    if f2.denominator == 1 then
       local power = f2.numerator
@@ -374,7 +374,7 @@ function mt:__pow(f2)
    end
 end
 
-function mt:__mod(f2)
+function time:__mod(f2)
    f2 = Time(f2)
    local da = self.denominator
    local db = f2.denominator
@@ -383,47 +383,47 @@ function mt:__mod(f2)
    return Time((na * db) % (nb * da), da * db)
 end
 
-function mt:__unm()
+function time:__unm()
    return Time(-self.numerator, self.denominator, false)
 end
 
-function mt:__eq(rhs)
+function time:__eq(rhs)
    return self.numerator / self.denominator == rhs.numerator / rhs.denominator
 end
 
-function mt:__lt(rhs)
+function time:__lt(rhs)
    return self.numerator / self.denominator < rhs.numerator / rhs.denominator
 end
 
-function mt:__lte(rhs)
+function time:__lte(rhs)
    return self.numerator / self.denominator <= rhs.numerator / rhs.denominator
 end
 
-function mt:eq(rhs)
+function time:eq(rhs)
    return self == (Time(rhs))
 end
 
-function mt:lt(rhs)
+function time:lt(rhs)
    return self < Time(rhs)
 end
 
-function mt:reverse()
+function time:reverse()
    return Time(1) / self
 end
 
-function mt:floor()
+function time:floor()
    return floor(self.numerator / self.denominator)
 end
 
-function mt:sam()
+function time:sam()
    return Time(self:floor())
 end
 
-function mt:nextSam()
+function time:nextSam()
    return self:sam() + 1
 end
 
-function mt:min(other)
+function time:min(other)
    other = Time(other)
    if self < other then
       return self
@@ -432,7 +432,7 @@ function mt:min(other)
    end
 end
 
-function mt:max(other)
+function time:max(other)
    other = Time(other)
    if self > other then
       return self
@@ -441,29 +441,29 @@ function mt:max(other)
    end
 end
 
-function mt:gcd(other)
+function time:gcd(other)
    other = Time(other)
    local gcd_numerator = gcd(self.numerator, other.numerator)
    local lcm_denominator = lcm(self.denominator, other.denominator)
    return Time(gcd_numerator, lcm_denominator)
 end
 
-function mt:asFloat()
+function time:asFloat()
    return self.numerator / self.denominator
 end
 
-function mt:__tostring()
+function time:__tostring()
    return ("%d/%d"):format(self.numerator, self.denominator)
 end
 
-function mt:show()
+function time:show()
    return self:__tostring()
 end
 
 ---@class Fraction
 function Time(n, d, normalize)
    -- HACK:
-   if T(n) == "fraction" then
+   if T(n) == "time" then
       return n
    end
    n = n or 0
@@ -485,7 +485,106 @@ function Time(n, d, normalize)
    return setmetatable({
       numerator = n,
       denominator = d,
-   }, mt)
+   }, time)
 end
 
-return { Span = Span, Event = Event, State = State, Time = Time }
+local stream = { __class = "stream" }
+-- TODO: get rid of ??? core should be pure
+local losc = require "losc"
+
+function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
+   if not self.pattern then
+      return
+   end
+   local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo)
+   for _, ev in ipairs(events) do
+      local cycleOn = ev.whole._begin
+      local cycleOff = ev.whole._end
+      local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)
+      local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
+      local deltaSeconds = (linkOff - linkOn) / mill
+      local value = ev.value
+      value.cps = ev.value.cps or cps
+      value.cycle = cycleOn:asFloat()
+      value.delta = deltaSeconds
+      local link_secs = now / mill
+      local nudge = 0
+      local diff = losc:now() + -link_secs
+      -- print(link_secs)
+      -- print(diff:seconds())
+      local ts = diff + (linkOn / mill) + self.latency + nudge
+      self.sendf(value, ts)
+   end
+end
+stream.__index = stream
+
+local function Stream(sendf)
+   return setmetatable({ latency = 0.2, sendf = sendf }, stream)
+end
+
+local lpeg = require "lpeg"
+local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
+
+local tremove = table.remove
+local tconcat = table.concat
+
+local function pId(...)
+   return { tconcat { ... } }
+end
+
+local function pComp(const, tvar)
+   return { constructor = const[1], tvar[1] }
+end
+
+local function pDef(...)
+   local args = { ... }
+   local name
+   if args[1].isname then
+      name = tremove(args, 1)[1]
+   end
+   local ret = tremove(args, #args)
+   return { ret = ret, name = name, unpack(args) }
+end
+
+local function pTab(a)
+   a.istable = true
+   return a
+end
+
+local typedef = V "typedef"
+local fdef = V "fdef"
+local tab = V "tab"
+local elem = V "elem"
+local comp_type = V "comp_type"
+local char = R("AZ", "az")
+local name = V "name"
+local ws = S " \n\r\t" ^ 0
+local id = ws * ((char ^ 1) / pId) * ws
+
+local rules = {
+   [1] = "typedef",
+   name = id * ws * P "::" * ws / function(a)
+      a.isname = true
+      return a
+   end,
+   typedef = name ^ -1 * (elem * ws * P "->" * ws) ^ 1 * elem / pDef,
+   elem = comp_type + id + fdef + tab,
+   fdef = P "(" * ws * typedef * ws * P ")",
+   tab = P "[" * ws * elem * ws * P "]" / pTab,
+   comp_type = id * ws * id / pComp,
+}
+
+local grammar = Ct(C(rules))
+
+local function TDef(a)
+   local tdef = grammar:match(a)[2]
+   tdef.source = a
+   setmetatable(tdef, {
+      __tostring = function(self)
+         return self.source
+      end,
+   })
+   return tdef, tdef.name
+end
+
+return { Span = Span, Event = Event, State = State, Time = Time, Stream = Stream, TDef = TDef }

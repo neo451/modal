@@ -27,12 +27,8 @@ build = {
    type = "builtin",
    modules = {
       ["modal.init"] = "src/init.lua",
-      ["modal.luacats"] = "src/luacats.lua",
       ["modal.utils"] = "src/core/utils.lua",
-      ["modal.log"] = "src/core/log.lua",
 
-      ["modal.stream"] = "src/core/stream.lua",
-      ["modal.drawline"] = "src/core/drawline.lua",
       ["modal.types"] = "src/core/types.lua",
       ["modal.pattern"] = "src/core/pattern.lua",
       ["modal.factory"] = "src/core/factory.lua",
@@ -45,17 +41,15 @@ build = {
       ["modal.euclid"] = "src/core/euclid.lua",
       ["modal.scales"] = "src/core/scales.lua",
       ["modal.chords"] = "src/core/chords.lua",
-      ["modal.lib"] = "src/core/lib.lua",
 
       ["modal.maxi"] = "src/core/maxi.lua",
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
-      ["modal.typedef"] = "src/core/typedef.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
       ["modal.luv_repl"] = "src/repl/luv_repl.lua",
       ["modal.server"] = "src/repl/server.lua",
 
-      ["modal.doc"] = "src/repl/doc.lua",
+      ["modal.luacats"] = "src/luacats.lua",
       ["modal.gendef"] = "src/core/gendef.lua",
    },
    install = {

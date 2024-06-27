@@ -1,6 +1,6 @@
 -- require("modal")()
 M = require "modal"
-local log = require "modal.log"
+local log = require("modal.utils").log
 local uv = require "luv"
 local clock = M.DefaultClock
 

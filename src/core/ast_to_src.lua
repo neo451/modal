@@ -1,26 +1,11 @@
--------------------------------------------------------------------------------
 -- Copyright (c) 2006-2013 Fabien Fleutot and others.
---
--- All rights reserved.
---
--- This program and the accompanying materials are made available
--- under the terms of the Eclipse Public License v1.0 which
--- accompanies this distribution, and is available at
--- http://www.eclipse.org/legal/epl-v10.html
---
--- This program and the accompanying materials are also made available
--- under the terms of the MIT public license which accompanies this
--- distribution, and is available at http://www.lua.org/license.html
---
--- Contributors:
---     Fabien Fleutot - API and implementation
---
--------------------------------------------------------------------------------
-local pp = require "metalua.pprint"
 local M = {}
 M.__index = M
 
---- TODO: restore comments!
+local tconcat = table.concat
+local str_match = string.match
+local str_format = string.format
+local unpack = unpack or rawget(table, "unpack")
 
 -- Instanciate a new AST->source synthetizer
 function M.new()
@@ -43,7 +28,7 @@ function M:run(ast)
    end
    self._acc = {}
    self:node(ast)
-   return table.concat(self._acc)
+   return tconcat(self._acc)
 end
 
 --------------------------------------------------------------------------------
@@ -51,7 +36,7 @@ end
 --------------------------------------------------------------------------------
 function M:acc(x)
    if x then
-      table.insert(self._acc, x)
+      self._acc[#self._acc + 1] = x
    end
 end
 
@@ -118,11 +103,7 @@ end
 -- Return true iff string `id' is a legal identifier name.
 --------------------------------------------------------------------------------
 local function is_ident(id)
-   -- HACK:
-   -- if type(id) ~= "string" then
-   --    return false
-   -- end
-   return string["match"](id, "^[%a_][%w_]*$") and not keywords[id]
+   return str_match(id, "^[%a_][%w_]*$") and not keywords[id]
 end
 
 -- Return true iff ast represents a legal function name for
@@ -193,12 +174,6 @@ local op_symbol = {
 -- If something can't be converted to normal sources, it's
 -- instead dumped as a `-{ ... }' splice in the source accumulator.
 function M:node(node)
-   -- pp.print(node)
-   -- pp.print(node.lineinfo.first.comments)
-   -- pp.print(node.lineinfo.last.comments)
-   -- if node.lineinfo.first.comments then
-   --    M.first_comment(self, node)
-   -- end
    assert(self ~= M and self._acc, "wrong ast_to_src compiler?")
    if node == nil then
       self:acc "<<error>>"
@@ -212,31 +187,7 @@ function M:node(node)
          f(self, node, unpack(node))
       elseif type(f) == "string" then -- tag string.
          self:acc(f)
-      else -- No appropriate method, fall back to splice dumping.
-         -- This cannot happen in a plain Lua AST.
-         self:acc " -{ "
-         self:acc(pp.tostring(node, { metalua_tag = 1, hide_hash = 1 }))
-         self:acc " }"
       end
-   end
-   -- if node.lineinfo.last.comments then
-   --    M.last_comment(self, node)
-   -- end
-end
-
--- TODO: cache comments already printed
-
-M.first_comment = function(self, node)
-   for _, comment in ipairs(node.lineinfo.first.comments) do
-      self:acc("--" .. comment[1])
-      self:nl()
-   end
-end
-
-M.last_comment = function(self, node)
-   for _, comment in ipairs(node.lineinfo.last.comments) do
-      self:acc("--" .. comment[1])
-      self:nl()
    end
 end
 
@@ -320,8 +271,6 @@ function M:Set(node)
       local method = lhs[1][2][1]
       local params = rhs[1][1]
       local body = rhs[1][2]
-      -- TODO:
-      -- local params = node[2]
       self:acc "function "
       self:node(lhs)
       self:acc ":"
@@ -335,7 +284,7 @@ function M:Set(node)
       self:acc "end"
    elseif rhs[1].tag == "Function" and is_idx_stack(lhs) then
       -- | `Set{ { lhs }, { `Function{ params, body } } } if is_idx_stack (lhs) ->
-      --    -- ``function foo(...) ... end'' --
+      -- ``function foo(...) ... end'' --
       local params = rhs[1][1]
       local body = rhs[1][2]
       self:acc "function "
@@ -351,43 +300,6 @@ function M:Set(node)
       self:list(lhs, ", ")
       self:acc " = "
       self:list(rhs, ", ")
-
-      --
-      -- | `Set{ { `Id{ lhs1name } == lhs1, ... } == lhs, rhs }
-      --       if not is_ident (lhs1name) ->
-      --    -- ``foo, ... = ...'' when foo is *not* a valid identifier.
-      --    -- In that case, the spliced 1st variable must get parentheses,
-      --    -- to be distinguished from a statement splice.
-      --    -- This cannot happen in a plain Lua AST.
-      --    self:acc      "("
-      --    self:node     (lhs1)
-      --    self:acc      ")"
-      --    if lhs[2] then -- more than one lhs variable
-      --       self:acc   ", "
-      --       self:list  (lhs, ", ", 2)
-      --    end
-      --    self:acc      " = "
-      --    self:list     (rhs, ", ")
-      --
-      -- | `Set{ lhs, rhs } ->
-      --    -- ``... = ...'', no syntax sugar --
-      --    self:list  (lhs, ", ")
-      --    self:acc   " = "
-      --    self:list  (rhs, ", ")
-      -- | `Set{ lhs, rhs, annot } ->
-      --    -- ``... = ...'', no syntax sugar, annotation --
-      --    local n = #lhs
-      --    for i=1,n do
-      --        local ell, a = lhs[i], annot[i]
-      --        self:node (ell)
-      --        if a then
-      --            self:acc ' #'
-      --            self:node(a)
-      --        end
-      --        if i~=n then self:acc ', ' end
-      --    end
-      --    self:acc   " = "
-      --    self:list  (rhs, ", ")
    end
 end
 
@@ -462,31 +374,27 @@ function M:Forin(_, vars, generators, body)
    self:acc "end"
 end
 
-function M:Local(node, lhs, rhs, annots)
-   if next(lhs) then
-      self:acc "local "
-      if annots then
-         local n = #lhs
-         for i = 1, n do
-            self:node(lhs)
-            local a = annots[i]
-            if a then
-               self:acc " #"
-               self:node(a)
-            end
-            if i ~= n then
-               self:acc ", "
-            end
+function M:Local(_, lhs, rhs, annots)
+   self:acc "local "
+   if annots then
+      local n = #lhs
+      for i = 1, n do
+         self:node(lhs)
+         local a = annots[i]
+         if a then
+            self:acc " #"
+            self:node(a)
          end
-      else
-         self:list(lhs, ", ")
+         if i ~= n then
+            self:acc ", "
+         end
       end
-      if rhs[1] then
-         self:acc " = "
-         self:list(rhs, ", ")
-      end
-   else -- Can't create a local statement with 0 variables in plain Lua
-      self:acc(pp.tostring(node, "nohash"))
+   else
+      self:list(lhs, ", ")
+   end
+   if rhs[1] then
+      self:acc " = "
+      self:list(rhs, ", ")
    end
 end
 
@@ -501,39 +409,35 @@ function M:Localrec(_, lhs, rhs)
    self:list(rhs[1][2], self.nl)
    self:nldedent()
    self:acc "end"
-   --
-   -- | _ ->
-   --    -- Other localrec are unprintable ==> splice them --
-   --        -- This cannot happen in a plain Lua AST. --
-   --    self:acc "-{ "
-   --    self:acc (table.tostring (node, 'nohash', 80))
-   --    self:acc " }"
-   -- end
 end
 
 function M:Call(node, f)
+   local parens
+   if node[2].tag == "String" or node[2].tag == "Table" then
+      parens = false
+   else
+      parens = true
+   end
    self:node(f)
-   self:acc "("
+   self:acc(parens and "(" or " ")
    self:list(node, ", ", 2) -- skip `f'.
-   self:acc ")"
+   self:acc(parens and ")")
 end
 
 function M:Invoke(node, f, method)
    -- single string or table literal arg ==> no need for parentheses. --
-   -- local parens
-   -- if node[2].tag == "String" or node[2].tag == "Table" then
-   --    parens = false
-   -- else
-   --    parens = true
-   -- end
+   local parens
+   if node[2].tag == "String" or node[2].tag == "Table" then
+      parens = false
+   else
+      parens = true
+   end
    self:node(f)
    self:acc ":"
    self:acc(method[1])
-   self:acc "("
-   -- self:acc(parens and "(" or " ")
+   self:acc(parens and "(" or " ")
    self:list(node, ", ", 3) -- Skip args #1 and #2, object and method name.
-   -- self:acc(parens and ")")
-   self:acc ")"
+   self:acc(parens and ")")
 end
 
 function M:Return(node)
@@ -554,7 +458,7 @@ end
 function M:String(_, str)
    -- format "%q" prints '\n' in an umpractical way IMO,
    -- so this is fixed with the :gsub( ) call.
-   self:acc(string.format("%q", str):gsub("\\\n", "\\n"))
+   self:acc(str_format("%q", str):gsub("\\\n", "\\n"))
 end
 
 function M:Function(_, params, body, annots)
@@ -586,12 +490,7 @@ function M:Table(node)
    if not node[1] then
       self:acc "{ }"
    else
-      self:acc "{"
-      -- if #node > 1 then
-      --    self:nlindent()
-      -- else
-      --    self:acc(" ")
-      -- end
+      self:acc "{ "
       for i, elem in ipairs(node) do
          if elem.tag == "Pair" then
             -- `Pair{ `String{ key }, value }
@@ -599,7 +498,6 @@ function M:Table(node)
                self:acc(elem[1][1])
                self:acc " = "
                self:node(elem[2])
-               -- `Pair{ key, value }
             else
                self:acc "["
                self:node(elem[1])
@@ -610,16 +508,10 @@ function M:Table(node)
             self:node(elem)
          end
          if node[i + 1] then
-            self:acc ","
-            -- self:nl()
+            self:acc ", "
          end
       end
-      -- if #node > 1 then
-      --    self:nldedent()
-      -- else
-      --    self:acc(" ")
-      -- end
-      self:acc "}"
+      self:acc " }"
    end
 end
 

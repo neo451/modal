@@ -1,8 +1,9 @@
 local socket = require "socket"
 local al = require "abletonlink"
 local losc = require "losc"
+_G.struct = nil
 local plugin = require "losc.plugins.udp-socket"
-local Stream = require "modal.stream"
+local Stream = require("modal.types").Stream
 
 local floor = math.floor
 

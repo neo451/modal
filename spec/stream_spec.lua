@@ -4,7 +4,7 @@ local describe = require("busted").describe
 local busted = require "busted"
 local spy = busted.spy
 local Clock = require "modal.clock"
-local Stream = require "modal.stream"
+local Stream = require("modal").Stream
 local s = require("modal").s
 
 describe("new", function()

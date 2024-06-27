@@ -675,7 +675,7 @@ for i = 1, #genericParams do
 end
 
 local parseChord = require "modal.chords"
-require "moon.all"
+
 P.note = function(pat)
    local notemt = {
       __add = function(self, other)
