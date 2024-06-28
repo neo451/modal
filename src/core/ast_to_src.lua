@@ -7,6 +7,8 @@ local str_match = string.match
 local str_format = string.format
 local unpack = unpack or rawget(table, "unpack")
 
+-- TODO: check AST
+
 -- Instanciate a new AST->source synthetizer
 function M.new()
    local self = {

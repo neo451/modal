@@ -49,8 +49,8 @@ setmetatable(modal, {
 --- TODO:lib pats and funcs?
 modal.fonf = "bd [bd, sd] bd [bd, sd]"
 
-pattern.mini = maxi(modal, false)
-modal.mini = pattern.mini
+-- pattern.mini = maxi(modal, false)
+-- modal.mini = pattern.mini
 
 setmetatable(modal, {
    __call = function(t, override)

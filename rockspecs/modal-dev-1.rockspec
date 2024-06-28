@@ -46,7 +46,6 @@ build = {
       ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
-      ["modal.luv_repl"] = "src/repl/luv_repl.lua",
       ["modal.server"] = "src/repl/server.lua",
 
       ["modal.luacats"] = "src/luacats.lua",

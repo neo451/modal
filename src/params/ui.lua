@@ -29,11 +29,8 @@ do
       _obj_0.curry,
       _obj_0.type
 end
-local Event, Span, State
-do
-   local _obj_0 = require "modal.types"
-   Event, Span, State = _obj_0.Event, _obj_0.Span, _obj_0.State
-end
+local types = require "modal.types"
+local Event, Span, State = types.Event, types.Span, types.State
 
 local P = require "modal.params"
 
@@ -61,8 +58,7 @@ end
 
 return {
    {
-      "juxBy",
-      "Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+      "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
       juxBy,
    },
    {

@@ -3,7 +3,6 @@ local Event, Span, State, Time, TDef = types.Event, types.Span, types.State, typ
 local ut = require "modal.utils"
 local bjork = require "modal.euclid"
 local getScale = require "modal.scales"
-local maxi = require "modal.maxi"
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
@@ -41,17 +40,14 @@ local TYPES = {}
 local op = {}
 
 -- give mini access to global vars
-setmetatable(M, {
-   __index = _G,
-})
+setmetatable(M, { __index = _G })
 
-local mini = maxi(M, false)
-
+local mini = require("modal.maxi").mini(M)
 local reify = memoize(function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = mini("[" .. thing .. "]")
-      return res and res() or silence
+      local res = mini(thing)
+      return res and res or silence
    elseif "table" == t then
       return fastcat(thing)
    elseif "pattern" == t then
@@ -1281,6 +1277,5 @@ M.pipe = ut.pipe
 M.dump = ut.dump
 M.t = TYPES
 M.mt = mt
-M.mini = mini
 
 return M

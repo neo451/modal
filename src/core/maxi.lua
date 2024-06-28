@@ -414,9 +414,7 @@ local grammar = {
    euclid = P "(" * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P ")" / pEuclid,
 }
 
----@param env table
----@param top_level boolean
-return function(env, top_level)
+local function gen(top_level)
    if top_level then
       stat = expr * (P "=" / id) ^ -1 * expr ^ 0 * ws / pStat
       grammar.root = (stat * semi) ^ 1 / pRoot
@@ -430,30 +428,38 @@ return function(env, top_level)
       return rules:match(str)[2]
    end
 
-   local to_str = function(src)
-      local ok, ast
-      ok, ast = pcall(read, src)
-      if not ok then
-         return false
+   return function(env)
+      local to_str = function(src)
+         local ok, ast
+         ok, ast = pcall(read, src)
+         if not ok then
+            return false
+         end
+         local lua_src = ast_to_src(ast)
+         return lua_src
       end
-      local lua_src = ast_to_src(ast)
-      return lua_src
-   end
 
-   local function to_f(src)
-      local ok, fstr
-      local lua_src = to_str(src)
-      -- print(lua_src)
-      if not lua_src then
-         return false
+      local function to_f(src)
+         if not top_level then
+            src = "[" .. src .. "]"
+         end
+         local ok, fn
+         local lua_src = to_str(src)
+         -- print(lua_src)
+         if not lua_src then
+            return false
+         end
+         ok, fn = pcall(loadstring, lua_src)
+         if not ok then
+            return false
+         end
+         setfenv(fn and fn or function()
+            print "not a valid maxi notation"
+         end, env)
+         return fn()
       end
-      ok, fstr = pcall(loadstring, lua_src)
-      if not ok then
-         return false
-      end
-      return setfenv(fstr and fstr or function()
-         print "not a valid maxi notation"
-      end, env)
+      return memoize(to_f)
    end
-   return memoize(to_f), memoize(to_str)
 end
+
+return { maxi = gen(true), mini = gen(false) }

@@ -4,10 +4,8 @@ local host = "localhost"
 local port = 9000
 local RL = require "readline"
 local M = require "modal"
-local maxi = M.maxi
-local doc = require "modal.doc"
+local maxi = require("modal.maxi").maxi(M)
 local ut = require "modal.utils"
-local dump = ut.dump
 
 local keywords = {}
 for i, _ in pairs(M) do
@@ -33,9 +31,9 @@ local optf = {
    v = function()
       return M._VERSION
    end,
-   info = function(name)
-      return dump(doc[name])
-   end,
+   -- info = function(name)
+   --    return dump(doc[name])
+   -- end,
    q = function()
       if c then
          c:close()
@@ -43,27 +41,17 @@ local optf = {
       os.exit()
    end,
 }
-local evalf = maxi(_G, true)
 
 -- TODO: see luaish, first run as lua with multiline? no ambiguiaty?>
 local eval = function(a)
-   if a then
-      if a:sub(1, 1) == ":" then
-         local name, param = a:match "(%a+)%s(%a*)"
-         name = name and name or a:sub(2, #a)
-         param = param and param or nil
-         return optf[name](param)
-      else
-         local fn = evalf(a)
-         if fn then
-            local fok, res = pcall(fn)
-            if fok and res then
-               return tostring(res)
-            end
-         else
-            return fn
-         end
-      end
+   if a:sub(1, 1) == ":" then
+      local name, param = a:match "(%a+)%s(%a*)"
+      name = name and name or a:sub(2, #a)
+      param = param and param or nil
+      return optf[name](param)
+   else
+      local fn = maxi(a)
+      return fn
    end
 end
 
