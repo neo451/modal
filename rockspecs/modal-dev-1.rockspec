@@ -27,7 +27,7 @@ build = {
    type = "builtin",
    modules = {
       ["modal.init"] = "src/init.lua",
-      ["modal.utils"] = "src/core/utils.lua",
+      ["modal.utils"] = "src/core/ut.lua",
 
       ["modal.types"] = "src/core/types.lua",
       ["modal.pattern"] = "src/core/pattern.lua",
@@ -38,24 +38,18 @@ build = {
 
       ["modal.clock"] = "src/clock/clock.lua",
 
-      ["modal.euclid"] = "src/core/euclid.lua",
-      ["modal.scales"] = "src/core/scales.lua",
-      ["modal.chords"] = "src/core/chords.lua",
+      ["modal.theory"] = "src/core/theory.lua",
 
-      ["modal.maxi"] = "src/core/maxi.lua",
-      ["modal.ast_to_src"] = "src/core/ast_to_src.lua",
+      ["modal.notation"] = "src/core/notation.lua",
+      ["modal.ast_to_src"] = "src/core/a2s.lua",
 
       ["modal.repl"] = "src/repl/repl.lua",
       ["modal.server"] = "src/repl/server.lua",
-
-      ["modal.luacats"] = "src/luacats.lua",
-      ["modal.gendef"] = "src/core/gendef.lua",
    },
    install = {
       bin = {
          "bin/modal",
          "bin/mods",
-         "bin/lmodal",
       },
    },
 }

@@ -1,6 +1,6 @@
 -- Copyright (c) 2006-2013 Fabien Fleutot and others.
-local M = {}
-M.__index = M
+local a2s = {}
+a2s.__index = a2s
 
 local tconcat = table.concat
 local str_match = string.match
@@ -10,13 +10,13 @@ local unpack = unpack or rawget(table, "unpack")
 -- TODO: check AST
 
 -- Instanciate a new AST->source synthetizer
-function M.new()
+function a2s.new()
    local self = {
       _acc = {}, -- Accumulates pieces of source as strings
       current_indent = 0, -- Current level of line indentation
       indent_step = "   ", -- Indentation symbol, normally spaces or '\t'
    }
-   return setmetatable(self, M)
+   return setmetatable(self, a2s)
 end
 
 --------------------------------------------------------------------------------
@@ -24,9 +24,9 @@ end
 -- Can also be used as a static method `M.run (ast)'; in this case,
 -- a temporary Metizer is instanciated on the fly.
 --------------------------------------------------------------------------------
-function M:run(ast)
+function a2s:run(ast)
    if not ast then
-      self, ast = M.new(), self
+      self, ast = a2s.new(), self
    end
    self._acc = {}
    self:node(ast)
@@ -36,7 +36,7 @@ end
 --------------------------------------------------------------------------------
 -- Accumulate a piece of source file in the synthetizer.
 --------------------------------------------------------------------------------
-function M:acc(x)
+function a2s:acc(x)
    if x then
       self._acc[#self._acc + 1] = x
    end
@@ -47,7 +47,7 @@ end
 -- Jumps an extra line if indentation is 0, so that
 -- toplevel definitions are separated by an extra empty line.
 --------------------------------------------------------------------------------
-function M:nl()
+function a2s:nl()
    if self.current_indent == 0 then
       self:acc "\n"
    end
@@ -57,7 +57,7 @@ end
 --------------------------------------------------------------------------------
 -- Increase indentation and accumulate a new line.
 --------------------------------------------------------------------------------
-function M:nlindent()
+function a2s:nlindent()
    self.current_indent = self.current_indent + 1
    self:nl()
 end
@@ -65,7 +65,7 @@ end
 --------------------------------------------------------------------------------
 -- Decrease indentation and accumulate a new line.
 --------------------------------------------------------------------------------
-function M:nldedent()
+function a2s:nldedent()
    self.current_indent = self.current_indent - 1
    self:acc("\n" .. self.indent_step:rep(self.current_indent))
 end
@@ -175,8 +175,8 @@ local op_symbol = {
 -- the method having the name of the AST tag.
 -- If something can't be converted to normal sources, it's
 -- instead dumped as a `-{ ... }' splice in the source accumulator.
-function M:node(node)
-   assert(self ~= M and self._acc, "wrong ast_to_src compiler?")
+function a2s:node(node)
+   assert(self ~= a2s and self._acc, "wrong ast_to_src compiler?")
    if node == nil then
       self:acc "<<error>>"
       return
@@ -184,7 +184,7 @@ function M:node(node)
    if not node.tag then -- tagless block.
       self:list(node, self.nl)
    else
-      local f = M[node.tag]
+      local f = a2s[node.tag]
       if type(f) == "function" then -- Delegate to tag method.
          f(self, node, unpack(node))
       elseif type(f) == "string" then -- tag string.
@@ -201,7 +201,7 @@ end
 -- first element of list to be converted, so that we can skip the begining
 -- of a list.
 --------------------------------------------------------------------------------
-function M:list(list, sep, start)
+function a2s:list(list, sep, start)
    for i = start or 1, #list do
       self:node(list[i])
       if list[i + 1] then
@@ -243,7 +243,7 @@ end
 --
 --------------------------------------------------------------------------------
 
-function M:Chunk(node)
+function a2s:Chunk(node)
    -- TODO: check ret last
    for _, v in ipairs(node) do
       self:node(v)
@@ -251,7 +251,7 @@ function M:Chunk(node)
    end
 end
 
-function M:Do(node)
+function a2s:Do(node)
    self:acc "do"
    self:nlindent()
    self:list(node, self.nl)
@@ -259,7 +259,7 @@ function M:Do(node)
    self:acc "end"
 end
 
-function M:Set(node)
+function a2s:Set(node)
    local lhs = node[1]
    local rhs = node[2]
    -- ``function foo:bar(...) ... end'' --
@@ -305,7 +305,7 @@ function M:Set(node)
    end
 end
 
-function M:While(_, cond, body)
+function a2s:While(_, cond, body)
    self:acc "while "
    self:node(cond)
    self:acc " do"
@@ -315,7 +315,7 @@ function M:While(_, cond, body)
    self:acc "end"
 end
 
-function M:Repeat(_, body, cond)
+function a2s:Repeat(_, body, cond)
    self:acc "repeat"
    self:nlindent()
    self:list(body, self.nl)
@@ -324,7 +324,7 @@ function M:Repeat(_, body, cond)
    self:node(cond)
 end
 
-function M:If(node)
+function a2s:If(node)
    for i = 1, #node - 1, 2 do
       -- for each ``if/then'' and ``elseif/then'' pair --
       local cond, body = node[i], node[i + 1]
@@ -345,7 +345,7 @@ function M:If(node)
    self:acc "end"
 end
 
-function M:Fornum(node, var, first, last)
+function a2s:Fornum(node, var, first, last)
    local body = node[#node]
    self:acc "for "
    self:node(var)
@@ -364,7 +364,7 @@ function M:Fornum(node, var, first, last)
    self:acc "end"
 end
 
-function M:Forin(_, vars, generators, body)
+function a2s:Forin(_, vars, generators, body)
    self:acc "for "
    self:list(vars, ", ")
    self:acc " in "
@@ -376,7 +376,7 @@ function M:Forin(_, vars, generators, body)
    self:acc "end"
 end
 
-function M:Local(_, lhs, rhs, annots)
+function a2s:Local(_, lhs, rhs, annots)
    self:acc "local "
    if annots then
       local n = #lhs
@@ -400,7 +400,7 @@ function M:Local(_, lhs, rhs, annots)
    end
 end
 
-function M:Localrec(_, lhs, rhs)
+function a2s:Localrec(_, lhs, rhs)
    -- ``local function name() ... end'' --
    self:acc "local function "
    self:acc(lhs[1][1])
@@ -413,7 +413,7 @@ function M:Localrec(_, lhs, rhs)
    self:acc "end"
 end
 
-function M:Call(node, f)
+function a2s:Call(node, f)
    local parens
    if node[2].tag == "String" or node[2].tag == "Table" then
       parens = false
@@ -426,7 +426,7 @@ function M:Call(node, f)
    self:acc(parens and ")")
 end
 
-function M:Invoke(node, f, method)
+function a2s:Invoke(node, f, method)
    -- single string or table literal arg ==> no need for parentheses. --
    local parens
    if node[2].tag == "String" or node[2].tag == "Table" then
@@ -442,28 +442,28 @@ function M:Invoke(node, f, method)
    self:acc(parens and ")")
 end
 
-function M:Return(node)
+function a2s:Return(node)
    self:acc "return "
    self:list(node, ", ")
 end
 
-M.Break = "break"
-M.Nil = "nil"
-M.False = "false"
-M.True = "true"
-M.Dots = "..."
+a2s.Break = "break"
+a2s.Nil = "nil"
+a2s.False = "false"
+a2s.True = "true"
+a2s.Dots = "..."
 
-function M:Number(_, n)
+function a2s:Number(_, n)
    self:acc(tostring(n))
 end
 
-function M:String(_, str)
+function a2s:String(_, str)
    -- format "%q" prints '\n' in an umpractical way IMO,
    -- so this is fixed with the :gsub( ) call.
    self:acc(str_format("%q", str):gsub("\\\n", "\\n"))
 end
 
-function M:Function(_, params, body, annots)
+function a2s:Function(_, params, body, annots)
    self:acc "function("
    if annots then
       local n = #params
@@ -488,7 +488,7 @@ function M:Function(_, params, body, annots)
    self:acc "end"
 end
 
-function M:Table(node)
+function a2s:Table(node)
    if not node[1] then
       self:acc "{ }"
    else
@@ -518,7 +518,7 @@ function M:Table(node)
 end
 
 -- TODO: understand associatitivity
-function M:Op(node, op, a, b)
+function a2s:Op(node, op, a, b)
    if op == "not" and (node[2][1][1] == "eq") then ---TODO:???
       op, a, b = "ne", node[2][1][2], node[2][1][3]
    end
@@ -557,13 +557,13 @@ function M:Op(node, op, a, b)
    end
 end
 
-function M:Paren(_, content)
+function a2s:Paren(_, content)
    self:acc "("
    self:node(content)
    self:acc ")"
 end
 
-function M:Index(_, table, key)
+function a2s:Index(_, table, key)
    local paren_table
    if table.tag == "Op" and op_prec[table[1][1]] < op_prec.index then
       paren_table = true
@@ -587,18 +587,15 @@ function M:Index(_, table, key)
    end
 end
 
-function M:Id(node, name)
+function a2s:Id(_, name)
    if is_ident(name) then
       self:acc(name)
-   else -- Unprintable identifier, fall back to splice representation.
-      -- This cannot happen in a plain Lua AST.
-      self:acc "-{`Id "
-      self:String(node, name)
-      self:acc "}"
+   else
+      error "invalid identifier"
    end
 end
 
-function M:Goto(node, name)
+function a2s:Goto(node, name)
    self:acc "goto "
    if type(name) == "string" then
       self:Id(node, name)
@@ -607,7 +604,7 @@ function M:Goto(node, name)
    end
 end
 
-function M:Label(node, name)
+function a2s:Label(node, name)
    self:acc "::"
    if type(name) == "string" then
       self:Id(node, name)
@@ -617,6 +614,4 @@ function M:Label(node, name)
    self:acc "::"
 end
 
-return function(x)
-   return M.run(x)
-end
+return a2s

@@ -1,12 +1,13 @@
-local M = {}
+local ut = {}
 
 local pairs = pairs
 local ipairs = ipairs
 local tostring = tostring
 local loadstring = loadstring or load
+local setmetatable = setmetatable
 local type = type
 local unpack = unpack or rawget(table, "unpack")
-local setmetatable = setmetatable
+local setfenv = setfenv or ut.setfenv
 local str_dump = string.dump
 local str_char = string.char
 local tconcat = table.concat
@@ -30,8 +31,8 @@ local function memoize(f)
       return r
    end
 end
-M.memoize = memoize
-M.loadstring = memoize(loadstring)
+ut.memoize = memoize
+ut.loadstring = memoize(loadstring)
 
 ---@table term colors
 local colors = {}
@@ -91,7 +92,7 @@ for c, v in pairs(colorvalues) do
    colors[c] = makecolor(v)
 end
 
-M.colors = colors
+ut.colors = colors
 
 ---@table bitwise ops
 local bit = {}
@@ -180,12 +181,12 @@ lshift = function(a, disp)
 end
 bit.lshift = lshift
 
-M.bit = bit
+ut.bit = bit
 
 ---Copyright (c) 2016 rxi
 ---@table log
 local log = { _version = "0.1.0" }
-M.log = log
+ut.log = log
 
 log.usecolor = true
 log.outfile = nil
@@ -276,7 +277,7 @@ end
 ---@param rhs table
 ---@param lhs table
 ---@return boolean
-function M.compare(rhs, lhs)
+function ut.compare(rhs, lhs)
    if type(lhs) ~= type(rhs) then
       return false
    end
@@ -285,7 +286,7 @@ function M.compare(rhs, lhs)
          return false
       end
       for k, v in pairs(lhs) do
-         local equal = M.compare(v, rhs[k])
+         local equal = ut.compare(v, rhs[k])
          if not equal then
             return false
          end
@@ -298,7 +299,7 @@ end
 
 ---@param value any
 ---@return string
-function M.T(value)
+function ut.T(value)
    local base_type = type(value)
    if base_type == "table" then
       local cls = value.__class
@@ -309,12 +310,12 @@ function M.T(value)
    return base_type
 end
 
-function M.flatten(t)
+function ut.flatten(t)
    local flat = {}
    for i = 1, #t do
       local value = t[i]
-      if M.T(value) == "table" then
-         local list = M.flatten(value)
+      if ut.T(value) == "table" then
+         local list = ut.flatten(value)
          for j = 1, #list do
             flat[#flat + 1] = list[j]
          end
@@ -329,7 +330,7 @@ end
 ---@param f function
 ---@param list table
 ---@return table
-function M.filter(f, list)
+function ut.filter(f, list)
    local res = {}
    for i = 1, #list do
       if f(list[i]) then
@@ -345,13 +346,13 @@ local function reduce(f, acc, list)
    end
    return acc
 end
-M.reduce = reduce
+ut.reduce = reduce
 
 ---list map
 ---@param f function
 ---@param list table
 ---@return table
-function M.map(f, list)
+function ut.map(f, list)
    for i = 1, #list do
       list[i] = f(list[i], i)
    end
@@ -361,31 +362,31 @@ end
 ---dump table as key value pairs
 ---@param o table
 ---@return string
-function M.tdump(o)
-   if M.T(o) == "table" then
+function ut.tdump(o)
+   if ut.T(o) == "table" then
       local s = {}
       for k, v in pairs(o) do
          s[#s + 1] = k
          s[#s + 1] = ": "
-         s[#s + 1] = M.tdump(v)
+         s[#s + 1] = ut.tdump(v)
          s[#s + 1] = " "
       end
       return tconcat(s)
    else
-      return tostring(M.colors.red(o))
+      return tostring(ut.colors.red(o))
    end
 end
 
 ---dump table of events the tidal way
 ---@param o table
 ---@return string
-function M.dump(o)
-   if M.T(o) == "table" then
+function ut.dump(o)
+   if ut.T(o) == "table" then
       local s = {}
       for k, v in pairs(o) do
-         s[#s + 1] = M.colors.cyan(k)
+         s[#s + 1] = ut.colors.cyan(k)
          s[#s + 1] = ": "
-         s[#s + 1] = M.dump(v)
+         s[#s + 1] = ut.dump(v)
          s[#s + 1] = (k ~= #o) and "\n" or ""
       end
       return tconcat(s)
@@ -399,7 +400,7 @@ end
 ---@param xs table
 ---@param ys table
 ---@return table
-function M.zipWith(f, xs, ys)
+function ut.zipWith(f, xs, ys)
    local acc = {}
    for i = 1, #xs do
       acc[i] = f(xs[i], ys[i])
@@ -418,13 +419,13 @@ local function concat(a, b)
    -- return chain(a, b):totable()
    return a
 end
-M.concat = concat
+ut.concat = concat
 
 ---concat two hashmaps
 ---@param a table
 ---@param b table
 ---@return table
-function M.union(a, b)
+function ut.union(a, b)
    for k, v in pairs(b) do
       a[k] = v
    end
@@ -445,12 +446,12 @@ local function splitAt(index, list)
    end
    return fst, lst
 end
-M.splitAt = splitAt
+ut.splitAt = splitAt
 
 ---@param step number
 ---@param list table
 ---@return table
-function M.rotate(step, list)
+function ut.rotate(step, list)
    local a, b = splitAt(step, list)
    return concat(b, a)
 end
@@ -458,13 +459,13 @@ end
 ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
 ---@param ... unknown
 ---@return unknown
-function M.pipe(...)
+function ut.pipe(...)
    local funcs = { ... }
    return reduce(function(f, g)
       return function(...)
          return f(g(...))
       end
-   end, M.id, funcs)
+   end, ut.id, funcs)
 end
 
 local function reverse(...)
@@ -502,12 +503,12 @@ local function curry(func, num_args)
    end
    return curry_h(function() end, num_args)
 end
-M.curry = curry
+ut.curry = curry
 
 ---flip two args of f
 ---@param f function
 ---@return function
-function M.flip(f)
+function ut.flip(f)
    return function(a, b)
       return f(b, a)
    end
@@ -531,14 +532,14 @@ local function intSeedToRand(x)
    return (x % 536870912) / 536870912
 end
 
-function M.timeToRand(x)
+function ut.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
 
 ---returns num_param, is_vararg
 ---@param func function
 ---@return number, boolean
-function M.nparams(func)
+function ut.nparams(func)
    if _VERSION == "Lua 5.1" and not jit then
       local s = str_dump(func)
       assert(s:sub(1, 6) == "\27LuaQ\0", "This code works only in Lua 5.1")
@@ -555,7 +556,7 @@ end
 ---register a f(..., pat) as a method for Pattern.f(self, ...), essentially switch the order of args
 ---@param f function
 ---@return function
-function M.method_wrap(f)
+function ut.method_wrap(f)
    return function(...)
       local args = { ... }
       local pat = tremove(args, 1)
@@ -568,7 +569,7 @@ end
 ---@param arity number
 ---@param f function
 ---@return function
-function M.curry_wrap(arity, f)
+function ut.curry_wrap(arity, f)
    return function(...)
       local args = { ... }
       if #args < arity then
@@ -583,7 +584,7 @@ function M.curry_wrap(arity, f)
    end
 end
 
-function M.id(x)
+function ut.id(x)
    return x
 end
 
@@ -591,7 +592,7 @@ end
 ---@param f any
 ---@param env any
 ---@return any
-function M.setfenv(f, env)
+function ut.setfenv(f, env)
    local i = 1
    while true do
       local name = debug.getupvalue(f, i)
@@ -630,7 +631,7 @@ local function quicksort(array, left, right)
       quicksort(array, pivotNewIndex + 1, right)
    end
 end
-M.quicksort = quicksort
+ut.quicksort = quicksort
 
 --- debug in 51
 -- function M.get_args(f)
@@ -641,7 +642,7 @@ M.quicksort = quicksort
 --    return args
 -- end
 
-function M.get_args(f)
+function ut.get_args(f)
    local args = {}
    local hook = debug.gethook()
 
@@ -668,4 +669,4 @@ function M.get_args(f)
    return args
 end
 
-return M
+return ut

@@ -4,7 +4,7 @@ local host = "localhost"
 local port = 9000
 local RL = require "readline"
 local M = require "modal"
-local maxi = require("modal.maxi").maxi(M)
+local maxi = require("modal.notation").maxi(M)
 local ut = require "modal.utils"
 
 local keywords = {}

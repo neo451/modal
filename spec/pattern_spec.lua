@@ -103,7 +103,7 @@ describe("withQuerySpan", function()
    it("should return new pattern with that modifies query Span with function when queried", function()
       local pat = pure(5)
       local func = function(span)
-         return Span(span._begin + 0.5, span._end + 0.5)
+         return Span(span.start + 0.5, span.stop + 0.5)
       end
       local newPat = pat:withQuerySpan(func)
       local expected = {
@@ -475,7 +475,7 @@ end)
 
 describe("euclid", function()
    it("shoudl gen euclid pats", function()
-      local bjork = require "modal.euclid"
+      local bjork = require("modal.theory").bjork
       local pat = euclidRot(3, 8, 1, "bd")
       local expected = struct(bjork(3, 8, 1), "bd")
       assert.pat(expected, pat)

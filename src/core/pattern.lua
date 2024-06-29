@@ -1,8 +1,11 @@
 local types = require "modal.types"
-local Event, Span, State, Time, TDef = types.Event, types.Span, types.State, types.Time, types.TDef
 local ut = require "modal.utils"
-local bjork = require "modal.euclid"
-local getScale = require "modal.scales"
+local theory = require "modal.theory"
+local notation = require "modal.notation"
+local pattern = {}
+
+local bjork, getScale = theory.bjork, theory.getScale
+local Event, Span, State, Time, TDef = types.Event, types.Span, types.State, types.Time, types.TDef
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
@@ -35,18 +38,17 @@ local T = ut.T
 
 local fast, pure, fastcat, slowcat, stack, silence, focus, range, rev, compress
 
-local M = {}
 local TYPES = {}
 local op = {}
 
 -- give mini access to global vars
-setmetatable(M, { __index = _G })
+setmetatable(pattern, { __index = _G })
 
-local mini = require("modal.maxi").mini(M)
+local eval = notation.mini(pattern)
 local reify = memoize(function(thing)
    local t = T(thing)
    if "string" == t then
-      local res = mini(thing)
+      local res = eval(thing)
       return res and res or silence
    elseif "table" == t then
       return fastcat(thing)
@@ -56,7 +58,7 @@ local reify = memoize(function(thing)
       return pure(thing)
    end
 end)
-M.reify = reify
+pattern.reify = reify
 
 local mt = { __class = "pattern" }
 
@@ -130,10 +132,10 @@ mt.__index = mt
 -- automatically export pattern methods
 setmetatable(mt, {
    __newindex = function(_, k, v)
-      M[k] = v
+      pattern[k] = v
    end,
    __index = function(_, k)
-      return M[k]
+      return pattern[k]
    end,
 })
 
@@ -144,7 +146,7 @@ local function Pattern(query)
    end
    return setmetatable({ query = query }, mt)
 end
-M.Pattern = Pattern
+pattern.Pattern = Pattern
 
 local function querySpan(pat, b, e)
    local span = Span(b, e)
@@ -449,7 +451,7 @@ local function squeezeJoin(pat)
       local events = discreteOnly(pat).query(state)
       local flatEvent = function(outerEvent)
          local span = outerEvent:wholeOrPart()
-         local innerPat = M.focus(span._begin, span._end, outerEvent.value)
+         local innerPat = pattern.focus(span.start, span.stop, outerEvent.value)
          local innerEvents = innerPat.query(state:setSpan(outerEvent.part))
          local munge = function(outer, inner)
             local whole = nil
@@ -582,22 +584,22 @@ for k, f in pairs(ops) do
 end
 op["#"] = op["|>"]
 
-M.op = op
+pattern.op = op
 
 silence = Pattern()
-M.silence = silence
+pattern.silence = silence
 
 function pure(value)
    local query = function(state)
       local cycles = state.span:spanCycles()
       for i, v in ipairs(cycles) do
-         cycles[i] = Event(v._begin:wholeCycle(), v, value)
+         cycles[i] = Event(v.start:wholeCycle(), v, value)
       end
       return cycles
    end
    return Pattern(query)
 end
-M.pure = pure
+pattern.pure = pure
 
 local function purify(value)
    if T(value) == "pattern" then
@@ -674,17 +676,17 @@ local function register(type_sig, f, nify)
       local f_p = patternify(f)
       local f_p_t = type_wrap(f_p, name)
       local f_c_p_t = curry_wrap(arity, f_p_t)
-      M[name] = f_c_p_t
+      pattern[name] = f_c_p_t
       rawset(mt, name, method_wrap(f_c_p_t))
    else
       TYPES[name] = tdef
       local f_t = type_wrap(f, name)
       local f_t_c = curry_wrap(arity, f_t)
-      M[name] = f_t_c
+      pattern[name] = f_t_c
       rawset(mt, name, method_wrap(f_t))
    end
 end
-M.register = register
+pattern.register = register
 
 local function overlay(a, b)
    local query = function(st)
@@ -699,9 +701,9 @@ function stack(pats)
 end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
-function M.polymeter(steps, pats)
+function pattern.polymeter(steps, pats)
    for i, pat in ipairs(pats) do
-      pats[i] = fast(steps / pat:len(), pat)
+      pats[i] = pattern.fast(steps / pat:len(), pat)
    end
    return stack(pats)
 end
@@ -710,7 +712,7 @@ end
 function slowcat(pats)
    local query = function(state)
       local a = state.span
-      local cyc = a._begin:sam():asFloat()
+      local cyc = a.start:sam():asFloat()
       local n = #pats
       local i = cyc % n
       local pat = pats[i + 1]
@@ -729,7 +731,7 @@ end
 register("slowcat :: [Pattern a] -> Pattern a", slowcat, false)
 
 function fastcat(pats)
-   return fast(#pats, M.slowcat(pats))
+   return pattern.fast(#pats, pattern.slowcat(pats))
 end
 register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
 
@@ -751,7 +753,7 @@ local function timecat(tups)
    end
    return stack(pats)
 end
-M.timecat = timecat
+pattern.timecat = timecat
 
 local function arrange(tups)
    local total = 0
@@ -763,11 +765,11 @@ local function arrange(tups)
    local cycles, pat
    for i = 1, #tups, 2 do
       cycles, pat = tups[i], reify(tups[i + 1])
-      tups[i + 1] = fast(cycles, pat)
+      tups[i + 1] = pattern.fast(cycles, pat)
    end
    return slow(total, timecat(tups))
 end
-M.arrange = arrange
+pattern.arrange = arrange
 
 local function superimpose(f, pat)
    return overlay(pat, f(pat))
@@ -783,7 +785,6 @@ end
 register("layer :: [(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", layer, false) -- a little ugly lol layer
 
 function fast(factor, pat)
-   factor = Time(factor) -- TODO:
    if factor:eq(0) then
       return silence
    elseif factor:lt(0) then
@@ -846,7 +847,7 @@ end
 register("ply :: Pattern Time -> Pattern a -> Pattern a", ply)
 
 local function fastgap(factor, pat)
-   if factor <= Time(0) then
+   if factor:lte(0) then
       return silence
    end
    factor = factor:max(1)
@@ -854,14 +855,14 @@ local function fastgap(factor, pat)
       return t:sam() + ((t - t:sam()) * factor):min(1)
    end
    local eventSpanFunc = function(span)
-      local b = span._begin:sam() + (span._begin - span._begin:sam()) / factor
-      local e = span._begin:sam() + (span._end - span._begin:sam()) / factor
+      local b = span.start:sam() + (span.start - span.start:sam()) / factor
+      local e = span.start:sam() + (span.stop - span.start:sam()) / factor
       return Span(b, e)
    end
    local query = function(state)
       local span = state.span
-      local new_span = Span(mungeQuery(span._begin), mungeQuery(span._end))
-      if new_span._begin == new_span._begin:nextSam() then
+      local new_span = Span(mungeQuery(span.start), mungeQuery(span.stop))
+      if new_span.start == new_span.start:nextSam() then
          return {}
       end
       local new_state = State(new_span)
@@ -876,7 +877,7 @@ end
 register("fastgap :: Pattern Time -> Pattern a -> Pattern a", fastgap)
 
 function compress(b, e, pat)
-   if b > e or e > Time(1) or b > Time(1) or b < Time(0) or e < Time(0) then
+   if b:gt(e) or e:gt(1) or b:gt(1) or b:lt(0) or e:lt(0) then
       return silence
    end
    local fasted = fastgap((e - b):reverse(), pat)
@@ -932,13 +933,6 @@ local function scan(n)
 end
 register("scan :: Pattern Int -> Pattern Int", scan, false)
 
-local waveform = function(func)
-   local query = function(state)
-      return { Event(nil, state.span, func(state.span:midpoint())) }
-   end
-   return Pattern(query)
-end
-
 local function segment(n, pat)
    return appLeft(fast(n, pure(id)), pat)
 end
@@ -947,10 +941,17 @@ register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
-
 register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
 
-M.steady = function(value)
+local waveform = function(func)
+   local query = function(state)
+      return { Event(nil, state.span, func(state.span:midpoint())) }
+   end
+
+   return Pattern(query)
+end
+
+pattern.steady = function(value)
    return Pattern(function(state)
       return { Event(nil, state.span, value) }
    end)
@@ -963,31 +964,25 @@ local fromBipolar = function(pat)
    return (pat + 1) / 2
 end
 
-M.sine2 = waveform(function(t)
-   return sin(t:asFloat() * pi * 2)
-end)
-M.sine = fromBipolar(M.sine2)
-M.cosine2 = late(1 / 4, M.sine2)
-M.cosine = fromBipolar(M.cosine2)
-M.square = waveform(function(t)
-   return floor((t * 2) % 2)
-end)
-M.square2 = toBipolar(M.square)
-M.isaw = waveform(function(t)
-   return -(t % 1) + 1
-end)
-M.isaw2 = toBipolar(M.isaw)
-M.saw = waveform(function(t)
-   return t % 1
-end)
-M.saw2 = toBipolar(M.saw)
-M.tri = fastcat { M.isaw, M.saw }
-M.tri2 = fastcat { M.isaw2, M.saw2 }
-M.time = waveform(id)
-M.rand = waveform(timeToRand)
+-- stylua: ignore start
+local sine2 = waveform(function(t) return sin(t:asFloat() * pi * 2) end)
+local sine = fromBipolar(sine2)
+local cosine2 = late(1 / 4, sine2)
+local cosine = fromBipolar(cosine2)
+local square = waveform(function(t) return floor((t * 2) % 2) end)
+local square2 = toBipolar(square)
+local isaw = waveform(function(t) return -(t % 1) + 1 end)
+local isaw2 = toBipolar(isaw)
+local saw = waveform(function(t) return t % 1 end)
+local saw2 = toBipolar(saw)
+local tri = fastcat { isaw, saw }
+local tri2 = fastcat { isaw2, saw2 }
+local time = waveform(id)
+local rand = waveform(timeToRand)
+-- stylua: ignore end
 
 local _irand = function(i)
-   return fmap(M.rand, function(x)
+   return fmap(rand, function(x)
       return floor(x * i)
    end)
 end
@@ -1017,11 +1012,11 @@ local chooseInWith = function(pat, vals)
 end
 
 local choose = function(vals)
-   return chooseInWith(M.rand, vals)
+   return chooseInWith(rand, vals)
 end
 
 local randcat = function(pats)
-   return segment(1, choose(pats))
+   return pattern.segment(1, choose(pats))
 end
 register("randcat :: [Pattern a] -> Pattern a", randcat, false)
 
@@ -1045,13 +1040,13 @@ end
 register("degradeByWith :: Pattern Double -> Double -> Pattern a -> Pattern a", degradeByWith)
 
 local function degradeBy(by, pat)
-   return degradeByWith(M.rand, by, pat)
+   return degradeByWith(rand, by, pat)
 end
 register("degradeBy :: Pattern Double -> Pattern a -> Pattern a", degradeBy)
 
 local function undegradeBy(by, pat)
    return degradeByWith(
-      fmap(M.rand, function(r)
+      fmap(rand, function(r)
          return 1 - r
       end),
       by,
@@ -1101,15 +1096,15 @@ register("euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a ->
 function rev(pat)
    local query = function(state)
       local span = state.span
-      local cycle = span._begin:sam()
-      local nextCycle = span._begin:nextSam()
+      local cycle = span.start:sam()
+      local nextCycle = span.start:nextSam()
       local reflect = function(to_reflect)
          local reflected = to_reflect:withTime(function(t)
             return cycle + (nextCycle - t)
          end)
-         local tmp = reflected._begin
-         reflected._begin = reflected._end
-         reflected._end = tmp
+         local tmp = reflected.start
+         reflected.start = reflected.stop
+         reflected.stop = tmp
          return reflected
       end
       local events = pat.query(state:setSpan(reflect(span)))
@@ -1144,7 +1139,7 @@ register("reviter :: Pattern Int -> Pattern a -> Pattern a", reviter)
 local function echoWith(times, time, f, pat)
    local acc = {}
    for i = 0, times - 1 do
-      acc[i] = f(M.late(time * i, pat))
+      acc[i] = f(pattern.late(time * i, pat))
    end
    return stack(acc)
 end
@@ -1152,7 +1147,7 @@ register("echoWith :: Pattern Int -> Pattern Int -> Pattern f -> Pattern a -> Pa
 
 local function when(test, f, pat)
    local query = function(state)
-      local cycle_idx = state.span._begin:sam()
+      local cycle_idx = state.span.start:sam()
       if test(cycle_idx) then
          return f(pat).query(state)
       else
@@ -1165,7 +1160,7 @@ register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pat
 
 local slowcatPrime = function(pats)
    local query = function(state)
-      local index = state.span._begin:sam():asFloat() % #pats + 1
+      local index = state.span.start:sam():asFloat() % #pats + 1
       local pat = pats[index]
       return pat.query(state)
    end
@@ -1236,9 +1231,9 @@ local function drawLine(pat, chars)
       end, lines)
       emptyLine = emptyLine .. "|"
       for _ = 1, totalSlots:asFloat() do
-         local _begin, _end = pos, pos + charFraction
+         local start, stop = pos, pos + charFraction
          local matches = filter(function(event)
-            return event.whole._begin <= _begin and event.whole._end >= _end
+            return event.whole.start <= start and event.whole.stop >= stop
          end, events)
          local missingLines = #matches - #lines
          if missingLines > 0 then
@@ -1249,7 +1244,7 @@ local function drawLine(pat, chars)
          lines = map(function(line, index)
             local event = matches[index]
             if event ~= nil then
-               local isOnset = event.whole._begin == _begin
+               local isOnset = event.whole.start == start
                local char = nil
                if isOnset then
                   -- TODO: proper dump
@@ -1270,12 +1265,25 @@ local function drawLine(pat, chars)
 end
 mt.drawLine = drawLine
 
-M.id = id
-M.T = T
-M.maxi = maxi
-M.pipe = ut.pipe
-M.dump = ut.dump
-M.t = TYPES
-M.mt = mt
+pattern.id = id
+pattern.T = T
+pattern.pipe = ut.pipe
+pattern.dump = ut.dump
+pattern.t = TYPES
+pattern.mt = mt
+pattern.tri2 = tri2
+pattern.tri = tri
+pattern.saw2 = saw2
+pattern.saw = saw
+pattern.isaw = isaw
+pattern.isaw2 = isaw2
+pattern.square2 = square2
+pattern.square = square
+pattern.cosine = cosine
+pattern.cosine2 = cosine2
+pattern.sine = sine
+pattern.sine2 = sine2
+pattern.rand = rand
+pattern.time = time
 
-return M
+return pattern

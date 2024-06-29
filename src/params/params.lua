@@ -635,7 +635,7 @@ local pattern = require "modal.pattern"
 local reify, stack, pure = pattern.reify, pattern.stack, pattern.pure
 local T = require("modal.utils").T
 
-local P = {}
+local params = {}
 local create = function(name)
    local withVal
    if type(name) == "table" then
@@ -651,14 +651,14 @@ local create = function(name)
          end
       end
 
-      P[name[1]] = function(args)
+      params[name[1]] = function(args)
          return reify(args):fmap(withVal)
       end
    else
       withVal = function(v)
          return { [name] = v }
       end
-      P[name] = function(args)
+      params[name] = function(args)
          return reify(args):fmap(withVal)
       end
    end
@@ -670,13 +670,13 @@ for i = 1, #genericParams do
    create(param)
    if aliasParams[param] ~= nil then
       local alias = aliasParams[param]
-      P[alias] = P[param]
+      params[alias] = params[param]
    end
 end
 
-local parseChord = require "modal.chords"
+local parseChord = require("modal.theory").parseChord
 
-P.note = function(pat)
+params.note = function(pat)
    local notemt = {
       __add = function(self, other)
          -- HACK:
@@ -710,6 +710,6 @@ P.note = function(pat)
    return chordToStack(pat):fmap(withVal)
 end
 
-P.n = P.note
+params.n = params.note
 
-return P
+return params

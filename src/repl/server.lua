@@ -1,5 +1,5 @@
 local socket = require "socket"
-local maxi = require "modal.maxi"
+local maxi = require "modal.notation"
 local log = require("modal.utils").log
 local M = require "modal"
 

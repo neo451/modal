@@ -1,20 +1,20 @@
 local Clock = require "modal.clock"
 local DefaultClock = Clock()
-local M = {}
+local factory = {}
 
-function M.p(key, pattern)
+function factory.p(key, pattern)
    DefaultClock:subscribe(key, pattern)
    return pattern
 end
 
 -- TODO: cause server to freeze ...
-function M._p(key)
+function factory._p(key)
    DefaultClock:unsubscribe(key)
 end
 
-M.p_ = M._p
+factory.p_ = factory._p
 
-function M.hush()
+function factory.hush()
    for i, _ in pairs(DefaultClock.subscribers) do
       DefaultClock:unsubscribe(i)
    end
@@ -29,56 +29,33 @@ end
 
 for i = 1, 16 do
    if i <= 12 then
-      M["d" .. i] = function(a)
-         return M.p(i, a:orbit(i - 1))
+      factory["d" .. i] = function(a)
+         return factory.p(i, a:orbit(i - 1))
       end
    else
-      M["d" .. i] = function(a)
-         return M.p(i, a)
+      factory["d" .. i] = function(a)
+         return factory.p(i, a)
       end
    end
-   M["_d" .. i] = function()
-      return M._p(i)
+   factory["_d" .. i] = function()
+      return factory._p(i)
    end
-   M["d" .. i .. "_"] = function()
-      return M._p(i)
+   factory["d" .. i .. "_"] = function()
+      return factory._p(i)
    end
 end
 
-M.DefaultClock = DefaultClock
+factory.DefaultClock = DefaultClock
 
-function M.setcps(cps)
+function factory.setcps(cps)
    DefaultClock:setcps(cps)
 end
 
-function M.setbpm(bpm)
+function factory.setbpm(bpm)
    DefaultClock:setbpm(bpm)
 end
 
-M.bpm = M.setbpm
-M.cps = M.setcps
+factory.bpm = factory.setbpm
+factory.cps = factory.setcps
 
--- | 'hush' then execute the given action.
--- only :: Tidally => IO () -> IO ()
--- only = (hush >>)
-
--- -- | See 'Sound.Tidal.Stream.streamReplace'.
--- p :: Tidally => ID -> ControlPattern -> IO ()
--- p = streamReplace tidal
---
--- -- | Silences a specific stream, regardless of ControlPattern input. Useful for rapid muting of streams
--- _p :: Tidally => ID -> ControlPattern -> IO ()
--- _p k _ = streamReplace tidal k silence
---
--- -- | Silences a specific stream, regardless of ControlPattern input. Useful for rapid muting of streams
--- p_ :: Tidally => ID -> ControlPattern -> IO ()
--- p_ = _p
---
--- -- | See 'Sound.Tidal.Stream.streamHush'.
--- hush :: Tidally => IO ()
--- hush = streamHush tidal
---
--- panic :: Tidally => IO ()
--- panic = hush >> once (sound "superpanic")
-
-return M
+return factory

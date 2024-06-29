@@ -1,7 +1,7 @@
 local M = require "modal"
 M()
-local maxi = require("modal.maxi").maxi(M)
-local mini = require("modal.maxi").mini(M)
+local maxi = require("modal.notation").maxi(M)
+local mini = require("modal.notation").mini(M)
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert

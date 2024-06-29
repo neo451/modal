@@ -1,12 +1,15 @@
-local Time, Span, Event, State
-local T = require("modal.utils").T
-local decimaltofraction, gcd, lcm
 local ut = require "modal.utils"
+local losc = require "losc" -- TODO: get rid of ??? core should be pure
+local types = {}
+
+local T = ut.T
+local decimaltofraction, gcd, lcm
 local abs = math.abs
 local floor = math.floor
 local setmetatable = setmetatable
 local compare = ut.compare
 
+local State, Time, Span, Event
 local time = { __class = "time" }
 local span = { __class = "span" }
 local state = { __class = "state" }
@@ -18,7 +21,7 @@ time.__index = time
 
 function span:spanCycles()
    local spans = {}
-   local b, e = self._begin, self._end
+   local b, e = self.start, self.stop
    local e_sam = e:sam()
    -- TODO: zero width???
    -- if b == e then
@@ -26,7 +29,7 @@ function span:spanCycles()
    -- end
    while e > b do
       if b:sam() == e_sam then
-         spans[#spans + 1] = Span(b, self._end)
+         spans[#spans + 1] = Span(b, self.stop)
          break
       end
       local next_b = b:nextSam()
@@ -37,24 +40,24 @@ function span:spanCycles()
 end
 
 function span:duration()
-   return self._end - self._begin
+   return self.stop - self.start
 end
 
 function span:midpoint()
-   return self._begin + (self:duration() / 2)
+   return self.start + (self:duration() / 2)
 end
 
 function span:cycleSpan()
-   local b = self._begin:cyclePos()
+   local b = self.start:cyclePos()
    return Span(b, b + self:duration())
 end
 
 function span:__eq(rhs)
-   return self._begin == rhs._begin and self._end == rhs._end
+   return self.start == rhs.start and self.stop == rhs.stop
 end
 
 function span:__tostring()
-   return self._begin:show() .. " → " .. self._end:show()
+   return self.start:show() .. " → " .. self.stop:show()
 end
 
 function span:show()
@@ -62,31 +65,31 @@ function span:show()
 end
 
 function span:withTime(func)
-   return Span(func(self._begin), func(self._end))
+   return Span(func(self.start), func(self.stop))
 end
 
 function span:withEnd(func)
-   return Span(self._begin, func(self._end))
+   return Span(self.start, func(self.stop))
 end
 
 function span:withCycle(func)
-   local sam = self._begin:sam()
-   local b = sam + func(self._begin - sam)
-   local e = sam + func(self._end - sam)
+   local sam = self.start:sam()
+   local b = sam + func(self.start - sam)
+   local e = sam + func(self.stop - sam)
    return Span(b, e)
 end
 
 function span:sect(other)
-   local maxOfStart = self._begin:max(other._begin)
-   local minOfEnd = self._end:min(other._end)
+   local maxOfStart = self.start:max(other.start)
+   local minOfEnd = self.stop:min(other.stop)
    if maxOfStart > minOfEnd then
       return nil
    end
    if maxOfStart == minOfEnd then
-      if maxOfStart == self._end and self._begin < self._end then
+      if maxOfStart == self.stop and self.start < self.stop then
          return nil
       end
-      if maxOfStart == other._end and other._begin < other._end then
+      if maxOfStart == other.stop and other.start < other.stop then
          return nil
       end
    end
@@ -102,11 +105,12 @@ function span:sect_e(other)
 end
 
 function Span(b, e)
-   local new_obj = setmetatable({}, span)
    b = b or 1
    e = e or 1
-   new_obj._begin, new_obj._end = Time(b), Time(e)
-   return new_obj
+   return setmetatable({
+      start = Time(b),
+      stop = Time(e),
+   }, span)
 end
 
 function event:__eq(other)
@@ -119,7 +123,7 @@ function event:__eq(other)
 end
 
 function event:duration()
-   return self.whole._end - self.whole._begin
+   return self.whole.stop - self.whole.start
 end
 
 function event:wholeOrPart()
@@ -134,7 +138,7 @@ function event:hasWhole()
 end
 
 function event:hasOnset()
-   return self.whole ~= nil and self.whole._begin == self.part._begin
+   return self.whole ~= nil and self.whole.start == self.part.start
 end
 
 function event:withSpan(func)
@@ -157,8 +161,8 @@ function event:__tostring()
    local part = self.part:__tostring()
    local h, t = "", ""
    if self:hasWhole() then
-      h = (self.whole._begin ~= self.part._begin) and self.whole._begin:show() .. "-" or ""
-      t = (self.whole._end ~= self.part._end) and "-" .. self.whole._end:show() or ""
+      h = (self.whole.start ~= self.part.start) and self.whole.start:show() .. "-" or ""
+      t = (self.whole.stop ~= self.part.stop) and "-" .. self.whole.stop:show() or ""
    end
    return ("%s(%s)%s | %s"):format(h, part, t, ut.tdump(self.value))
 end
@@ -204,8 +208,8 @@ function Event(whole, part, value, context, stateful)
    }, event)
 end
 
-function state:setSpan(span)
-   return State(span, self.controls)
+function state:setSpan(sp)
+   return State(sp, self.controls)
 end
 
 function state:withSpan(func)
@@ -228,12 +232,12 @@ function state:__eq(other)
    return self.span == other.span and compare(self.controls, other.controls)
 end
 
-function State(span, controls)
-   span = span or Span()
-   controls = controls or {}
+function State(sp, ctrls)
+   sp = sp or Span()
+   ctrls = ctrls or {}
    return setmetatable({
-      span = span,
-      controls = controls,
+      span = sp,
+      controls = ctrls,
    }, state)
 end
 
@@ -407,6 +411,18 @@ function time:lt(rhs)
    return self < Time(rhs)
 end
 
+function time:gt(rhs)
+   return self > Time(rhs)
+end
+
+function time:lte(rhs)
+   return self <= Time(rhs)
+end
+
+function time:gte(rhs)
+   return self <= Time(rhs)
+end
+
 function time:reverse()
    return Time(1) / self
 end
@@ -489,8 +505,6 @@ function Time(n, d, normalize)
 end
 
 local stream = { __class = "stream" }
--- TODO: get rid of ??? core should be pure
-local losc = require "losc"
 
 function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
    if not self.pattern then
@@ -498,8 +512,8 @@ function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
    end
    local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo)
    for _, ev in ipairs(events) do
-      local cycleOn = ev.whole._begin
-      local cycleOff = ev.whole._end
+      local cycleOn = ev.whole.start
+      local cycleOff = ev.whole.stop
       local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)
       local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
       local deltaSeconds = (linkOff - linkOn) / mill
@@ -587,4 +601,6 @@ local function TDef(a)
    return tdef, tdef.name
 end
 
-return { Span = Span, Event = Event, State = State, Time = Time, Stream = Stream, TDef = TDef }
+types = { Span = Span, Event = Event, State = State, Time = Time, Stream = Stream, TDef = TDef }
+
+return types

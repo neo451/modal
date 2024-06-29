@@ -3,9 +3,12 @@ local al = require "abletonlink"
 local losc = require "losc"
 _G.struct = nil
 local plugin = require "losc.plugins.udp-socket"
-local Stream = require("modal.types").Stream
+local types = require "modal.types"
+local Stream = types.Stream
 
 local floor = math.floor
+local type = type
+local pairs = pairs
 
 local sleep = function(sec)
    return socket.sleep(sec)
@@ -126,7 +129,7 @@ end
 
 mt.__index = mt
 
-local function Clock(bpm, sampleRate, beatsPerCycle)
+function Clock(bpm, sampleRate, beatsPerCycle)
    bpm = bpm or 120
    sampleRate = sampleRate or (1 / 20)
    beatsPerCycle = beatsPerCycle or 4

@@ -1,4 +1,5 @@
 local ut = require "modal.utils"
+local notation = {}
 
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
@@ -448,7 +449,7 @@ local function make_gen(top_level)
          if not ok then
             return false
          end
-         local lua_src = a2s(ast)
+         local lua_src = a2s.run(ast) -- TODO: imporve api
          return lua_src
       end
 
@@ -475,6 +476,6 @@ local function make_gen(top_level)
    end
 end
 
-local notation = { maxi = make_gen(true), mini = make_gen(false) }
+notation = { maxi = make_gen(true), mini = make_gen(false) }
 
 return notation

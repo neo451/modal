@@ -28,13 +28,13 @@ polymeter = function(steps, pats) end
 ---@return Pattern
 stack = function(pats) end
 
----@param pats Pattern[]
+---@param pats any[]
 ---@return Pattern
 slowcat = function(pats) end
 
 ---Like slowcat, but the items are crammed into one cycle.
 ---fastcat("e5", "b4", "d5", "c5") // "e5 b4 d5 c5"
----@param pats Pattern[]
+---@param pats any[]
 ---@return Pattern
 fastcat = function(pats) end
 
