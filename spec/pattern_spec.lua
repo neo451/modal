@@ -2,12 +2,10 @@ local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 
-require "modal"()
 local M = require "modal"
--- HACK:
-local struct = M.struct
+M()
 local types = require "modal.types"
-local Span, State, Event = types.Span, types.State, types.Event
+local Span, Event = types.Span, types.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
 
 assert.pat = function(a, b)
@@ -17,13 +15,13 @@ end
 describe("new", function()
    it("should initialize with defaults", function()
       local pat = Pattern()
-      assert.same({}, pat.query(State()))
+      assert.same({}, pat.query(Span()))
    end)
    it("should create with specified query", function()
       local pat = Pattern(function()
          return { Event() }
       end)
-      local Events = pat.query(State())
+      local Events = pat.query(Span())
       assert.same({ Event() }, Events)
    end)
 end)
@@ -116,8 +114,8 @@ end)
 
 describe("splitQueries", function()
    it("should break a query that Spans multiple cycles into multiple queries each Spanning one cycle", function()
-      local query = function(state)
-         return { Event(state.span, state.span, "a") }
+      local query = function(span)
+         return { Event(span, span, "a") }
       end
       local pat = Pattern(query)
       local splitPat = pat:splitQueries()

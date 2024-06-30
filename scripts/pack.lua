@@ -78,6 +78,7 @@ function load(name)
    header = header .. "\n" .. wrap(name, files[name])
 end
 
+-- BUG: parseChord??
 load "ut"
 load "types"
 load "a2s"

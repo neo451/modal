@@ -3,20 +3,18 @@ local losc = require "losc" -- TODO: get rid of ??? core should be pure
 local types = {}
 
 local T = ut.T
-local decimaltofraction, gcd, lcm
 local abs = math.abs
 local floor = math.floor
 local setmetatable = setmetatable
-local compare = ut.compare
 
-local State, Time, Span, Event
+local Time, Span, Event
 local time = { __class = "time" }
 local span = { __class = "span" }
-local state = { __class = "state" }
+-- local state = { __class = "state" }
 local event = { __class = "event" }
 span.__index = span
 event.__index = event
-state.__index = state
+-- state.__index = state
 time.__index = time
 
 function span:spanCycles()
@@ -208,40 +206,7 @@ function Event(whole, part, value, context, stateful)
    }, event)
 end
 
-function state:setSpan(sp)
-   return State(sp, self.controls)
-end
-
-function state:withSpan(func)
-   return self:setSpan(func(self.span))
-end
-
-function state:setControls(controls)
-   return State(self.span, controls)
-end
-
-function state:__tostring()
-   return "span: " .. self.span:show() .. " controls: " .. ut.tdump(self.controls)
-end
-
-function state:show()
-   return self.__tostring(self)
-end
-
-function state:__eq(other)
-   return self.span == other.span and compare(self.controls, other.controls)
-end
-
-function State(sp, ctrls)
-   sp = sp or Span()
-   ctrls = ctrls or {}
-   return setmetatable({
-      span = sp,
-      controls = ctrls,
-   }, state)
-end
-
-decimaltofraction = function(x0, err)
+local function decimaltofraction(x0, err)
    err = err or 0.0000000001
    local num, den
    local g = abs(x0)
@@ -264,11 +229,11 @@ decimaltofraction = function(x0, err)
    return 0, 1
 end
 
-gcd = function(a, b)
+local function gcd(a, b)
    return (b == 0) and a or gcd(b, a % b)
 end
 
-lcm = function(a, b)
+local function lcm(a, b)
    return (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
 end
 
@@ -601,6 +566,6 @@ local function TDef(a)
    return tdef, tdef.name
 end
 
-types = { Span = Span, Event = Event, State = State, Time = Time, Stream = Stream, TDef = TDef }
+types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef }
 
 return types

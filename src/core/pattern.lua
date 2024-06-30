@@ -150,8 +150,8 @@ pattern.Pattern = Pattern
 
 local function querySpan(pat, b, e)
    local span = Span(b, e)
-   local state = State(span)
-   return setmetatable(pat.query(state), {
+   -- local state = State(span)
+   return setmetatable(pat.query(span), {
       __tostring = function(self)
          return dump(self)
       end,
@@ -188,11 +188,11 @@ end
 mt.removeNils = removeNils
 
 local function splitQueries(pat)
-   local query = function(state)
-      local cycles = state.span:spanCycles()
+   local query = function(span)
+      local cycles = span:spanCycles()
       local res = {}
       for i = 1, #cycles do
-         local evs = pat.query(state:setSpan(cycles[i]))
+         local evs = pat.query(cycles[i])
          for j = 1, #evs do
             res[#res + 1] = evs[j]
          end
@@ -219,9 +219,8 @@ local fmap = withValue
 mt.fmap = fmap
 
 local function withQuerySpan(pat, f)
-   local query = function(state)
-      local new_state = state:withSpan(f)
-      return pat.query(new_state)
+   local query = function(span)
+      return pat.query(f(span))
    end
    return Pattern(query)
 end
@@ -349,7 +348,7 @@ local function appLeft(pat, pat_val)
       local event_funcs = pat.query(state)
       for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
-         local event_vals = pat_val.query(state:setSpan(whole))
+         local event_vals = pat_val.query(whole)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
@@ -373,7 +372,7 @@ local function appRight(pat, pat_val)
       local event_vals = pat_val.query(state)
       for _, event_val in ipairs(event_vals) do
          local whole = event_val:wholeOrPart()
-         local event_funcs = pat.query(state:setSpan(whole))
+         local event_funcs = pat.query(whole)
          for _, event_func in ipairs(event_funcs) do
             local new_whole = event_val.whole
             local new_part = event_func.part:sect(event_val.part)
@@ -395,7 +394,7 @@ local function bindWhole(pat, choose_whole, func)
       local events = pat.query(state)
       local res = {}
       for _, a in ipairs(events) do
-         local evs = func(a.value).query(state:setSpan(a.part))
+         local evs = func(a.value).query(a.part)
          for _, b in ipairs(evs) do
             res[#res + 1] = Event(choose_whole(a.whole, b.whole), b.part, b.value)
          end
@@ -452,7 +451,7 @@ local function squeezeJoin(pat)
       local flatEvent = function(outerEvent)
          local span = outerEvent:wholeOrPart()
          local innerPat = pattern.focus(span.start, span.stop, outerEvent.value)
-         local innerEvents = innerPat.query(state:setSpan(outerEvent.part))
+         local innerEvents = innerPat.query(outerEvent.part)
          local munge = function(outer, inner)
             local whole = nil
             if inner.whole and outer.whole then
@@ -590,8 +589,8 @@ silence = Pattern()
 pattern.silence = silence
 
 function pure(value)
-   local query = function(state)
-      local cycles = state.span:spanCycles()
+   local query = function(span)
+      local cycles = span:spanCycles()
       for i, v in ipairs(cycles) do
          cycles[i] = Event(v.start:wholeCycle(), v, value)
       end
@@ -710,9 +709,8 @@ end
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
 function slowcat(pats)
-   local query = function(state)
-      local a = state.span
-      local cyc = a.start:sam():asFloat()
+   local query = function(span)
+      local cyc = span.start:sam():asFloat()
       local n = #pats
       local i = cyc % n
       local pat = pats[i + 1]
@@ -722,9 +720,9 @@ function slowcat(pats)
       local offset = cyc - (cyc - i) / n
       return withEventTime(pat, function(t)
          return t + offset
-      end).query(state:setSpan(a:withTime(function(t)
+      end).query(span:withTime(function(t)
          return t - offset
-      end)))
+      end))
    end
    return splitQueries(Pattern(query))
 end
@@ -859,14 +857,12 @@ local function fastgap(factor, pat)
       local e = span.start:sam() + (span.stop - span.start:sam()) / factor
       return Span(b, e)
    end
-   local query = function(state)
-      local span = state.span
+   local query = function(span)
       local new_span = Span(mungeQuery(span.start), mungeQuery(span.stop))
       if new_span.start == new_span.start:nextSam() then
          return {}
       end
-      local new_state = State(new_span)
-      local events = pat.query(new_state)
+      local events = pat.query(new_span)
       for i = 1, #events do
          events[i] = events[i]:withSpan(eventSpanFunc)
       end
@@ -944,8 +940,8 @@ end
 register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
 
 local waveform = function(func)
-   local query = function(state)
-      return { Event(nil, state.span, func(state.span:midpoint())) }
+   local query = function(span)
+      return { Event(nil, span, func(span:midpoint())) }
    end
 
    return Pattern(query)
@@ -1094,8 +1090,7 @@ end
 register("euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot)
 
 function rev(pat)
-   local query = function(state)
-      local span = state.span
+   local query = function(span)
       local cycle = span.start:sam()
       local nextCycle = span.start:nextSam()
       local reflect = function(to_reflect)
@@ -1107,7 +1102,7 @@ function rev(pat)
          reflected.stop = tmp
          return reflected
       end
-      local events = pat.query(state:setSpan(reflect(span)))
+      local events = pat.query(reflect(span))
       for i = 1, #events do
          events[i] = events[i]:withSpan(reflect)
       end
@@ -1159,10 +1154,10 @@ end
 register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", when)
 
 local slowcatPrime = function(pats)
-   local query = function(state)
-      local index = state.span.start:sam():asFloat() % #pats + 1
+   local query = function(span)
+      local index = span.start:sam():asFloat() % #pats + 1
       local pat = pats[index]
-      return pat.query(state)
+      return pat.query(span)
    end
    return splitQueries(Pattern(query))
 end
