@@ -1,113 +1,71 @@
-local stack, slow, pure, fastcat, _patternify, _patternify_p_p, _patternify_p_p_p
-do
-   local _obj_0 = require "modal.pattern"
-   stack, slow, pure, fastcat, _patternify, _patternify_p_p, _patternify_p_p_p =
-      _obj_0.stack,
-      _obj_0.slow,
-      _obj_0.pure,
-      _obj_0.fastcat,
-      _obj_0._patternify,
-      _obj_0._patternify_p_p,
-      _obj_0._patternify_p_p_p
-end
-local map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type
-do
-   local _obj_0 = require "modal.utils"
-   map, filter, string_lambda, reduce, id, flatten, totable, dump, concat, rotate, union, timeToRand, curry, type =
-      _obj_0.map,
-      _obj_0.filter,
-      _obj_0.string_lambda,
-      _obj_0.reduce,
-      _obj_0.id,
-      _obj_0.flatten,
-      _obj_0.totable,
-      _obj_0.dump,
-      _obj_0.concat,
-      _obj_0.rotate,
-      _obj_0.union,
-      _obj_0.timeToRand,
-      _obj_0.curry,
-      _obj_0.type
-end
-local types = require "modal.types"
-local Event, Span, State = types.Event, types.Span, types.State
+local pattern = require "modal.pattern"
+local stack, fastcat = pattern.stack, pattern.fastcat
+local ut = require "modal.utils"
+local union = ut.union
+local register = pattern.register
 
-local P = require "modal.params"
+-- local P = require "modal.params"
 
 local function juxBy(by, f, pat)
    by = by / 2
-   local elem_or
-   elem_or = function(dict, key, default)
+   local elem_or = function(dict, key, default)
       if dict[key] ~= nil then
          return dict[key]
       end
       return default
    end
    local left = pat:fmap(function(valmap)
-      return union({
-         pan = elem_or(valmap, "pan", 0.5) - by,
-      }, valmap)
+      return union({ pan = elem_or(valmap, "pan", 0.5) - by }, valmap)
    end)
    local right = pat:fmap(function(valmap)
-      return union({
-         pan = elem_or(valmap, "pan", 0.5) + by,
-      }, valmap)
+      return union({ pan = elem_or(valmap, "pan", 0.5) + by }, valmap)
    end)
    return stack(left, f(right))
 end
 
-return {
-   {
-      "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
-      juxBy,
-   },
-   {
-      "jux",
-      "(Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
-      function(f, pat)
-         return juxBy(0.5, f, pat)
-      end,
-   },
-   {
-      "striate",
-      "Pattern Int -> ControlPattern -> ControlPattern",
-      function(n, pat)
-         local ranges
-         do
-            local _accum_0 = {}
-            local _len_0 = 1
-            for i = 0, n - 1 do
-               _accum_0[_len_0] = {
-                  begin = i / n,
-                  ["end"] = (i + 1) / n,
-               }
-               _len_0 = _len_0 + 1
-            end
-            ranges = _accum_0
-         end
-         local merge_sample
-         merge_sample = function(range)
-            local f
-            f = function(v)
-               return union(range, {
-                  sound = v.sound,
-               })
-            end
-            return pat:fmap(f)
-         end
-         return fastcat((function()
-            local _accum_0 = {}
-            local _len_0 = 1
-            for _index_0 = 1, #ranges do
-               local r = ranges[_index_0]
-               _accum_0[_len_0] = merge_sample(r)
-               _len_0 = _len_0 + 1
-            end
-            return _accum_0
-         end)())
-      end,
-   },
-}
+local function striate(n, pat)
+   local ranges = {}
+   for i = 0, n - 1 do
+      ranges[i] = { ["begin"] = i / n, ["end"] = (i + 1) / n }
+   end
+   local merge_sample = function(range)
+      local f = function(v)
+         return union(range, { sound = v.sound })
+      end
+      return pat:fmap(f)
+   end
+   local pats = {}
+   for i = 1, n do
+      pats[i] = merge_sample(ranges[i])
+   end
+   return fastcat(pats)
+end
+register(
+   "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+   juxBy
+)
+
+-- return {
+--    ["juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap"] = juxBy,
+--    -- {
+--    --    -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+--    --    -- "juxBy :: Pattern Double -> f -> Pattern ValueMap -> Pattern ValueMap",
+--    --    "",
+--    --    juxBy,
+--    -- },
+--    -- {
+--    --    -- "jux :: (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+--    --    "",
+--    --    function(f, pat)
+--    --       return juxBy(0.5, f, pat)
+--    --    end,
+--    -- },
+--    -- {
+--    --    -- "striate :: Pattern Int -> ControlPattern -> ControlPattern",
+--    --    "",
+--    --    striate,
+--    -- },
+-- }
 
 --
 -- register("chop", function(n, pat)

@@ -608,9 +608,8 @@ local function purify(value)
    end
 end
 
-local function patternify(func)
+local function patternify(arity, func)
    return function(...)
-      local arity = nparams(func)
       local pats = { ... }
       local pat = tremove(pats, #pats)
       if arity == 1 then
@@ -672,11 +671,11 @@ local function register(type_sig, f, nify)
    end
    if nify then
       TYPES[name] = tdef
-      local f_p = patternify(f)
+      local f_p = patternify(arity, f)
       local f_p_t = type_wrap(f_p, name)
       local f_c_p_t = curry_wrap(arity, f_p_t)
       pattern[name] = f_c_p_t
-      rawset(mt, name, method_wrap(f_c_p_t))
+      rawset(mt, name, method_wrap(f_p_t))
    else
       TYPES[name] = tdef
       local f_t = type_wrap(f, name)

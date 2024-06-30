@@ -1,10 +1,10 @@
 local pattern = require "modal.pattern"
 local ut = require "modal.utils"
 local factory = require "modal.factory"
-local ui = require "modal.ui"
 local params = require "modal.params"
 local mt = pattern.mt
 local types = require "modal.types"
+require "modal.ui"
 
 local modal = {
    version = "modal dev-1",
@@ -23,8 +23,8 @@ for name, func in pairs(types) do
 end
 
 -- todo:
--- for _, func in pairs(ui) do
---    pattern.register(func)
+-- for type, func in pairs(ui) do
+--    pattern.register(type, func)
 -- end
 
 for name, func in pairs(pattern) do
