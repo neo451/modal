@@ -1,6 +1,6 @@
-local M = require "modal.utils"
+local M = require("modal").ut
 local drawLine = require("modal").drawLine
-local pat = require "modal.pattern"
+local pat = require "modal"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert

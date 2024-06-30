@@ -1,5 +1,5 @@
-local Time = require("modal.types").Time
-local Span = require("modal.types").Span
+local Time = require("modal").Time
+local Span = require("modal").Span
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert

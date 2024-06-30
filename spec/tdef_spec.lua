@@ -1,5 +1,5 @@
 local describe = require("busted").describe
-local M = require("modal.types").TDef
+local M = require("modal").TDef
 local it = require("busted").it
 local assert = require("busted").assert
 

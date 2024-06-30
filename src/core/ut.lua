@@ -1,5 +1,4 @@
 local ut = {}
-
 local pairs = pairs
 local ipairs = ipairs
 local tostring = tostring
@@ -7,7 +6,6 @@ local loadstring = loadstring or load
 local setmetatable = setmetatable
 local type = type
 local unpack = unpack or rawget(table, "unpack")
-local setfenv = setfenv or ut.setfenv
 local str_dump = string.dump
 local str_char = string.char
 local tconcat = table.concat

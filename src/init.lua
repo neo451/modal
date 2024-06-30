@@ -1,17 +1,30 @@
 local pattern = require "modal.pattern"
+local notation = require "modal.notation"
 local ut = require "modal.utils"
 local factory = require "modal.factory"
+local theory = require "modal.theory"
 local params = require "modal.params"
 local mt = pattern.mt
 local types = require "modal.types"
+local Clock = require "modal.clock"
 require "modal.ui"
 
-local modal = {
+modal = {
    version = "modal dev-1",
    url = "https://github.com/noearc/modal",
 }
 
 local pairs = pairs
+
+modal.Clock = Clock
+
+for name, func in pairs(notation) do
+   modal[name] = func
+end
+
+for name, func in pairs(theory) do
+   modal[name] = func
+end
 
 for name, func in pairs(factory) do
    modal[name] = func

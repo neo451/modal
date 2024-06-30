@@ -4,8 +4,7 @@ local assert = require("busted").assert
 
 local M = require "modal"
 M()
-local types = require "modal.types"
-local Span, Event = types.Span, types.Event
+local Span, Event = M.Span, M.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
 
 assert.pat = function(a, b)
@@ -473,7 +472,6 @@ end)
 
 describe("euclid", function()
    it("shoudl gen euclid pats", function()
-      local bjork = require("modal.theory").bjork
       local pat = euclidRot(3, 8, 1, "bd")
       local expected = struct(bjork(3, 8, 1), "bd")
       assert.pat(expected, pat)

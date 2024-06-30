@@ -1,12 +1,13 @@
-local M = require "modal.factory"
-local pure = require("modal.pattern").pure
+local M = require "modal"
+-- local pure = require("modal").pure
+require "modal"()
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 
 local DefaultClock = M.DefaultClock
-local hush = M.hush
-local p = M.p
+-- local hush = M.hush
+-- local p = M.p
 
 describe("p", function()
    it("register stream of patterns to clock", function()

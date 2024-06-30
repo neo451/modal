@@ -1,5 +1,5 @@
-local UI = require "modal.ui"
-local P = require "modal.params"
+-- local UI = require "modal.ui"
+local note = require("modal").note
 require "modal"()
 
 local describe = require("busted").describe
@@ -11,6 +11,6 @@ assert.pat = function(a, b)
 end
 describe("note", function()
    it("shoudl parse chords", function()
-      assert.pat(stack { { note = 0 }, { note = 4 }, { note = 7 } }, P.note "c'maj")
+      assert.pat(stack { { note = 0 }, { note = 4 }, { note = 7 } }, note "c'maj")
    end)
 end)

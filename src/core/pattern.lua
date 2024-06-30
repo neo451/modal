@@ -5,7 +5,7 @@ local notation = require "modal.notation"
 local pattern = {}
 
 local bjork, getScale = theory.bjork, theory.getScale
-local Event, Span, State, Time, TDef = types.Event, types.Span, types.State, types.Time, types.TDef
+local Event, Span, Time, TDef = types.Event, types.Span, types.Time, types.TDef
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs

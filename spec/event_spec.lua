@@ -1,6 +1,6 @@
-local types = require "modal.types"
-local ut = require "modal.utils"
-local Span, Event, Time = types.Span, types.Event, types.Time
+local M = require "modal"
+local ut = require("modal").ut
+local Span, Event, Time = M.Span, M.Event, M.Time
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert

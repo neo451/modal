@@ -40,6 +40,7 @@ local function striate(n, pat)
    end
    return fastcat(pats)
 end
+
 register(
    "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
    juxBy

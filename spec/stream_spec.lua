@@ -3,7 +3,7 @@ local assert = require("busted").assert
 local describe = require("busted").describe
 local busted = require "busted"
 local spy = busted.spy
-local Clock = require "modal.clock"
+local Clock = require("modal").Clock
 local Stream = require("modal").Stream
 local s = require("modal").s
 

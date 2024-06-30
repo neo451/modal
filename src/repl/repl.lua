@@ -1,22 +1,19 @@
 local socket = require "socket"
-print "modal repl   :? for help"
 local host = "localhost"
 local port = 9000
 local RL = require "readline"
-local M = require "modal"
-local maxi = require("modal.notation").maxi(M)
-local ut = require "modal.utils"
+local modal = require "modal"
+local notation = require "modal.notation"
+local maxi = notation.maxi(modal)
 
 local keywords = {}
-for i, _ in pairs(M) do
+for i, _ in pairs(modal) do
    keywords[#keywords + 1] = i
 end
 
 RL.set_complete_list(keywords)
 
 local ok, c = pcall(socket.connect, host, port)
-
-M()
 
 local optf = {
    ["?"] = function()
@@ -26,10 +23,10 @@ local optf = {
 :q  quit repl ]]
    end,
    t = function(a)
-      return tostring(M.t[a])
+      return tostring(modal.t[a])
    end,
    v = function()
-      return M._VERSION
+      return modal._VERSION
    end,
    -- info = function(name)
    --    return dump(doc[name])
@@ -58,28 +55,34 @@ end
 RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
 RL.set_readline_name "modal"
 
-local line
-while true do
-   line = RL.readline "> "
-   if line == "exit" then
-      if c then
-         c:close()
+local function repl()
+   local line
+   print "modal repl   :? for help"
+   while true do
+      line = RL.readline "> "
+      if line == "exit" then
+         if c then
+            c:close()
+         end
+         break
       end
-      break
+
+      if line ~= "" then
+         local res = eval(line)
+         if res then
+            print(res)
+         end
+         RL.add_history(line)
+         RL.save_history()
+         if c then
+            c:send(line .. "\n")
+         end
+      end
    end
 
-   if line ~= "" then
-      local res = eval(line)
-      if res then
-         print(res)
-      end
-      RL.add_history(line)
-      RL.save_history()
-      if c then
-         c:send(line .. "\n")
-      end
-   end
+   c:close()
+   os.exit()
 end
+modal.repl = repl
 
-c:close()
-os.exit()
+return repl

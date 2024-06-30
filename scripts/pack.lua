@@ -1,4 +1,6 @@
 local header = [[
+#! /usr/bin/lua5.1
+local modal = {}
 local ut = {}
 local pattern = {}
 local params = {}
@@ -7,12 +9,14 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
+local repl = {}
 local lpeg = require"lpeg"
 local socket = require "socket"
 local al = require "abletonlink"
 local losc = require "losc"
-_G.struct = nil
 local plugin = require "losc.plugins.udp-socket"
+_G.struct = nil
+local RL = require "readline"
 local Clock
 ]]
 
@@ -38,7 +42,6 @@ local function scandir(root)
    -- adapted from http://keplerproject.github.com/luafilesystem/examples.html
    local hndl
    for f in fs.dir(root) do
-      print(f)
       if f:find "%.lua$" then
          hndl = f:gsub("%.lua$", ""):gsub("^[/\\]", ""):gsub("/", "."):gsub("\\", ".")
          files[hndl] = io.open(root .. f)
@@ -49,8 +52,7 @@ end
 scandir "src/core/"
 
 files["init"] = io.open "src/init.lua"
-files["clock"] = io.open "src/clock/clock.lua"
-files["params"] = io.open "src/params/params.lua"
+files["repl"] = io.open "src/repl/repl.lua"
 -- p(files)
 
 local function get_content(name, file)
@@ -89,13 +91,15 @@ load "factory"
 load "pattern"
 load "params"
 header = header .. "\n" .. get_content("init", files["init"])
+header = header .. "\n" .. get_content("repl", files["repl"])
+
+header = header .. "\n" .. [[
+if arg and arg[1] == "-i" then repl() end
+modal.ut = ut
+]]
 header = header .. "\n" .. "return modal"
 
-local file = io.open("modal.lua", "w")
+print(header)
 
 -- TODO: lfs
 -- TODO: stylua the result if avaliable
-
-if file then
-   file:write(header)
-end

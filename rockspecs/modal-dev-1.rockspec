@@ -1,4 +1,3 @@
-rockspec_format = "3.0"
 package = "modal"
 version = "dev-1"
 source = {
@@ -24,32 +23,15 @@ dependencies = {
 }
 
 build = {
-   type = "builtin",
-   modules = {
-      ["modal.init"] = "src/init.lua",
-      ["modal.utils"] = "src/core/ut.lua",
-
-      ["modal.types"] = "src/core/types.lua",
-      ["modal.pattern"] = "src/core/pattern.lua",
-      ["modal.factory"] = "src/core/factory.lua",
-
-      ["modal.params"] = "src/params/params.lua",
-      ["modal.ui"] = "src/params/ui.lua",
-
-      ["modal.clock"] = "src/clock/clock.lua",
-
-      ["modal.theory"] = "src/core/theory.lua",
-
-      ["modal.notation"] = "src/core/notation.lua",
-      ["modal.ast_to_src"] = "src/core/a2s.lua",
-
-      ["modal.repl"] = "src/repl/repl.lua",
-      ["modal.server"] = "src/repl/server.lua",
-   },
+   type = "command",
+   build_command = "lua5.1 ./scripts/pack.lua > ./modal.lua",
    install = {
+      lua = {
+         ["modal"] = "modal.lua",
+      },
       bin = {
-         "bin/modal",
-         "bin/mods",
+         ["modal"] = "modal.lua",
+         -- "modal",
       },
    },
 }
