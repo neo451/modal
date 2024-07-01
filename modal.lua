@@ -8,13 +8,14 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
-local lpeg = require"lpeg"
+local has_lpeg, lpeg = pcall(require, "lpeg")
+lpeg = has_lpeg and lpeg or require("lulpeg"):register(not _ENV and _G)
 local socket = require "socket"
 local al = require "abletonlink"
 local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
 _G.struct = nil
-local RL = require "readline"
+local has_RL, RL = pcall(require, "readline")
 local Clock
 
 do
@@ -558,10 +559,11 @@ end
 function ut.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
+
 local nparams
--- ---returns num_param, is_vararg
--- ---@param func function
--- ---@return number, boolean
+---returns num_param, is_vararg
+---@param func function
+---@return number, boolean
 function nparams(func)
    local info = d_getinfo(func)
    return info.nparams, info.isvararg
@@ -658,7 +660,6 @@ local function quicksort(array, left, right)
 end
 ut.quicksort = quicksort
 
---- debug in 51
 function ut.get_args(f)
    local args = {}
    for i = 1, nparams(f) do
@@ -5032,7 +5033,9 @@ local aliasParams = {
    voice = "voi",
 }
 
-local reify, stack, pure = pattern.reify, pattern.stack, pattern.pure
+local reify, stack = pattern.reify, pattern.stack
+local T = ut.T
+local parseChord = theory.parseChord
 
 local create = function(name)
    local withVal
@@ -5071,7 +5074,6 @@ for i = 1, #genericParams do
       params[alias] = params[param]
    end
 end
-
 
 params.note = function(pat)
    local notemt = {
@@ -5195,7 +5197,12 @@ for i, _ in pairs(modal) do
    keywords[#keywords + 1] = i
 end
 
-RL.set_complete_list(keywords)
+if has_RL then
+   print "readline!"
+   RL.set_complete_list(keywords)
+   RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
+   RL.set_readline_name "modal"
+end
 
 local ok, c = pcall(socket.connect, host, port)
 
@@ -5236,14 +5243,18 @@ local eval = function(a)
    end
 end
 
-RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
-RL.set_readline_name "modal"
+local function readline(a)
+   io.write(a)
+   return io.read()
+end
+
+local read = has_RL and RL.readline or readline
 
 function repl()
    local line
    print "modal repl   :? for help"
    while true do
-      line = RL.readline "> "
+      line = read "> "
       if line == "exit" then
          if c then
             c:close()
@@ -5256,8 +5267,10 @@ function repl()
          if res then
             print(res)
          end
-         RL.add_history(line)
-         RL.save_history()
+         if has_RL then
+            RL.add_history(line)
+            RL.save_history()
+         end
          if c then
             c:send(line .. "\n")
          end
@@ -5271,4 +5284,5 @@ modal.repl = repl
 
 end
    
+modal.ut = ut
 return modal

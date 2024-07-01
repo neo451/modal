@@ -9,13 +9,14 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
-local lpeg = require"lpeg"
+local has_lpeg, lpeg = pcall(require, "lpeg")
+lpeg = has_lpeg and lpeg or require("lulpeg"):register(not _ENV and _G)
 local socket = require "socket"
 local al = require "abletonlink"
 local losc = require "losc"
 local plugin = require "losc.plugins.udp-socket"
 _G.struct = nil
-local RL = require "readline"
+local has_RL, RL = pcall(require, "readline")
 local Clock
 ]]
 
@@ -87,6 +88,7 @@ load "pattern"
 load "params"
 header = header .. "\n" .. get_content("init", files["init"])
 load "repl"
+header = header .. "\n" .. "modal.ut = ut"
 header = header .. "\n" .. "return modal"
 
 print(header)

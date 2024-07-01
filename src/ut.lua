@@ -539,10 +539,11 @@ end
 function ut.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
+
 local nparams
--- ---returns num_param, is_vararg
--- ---@param func function
--- ---@return number, boolean
+---returns num_param, is_vararg
+---@param func function
+---@return number, boolean
 function nparams(func)
    local info = d_getinfo(func)
    return info.nparams, info.isvararg
@@ -639,7 +640,6 @@ local function quicksort(array, left, right)
 end
 ut.quicksort = quicksort
 
---- debug in 51
 function ut.get_args(f)
    local args = {}
    for i = 1, nparams(f) do

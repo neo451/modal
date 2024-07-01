@@ -632,8 +632,11 @@ local aliasParams = {
 }
 
 local pattern = require "pattern"
-local reify, stack, pure = pattern.reify, pattern.stack, pattern.pure
-local T = require("modal.utils").T
+local reify, stack = pattern.reify, pattern.stack
+local ut = require "ut"
+local T = ut.T
+local theory = require "theory"
+local parseChord = theory.parseChord
 
 local params = {}
 local create = function(name)
@@ -673,8 +676,6 @@ for i = 1, #genericParams do
       params[alias] = params[param]
    end
 end
-
-local parseChord = require("modal.theory").parseChord
 
 params.note = function(pat)
    local notemt = {

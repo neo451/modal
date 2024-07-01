@@ -1,7 +1,7 @@
 local socket = require "socket"
 local host = "localhost"
 local port = 9000
-local RL = require "readline"
+local has_RL, RL = pcall(require, "readline")
 local modal = require "modal"
 local notation = require "modal.notation"
 local maxi = notation.maxi(modal)
@@ -11,7 +11,12 @@ for i, _ in pairs(modal) do
    keywords[#keywords + 1] = i
 end
 
-RL.set_complete_list(keywords)
+if has_RL then
+   print "readline!"
+   RL.set_complete_list(keywords)
+   RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
+   RL.set_readline_name "modal"
+end
 
 local ok, c = pcall(socket.connect, host, port)
 
@@ -52,14 +57,18 @@ local eval = function(a)
    end
 end
 
-RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
-RL.set_readline_name "modal"
+local function readline(a)
+   io.write(a)
+   return io.read()
+end
+
+local read = has_RL and RL.readline or readline
 
 function repl()
    local line
    print "modal repl   :? for help"
    while true do
-      line = RL.readline "> "
+      line = read "> "
       if line == "exit" then
          if c then
             c:close()
@@ -72,8 +81,10 @@ function repl()
          if res then
             print(res)
          end
-         RL.add_history(line)
-         RL.save_history()
+         if has_RL then
+            RL.add_history(line)
+            RL.save_history()
+         end
          if c then
             c:send(line .. "\n")
          end
