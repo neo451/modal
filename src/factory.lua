@@ -1,4 +1,4 @@
-local Clock = require "modal.clock"
+local Clock = require "clock"
 local DefaultClock = Clock()
 local factory = {}
 

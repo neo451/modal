@@ -24,13 +24,13 @@ dependencies = {
 
 build = {
    type = "command",
-   build_command = "lua5.1 ./scripts/pack.lua > ./modal.lua",
+   build_command = "make build",
    install = {
       lua = {
          ["modal"] = "modal.lua",
       },
       bin = {
-         ["modal"] = "modal.lua",
+         ["modal"] = "modal",
          -- "modal",
       },
    },

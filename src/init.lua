@@ -1,12 +1,12 @@
-local pattern = require "modal.pattern"
-local notation = require "modal.notation"
-local ut = require "modal.utils"
-local factory = require "modal.factory"
-local theory = require "modal.theory"
-local params = require "modal.params"
+local pattern = require "pattern"
+local notation = require "notation"
+local ut = require "utils"
+local factory = require "factory"
+local theory = require "theory"
+local params = require "params"
 local mt = pattern.mt
-local types = require "modal.types"
-local Clock = require "modal.clock"
+local types = require "types"
+local Clock = require "clock"
 require "modal.ui"
 
 modal = {

@@ -1,4 +1,4 @@
-local ut = require "modal.utils"
+local ut = require "ut"
 local lpeg = require "lpeg"
 local theory = {}
 local P, S, V, R, C, Ct, Cc = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct, lpeg.Cc

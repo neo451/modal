@@ -55,7 +55,7 @@ end
 RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
 RL.set_readline_name "modal"
 
-local function repl()
+function repl()
    local line
    print "modal repl   :? for help"
    while true do

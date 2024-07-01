@@ -1,11 +1,11 @@
-local M = require "modal"
+-- local M = require "modal"
 -- local pure = require("modal").pure
 require "modal"()
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 
-local DefaultClock = M.DefaultClock
+-- local DefaultClock = M.DefaultClock
 -- local hush = M.hush
 -- local p = M.p
 

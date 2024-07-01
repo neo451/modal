@@ -1,7 +1,7 @@
-local types = require "modal.types"
-local ut = require "modal.utils"
-local theory = require "modal.theory"
-local notation = require "modal.notation"
+local types = require "types"
+local ut = require "ut"
+local theory = require "theory"
+local notation = require "notation"
 local pattern = {}
 
 local bjork, getScale = theory.bjork, theory.getScale
@@ -30,7 +30,6 @@ local concat = ut.concat
 local flip = ut.flip
 local method_wrap = ut.method_wrap
 local curry_wrap = ut.curry_wrap
-local nparams = ut.nparams
 local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local memoize = ut.memoize
@@ -128,16 +127,6 @@ function mt:stack(pats)
 end
 
 mt.__index = mt
-
--- automatically export pattern methods
-setmetatable(mt, {
-   __newindex = function(_, k, v)
-      pattern[k] = v
-   end,
-   __index = function(_, k)
-      return pattern[k]
-   end,
-})
 
 ---@class Pattern
 local function Pattern(query)
@@ -310,12 +299,7 @@ local function appWhole(pat, whole_func, pat_val)
          if not new_part then
             return
          end
-         return Event(
-            whole_func(event_func.whole, event_val.whole),
-            new_part,
-            event_func.value(event_val.value),
-            event_val:combineContext(event_func)
-         )
+         return Event(whole_func(event_func.whole, event_val.whole), new_part, event_func.value(event_val.value))
       end
       local events = {}
       for _, ef in pairs(event_funcs) do
@@ -352,10 +336,9 @@ local function appLeft(pat, pat_val)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
-            local new_context = event_val:combineContext(event_func)
             if new_part then
                local new_value = event_func.value(event_val.value)
-               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
+               events[#events + 1] = Event(new_whole, new_part, new_value)
             end
          end
       end
@@ -378,8 +361,7 @@ local function appRight(pat, pat_val)
             local new_part = event_func.part:sect(event_val.part)
             if new_part then
                local new_value = event_func.value(event_val.value)
-               local new_context = event_val:combineContext(event_func)
-               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
+               events[#events + 1] = Event(new_whole, new_part, new_value)
             end
          end
       end
@@ -1258,6 +1240,7 @@ local function drawLine(pat, chars)
    return tconcat(lines)
 end
 mt.drawLine = drawLine
+pattern.drawLine = drawLine
 
 pattern.id = id
 pattern.T = T

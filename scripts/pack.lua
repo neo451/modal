@@ -9,7 +9,6 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
-local repl = {}
 local lpeg = require"lpeg"
 local socket = require "socket"
 local al = require "abletonlink"
@@ -49,11 +48,7 @@ local function scandir(root)
    end
 end
 
-scandir "src/core/"
-
-files["init"] = io.open "src/init.lua"
-files["repl"] = io.open "src/repl/repl.lua"
--- p(files)
+scandir "src/"
 
 local function get_content(name, file)
    local contents = {}
@@ -91,12 +86,7 @@ load "factory"
 load "pattern"
 load "params"
 header = header .. "\n" .. get_content("init", files["init"])
-header = header .. "\n" .. get_content("repl", files["repl"])
-
-header = header .. "\n" .. [[
-if arg and arg[1] == "-i" then repl() end
-modal.ut = ut
-]]
+load "repl"
 header = header .. "\n" .. "return modal"
 
 print(header)

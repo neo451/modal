@@ -8,7 +8,6 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
-local repl = {}
 local lpeg = require"lpeg"
 local socket = require "socket"
 local al = require "abletonlink"
@@ -33,7 +32,13 @@ local tremove = table.remove
 local floor = math.floor
 local ceil = math.ceil
 local abs = math.abs
-local debug_info = debug.getinfo
+local huge = math.huge
+local d_getinfo = debug.getinfo
+local d_getlocal = debug.getlocal
+local d_sethook = debug.sethook
+local d_gethook = debug.gethook
+local d_getupvalue = debug.getupvalue
+local d_setupvalue = debug.setupvalue
 
 -- from https://www.lua.org/gems/sample.pdf
 -- TODO: smarter cache over time maybe
@@ -553,23 +558,25 @@ end
 function ut.timeToRand(x)
    return abs(intSeedToRand(timeToIntSeed(x)))
 end
-
----returns num_param, is_vararg
----@param func function
----@return number, boolean
-function ut.nparams(func)
-   if _VERSION == "Lua 5.1" and not jit then
+local nparams
+-- ---returns num_param, is_vararg
+-- ---@param func function
+-- ---@return number, boolean
+function nparams(func)
+   local info = d_getinfo(func)
+   return info.nparams, info.isvararg
+end
+if _VERSION == "Lua 5.1" and not jit then
+   function nparams(func)
       local s = str_dump(func)
       assert(s:sub(1, 6) == "\27LuaQ\0", "This code works only in Lua 5.1")
       local int_size = s:byte(8)
       local ptr_size = s:byte(9)
       local pos = 14 + ptr_size + (s:byte(7) > 0 and s:byte(13) or s:byte(12 + ptr_size)) + 2 * int_size
       return s:byte(pos), s:byte(pos + 1) > 0
-   else
-      local info = debug_info(func)
-      return info.nparams, info.isvararg
    end
 end
+ut.nparams = nparams
 
 ---register a f(..., pat) as a method for Pattern.f(self, ...), essentially switch the order of args
 ---@param f function
@@ -613,9 +620,9 @@ end
 function ut.setfenv(f, env)
    local i = 1
    while true do
-      local name = debug.getupvalue(f, i)
+      local name = d_getupvalue(f, i)
       if name == "_ENV" then
-         debug.setupvalue(f, i, env)
+         d_setupvalue(f, i, env)
          break
       elseif not name then
          break
@@ -652,39 +659,40 @@ end
 ut.quicksort = quicksort
 
 --- debug in 51
--- function M.get_args(f)
---    local args = {}
---    for i = 1, M.nparams(f) do
---       table.insert(args, debug.getlocal(f, i))
---    end
---    return args
--- end
-
 function ut.get_args(f)
    local args = {}
-   local hook = debug.gethook()
+   for i = 1, nparams(f) do
+      args[#args + 1] = d_getlocal(f, i)
+   end
+   return args
+end
+if _VERSION == "Lua 5.1" and not jit then
+   ut.get_args = function(f)
+      local args = {}
+      local hook = d_gethook()
 
-   local argHook = function()
-      local info = debug.getinfo(3)
-      if "pcall" ~= info.name then
-         return
-      end
-
-      for i = 1, math.huge do
-         local name = debug.getlocal(2, i)
-         if "(*temporary)" == name then
-            debug.sethook(hook)
-            error ""
+      local argHook = function()
+         local info = d_getinfo(3)
+         if "pcall" ~= info.name then
             return
          end
-         args[#args + 1] = name
+
+         for i = 1, huge do
+            local name = d_getlocal(2, i)
+            if "(*temporary)" == name then
+               d_sethook(hook)
+               error ""
+               return
+            end
+            args[#args + 1] = name
+         end
       end
+
+      d_sethook(argHook, "c")
+      pcall(f)
+
+      return args
    end
-
-   debug.sethook(argHook, "c")
-   pcall(f)
-
-   return args
 end
 
 end
@@ -1882,6 +1890,7 @@ local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 
 
 local loadstring = ut.loadstring
+local setfenv = setfenv or ut.setfenv
 local memoize = ut.memoize
 local tremove = table.remove
 local ipairs = ipairs
@@ -3154,7 +3163,6 @@ local concat = ut.concat
 local flip = ut.flip
 local method_wrap = ut.method_wrap
 local curry_wrap = ut.curry_wrap
-local nparams = ut.nparams
 local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local memoize = ut.memoize
@@ -3252,16 +3260,6 @@ function mt:stack(pats)
 end
 
 mt.__index = mt
-
--- automatically export pattern methods
-setmetatable(mt, {
-   __newindex = function(_, k, v)
-      pattern[k] = v
-   end,
-   __index = function(_, k)
-      return pattern[k]
-   end,
-})
 
 ---@class Pattern
 local function Pattern(query)
@@ -3434,12 +3432,7 @@ local function appWhole(pat, whole_func, pat_val)
          if not new_part then
             return
          end
-         return Event(
-            whole_func(event_func.whole, event_val.whole),
-            new_part,
-            event_func.value(event_val.value),
-            event_val:combineContext(event_func)
-         )
+         return Event(whole_func(event_func.whole, event_val.whole), new_part, event_func.value(event_val.value))
       end
       local events = {}
       for _, ef in pairs(event_funcs) do
@@ -3476,10 +3469,9 @@ local function appLeft(pat, pat_val)
          for _, event_val in ipairs(event_vals) do
             local new_whole = event_func.whole
             local new_part = event_func.part:sect(event_val.part)
-            local new_context = event_val:combineContext(event_func)
             if new_part then
                local new_value = event_func.value(event_val.value)
-               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
+               events[#events + 1] = Event(new_whole, new_part, new_value)
             end
          end
       end
@@ -3502,8 +3494,7 @@ local function appRight(pat, pat_val)
             local new_part = event_func.part:sect(event_val.part)
             if new_part then
                local new_value = event_func.value(event_val.value)
-               local new_context = event_val:combineContext(event_func)
-               events[#events + 1] = Event(new_whole, new_part, new_value, new_context)
+               events[#events + 1] = Event(new_whole, new_part, new_value)
             end
          end
       end
@@ -4382,6 +4373,7 @@ local function drawLine(pat, chars)
    return tconcat(lines)
 end
 mt.drawLine = drawLine
+pattern.drawLine = drawLine
 
 pattern.id = id
 pattern.T = T
@@ -5193,7 +5185,8 @@ setmetatable(modal, {
    end,
 })
 
-local host = "localhost"
+do
+   local host = "localhost"
 local port = 9000
 local maxi = notation.maxi(modal)
 
@@ -5246,7 +5239,7 @@ end
 RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
 RL.set_readline_name "modal"
 
-local function repl()
+function repl()
    local line
    print "modal repl   :? for help"
    while true do
@@ -5276,7 +5269,6 @@ local function repl()
 end
 modal.repl = repl
 
-if arg and arg[1] == "-i" then repl() end
-modal.ut = ut
-
+end
+   
 return modal

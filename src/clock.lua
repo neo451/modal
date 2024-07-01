@@ -3,7 +3,7 @@ local al = require "abletonlink"
 local losc = require "losc"
 _G.struct = nil
 local plugin = require "losc.plugins.udp-socket"
-local types = require "modal.types"
+local types = require "types"
 local Stream = types.Stream
 
 local floor = math.floor

@@ -1,0 +1,2 @@
+#!/usr/bin/luajit
+require'modal'.repl()

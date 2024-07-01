@@ -631,7 +631,7 @@ local aliasParams = {
    voice = "voi",
 }
 
-local pattern = require "modal.pattern"
+local pattern = require "pattern"
 local reify, stack, pure = pattern.reify, pattern.stack, pattern.pure
 local T = require("modal.utils").T
 

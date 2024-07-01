@@ -1,6 +1,6 @@
-local pattern = require "modal.pattern"
+local pattern = require "pattern"
 local stack, fastcat = pattern.stack, pattern.fastcat
-local ut = require "modal.utils"
+local ut = require "ut"
 local union = ut.union
 local register = pattern.register
 

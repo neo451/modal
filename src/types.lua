@@ -1,4 +1,4 @@
-local ut = require "modal.utils"
+local ut = require "ut"
 local losc = require "losc" -- TODO: get rid of ??? core should be pure
 local types = {}
 
