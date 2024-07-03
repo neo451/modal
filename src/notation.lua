@@ -15,6 +15,7 @@ local type = type
 local filter = ut.filter
 local map = ut.map
 local reduce = ut.reduce
+local unpack = _G.unpack or rawget(table, "unpack")
 
 local sequence = V "sequence"
 local slice = V "slice"
@@ -43,16 +44,6 @@ local stat = V "stat"
 local choose = V "choose"
 local dotStack = V "dotStack"
 
-local cache = {}
-
--- setmetatable(cache, {
---    __mode = "kv", -- ???
---    __index = function(_, k)
---       print(k)
---       print "reading from cache "
---    end,
--- })
---
 local function Id(a)
    return { tag = "Id", a }
 end
@@ -378,8 +369,6 @@ end
 -- require "moon.all"
 local function pSet(lhs, rhs)
    lhs.tag = "Id"
-   cache[lhs[1]] = rhs
-   -- p(cache)
    return { tag = "Set", { lhs }, { rhs } }
 end
 

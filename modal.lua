@@ -1,5 +1,3 @@
-#! /usr/bin/lua5.1
-local modal = {}
 local ut = {}
 local pattern = {}
 local params = {}
@@ -704,15 +702,16 @@ local T = ut.T
 local abs = math.abs
 local floor = math.floor
 local setmetatable = setmetatable
+local tremove = table.remove
+local tconcat = table.concat
+local unpack = _G.unpack or table.unpack
 
 local Time, Span, Event
 local time = { __class = "time" }
 local span = { __class = "span" }
--- local state = { __class = "state" }
 local event = { __class = "event" }
 span.__index = span
 event.__index = event
--- state.__index = state
 time.__index = time
 
 function span:spanCycles()
@@ -1200,9 +1199,6 @@ local function Stream(sendf)
 end
 
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-
-local tremove = table.remove
-local tconcat = table.concat
 
 local function pId(...)
    return { tconcat { ... } }
@@ -1899,6 +1895,7 @@ local type = type
 local filter = ut.filter
 local map = ut.map
 local reduce = ut.reduce
+local unpack = _G.unpack or rawget(table, "unpack")
 
 local sequence = V "sequence"
 local slice = V "slice"
@@ -1927,16 +1924,6 @@ local stat = V "stat"
 local choose = V "choose"
 local dotStack = V "dotStack"
 
-local cache = {}
-
--- setmetatable(cache, {
---    __mode = "kv", -- ???
---    __index = function(_, k)
---       print(k)
---       print "reading from cache "
---    end,
--- })
---
 local function Id(a)
    return { tag = "Id", a }
 end
@@ -2261,8 +2248,6 @@ end
 
 local function pSet(lhs, rhs)
    lhs.tag = "Id"
-   cache[lhs[1]] = rhs
-   -- p(cache)
    return { tag = "Set", { lhs }, { rhs } }
 end
 
@@ -2279,6 +2264,11 @@ end
 local function pDot(...)
    return { ... }
 end
+local tab = V "tab"
+
+local function pTab(...)
+   return Table { ... }
+end
 
 local semi = P ";" ^ -1
 local grammar = {
@@ -2286,8 +2276,9 @@ local grammar = {
    root = (ret * semi) ^ 1 / pRoot,
    ret = (list + mini + dollar) / pRet,
    list = ws * P "(" * ws * (expr + arith) * expr ^ 0 * ws * P ")" * ws / pList,
+   tab = ws * P "'(" * ws * expr ^ 1 * ws * P ")" * ws / pTab,
    dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
-   expr = ws * (mini + list + dollar + tailop) * ws,
+   expr = ws * (tab + mini + list + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pDot,
    stack = sequence * (comma * sequence) ^ 0 / pStack,
    choose = sequence * (pipe * sequence) ^ 1 / pChoose,
@@ -5115,10 +5106,9 @@ end
    
 local mt = pattern.mt
 
-modal = {
-   version = "modal dev-1",
-   url = "https://github.com/noearc/modal",
-}
+local modal = {}
+modal.version = "modal dev-1"
+modal.url = "https://github.com/noearc/modal"
 
 local pairs = pairs
 
@@ -5188,69 +5178,69 @@ setmetatable(modal, {
 })
 
 do
+   local function repl()
    local host = "localhost"
-local port = 9000
-local maxi = notation.maxi(modal)
+   local port = 9000
+   local maxi = notation.maxi(modal)
 
-local keywords = {}
-for i, _ in pairs(modal) do
-   keywords[#keywords + 1] = i
-end
+   local keywords = {}
+   for i, _ in pairs(modal) do
+      keywords[#keywords + 1] = i
+   end
 
-if has_RL then
-   print "readline!"
-   RL.set_complete_list(keywords)
-   RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
-   RL.set_readline_name "modal"
-end
+   if has_RL then
+      print "readline!"
+      RL.set_complete_list(keywords)
+      RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
+      RL.set_readline_name "modal"
+   end
 
-local ok, c = pcall(socket.connect, host, port)
+   local ok, c = pcall(socket.connect, host, port)
 
-local optf = {
-   ["?"] = function()
-      return [[
+   local optf = {
+      ["?"] = function()
+         return [[
 :v  show _VERSION
 :t  get type for lib func (TODO: for expression)
 :q  quit repl ]]
-   end,
-   t = function(a)
-      return tostring(modal.t[a])
-   end,
-   v = function()
-      return modal._VERSION
-   end,
-   -- info = function(name)
-   --    return dump(doc[name])
-   -- end,
-   q = function()
-      if c then
-         c:close()
+      end,
+      t = function(a)
+         return tostring(modal.t[a])
+      end,
+      v = function()
+         return modal._VERSION
+      end,
+      -- info = function(name)
+      --    return dump(doc[name])
+      -- end,
+      q = function()
+         if c then
+            c:close()
+         end
+         os.exit()
+      end,
+   }
+
+   -- TODO: see luaish, first run as lua with multiline? no ambiguiaty?>
+   local eval = function(a)
+      if a:sub(1, 1) == ":" then
+         local name, param = a:match "(%a+)%s(%a*)"
+         name = name and name or a:sub(2, #a)
+         param = param and param or nil
+         return optf[name](param)
+      else
+         local fn = maxi(a)
+         return fn
       end
-      os.exit()
-   end,
-}
-
--- TODO: see luaish, first run as lua with multiline? no ambiguiaty?>
-local eval = function(a)
-   if a:sub(1, 1) == ":" then
-      local name, param = a:match "(%a+)%s(%a*)"
-      name = name and name or a:sub(2, #a)
-      param = param and param or nil
-      return optf[name](param)
-   else
-      local fn = maxi(a)
-      return fn
    end
-end
 
-local function readline(a)
-   io.write(a)
-   return io.read()
-end
+   local function readline(a)
+      io.write(a)
+      return io.read()
+   end
 
-local read = has_RL and RL.readline or readline
+   local read = has_RL and RL.readline or readline
 
-function repl()
    local line
    print "modal repl   :? for help"
    while true do

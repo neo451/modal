@@ -6,15 +6,16 @@ local T = ut.T
 local abs = math.abs
 local floor = math.floor
 local setmetatable = setmetatable
+local tremove = table.remove
+local tconcat = table.concat
+local unpack = _G.unpack or table.unpack
 
 local Time, Span, Event
 local time = { __class = "time" }
 local span = { __class = "span" }
--- local state = { __class = "state" }
 local event = { __class = "event" }
 span.__index = span
 event.__index = event
--- state.__index = state
 time.__index = time
 
 function span:spanCycles()
@@ -503,9 +504,6 @@ end
 
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-
-local tremove = table.remove
-local tconcat = table.concat
 
 local function pId(...)
    return { tconcat { ... } }
