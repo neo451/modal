@@ -9,10 +9,9 @@ local types = require "types"
 local Clock = require "clock"
 require "modal.ui"
 
-modal = {
-   version = "modal dev-1",
-   url = "https://github.com/noearc/modal",
-}
+local modal = {}
+modal.version = "modal dev-1"
+modal.url = "https://github.com/noearc/modal"
 
 local pairs = pairs
 

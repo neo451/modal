@@ -1,6 +1,4 @@
 local header = [[
-#! /usr/bin/lua5.1
-local modal = {}
 local ut = {}
 local pattern = {}
 local params = {}

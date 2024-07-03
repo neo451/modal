@@ -396,6 +396,11 @@ end
 local function pDot(...)
    return { ... }
 end
+local tab = V "tab"
+
+local function pTab(...)
+   return Table { ... }
+end
 
 local semi = P ";" ^ -1
 local grammar = {
@@ -403,8 +408,9 @@ local grammar = {
    root = (ret * semi) ^ 1 / pRoot,
    ret = (list + mini + dollar) / pRet,
    list = ws * P "(" * ws * (expr + arith) * expr ^ 0 * ws * P ")" * ws / pList,
+   tab = ws * P "'(" * ws * expr ^ 1 * ws * P ")" * ws / pTab,
    dollar = S "$>" * ws * step * ws * expr ^ 0 * ws / pDollar,
-   expr = ws * (mini + list + dollar + tailop) * ws,
+   expr = ws * (tab + mini + list + dollar + tailop) * ws,
    sequence = (mini ^ 1) / pDot,
    stack = sequence * (comma * sequence) ^ 0 / pStack,
    choose = sequence * (pipe * sequence) ^ 1 / pChoose,

@@ -31,7 +31,6 @@ build = {
       },
       bin = {
          ["modal"] = "modal",
-         -- "modal",
       },
    },
 }
