@@ -86,6 +86,7 @@ load "pattern"
 load "params"
 header = header .. "\n" .. get_content("init", files["init"])
 load "repl"
+load "server"
 header = header .. "\n" .. "modal.ut = ut"
 header = header .. "\n" .. "return modal"
 

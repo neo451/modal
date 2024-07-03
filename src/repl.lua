@@ -13,7 +13,6 @@ local function repl()
    end
 
    if has_RL then
-      print "readline!"
       RL.set_complete_list(keywords)
       RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
       RL.set_readline_name "modal"

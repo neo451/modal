@@ -5189,7 +5189,6 @@ do
    end
 
    if has_RL then
-      print "readline!"
       RL.set_complete_list(keywords)
       RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
       RL.set_readline_name "modal"
@@ -5271,6 +5270,53 @@ do
    os.exit()
 end
 modal.repl = repl
+
+end
+   
+do
+   local function server()
+   local maxi = notation.maxi(modal)
+
+   local clock = modal.DefaultClock
+   print(clock)
+   clock:start()
+
+   local host = "*"
+   local port = arg[1] or 9000
+   local sock = assert(socket.bind(host, port))
+   local i, p = sock:getsockname()
+   assert(i, p)
+
+   print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
+   local c = assert(sock:accept())
+   c:settimeout(0)
+
+   print "Connected"
+
+   local eval = function(a)
+      local ok, fn = pcall(maxi, a)
+      if not ok then
+         log.warn("syntax error: " .. fn)
+      else
+         print(fn)
+      end
+   end
+
+   local l, e
+
+   local listen = function()
+      l, e = c:receive()
+      if not e then
+         eval(l)
+      end
+   end
+
+   repeat
+      coroutine.resume(clock.co, listen)
+   until false
+end
+
+modal.server = server
 
 end
    
