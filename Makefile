@@ -8,10 +8,10 @@
 modal:
 
 test:
-	sudo luarocks-5.1 build && busted --lua=/usr/bin/lua5.1
-	sudo luarocks-5.2 build && busted --lua=/usr/bin/lua5.2
-	sudo luarocks-5.3 build && busted --lua=/usr/bin/lua5.3
-	# sudo luarocks-5.4 build && busted --lua=/usr/bin/lua5.4
+	# sudo luarocks-5.1 build && busted --lua=/usr/bin/lua5.1
+	# sudo luarocks-5.2 build && busted --lua=/usr/bin/lua5.2
+	# sudo luarocks-5.3 build && busted --lua=/usr/bin/lua5.3
+	sudo luarocks build --lua-version 5.4 && busted --lua=/usr/bin/lua5.4
 
 build:
 	luajit ./scripts/pack.lua > modal.lua

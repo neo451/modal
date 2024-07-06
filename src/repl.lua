@@ -82,7 +82,7 @@ local function repl()
          end
          if has_RL then
             RL.add_history(line)
-            RL.save_history()
+            -- RL.save_history()
          end
          if c then
             c:send(line .. "\n")
