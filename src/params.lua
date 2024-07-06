@@ -51,6 +51,7 @@ local genericParams = {
    "mtranspose",
    "octaveR",
    "ophatdecay",
+   "orbit",
    "pan",
    "panorient",
    "portamento",
