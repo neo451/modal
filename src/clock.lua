@@ -1,8 +1,8 @@
-local socket = require "socket"
-local al = require "abletonlink"
-local losc = require "losc"
+local has_socket, socket = pcall(require, "socket")
+local has_al, al = pcall(require, "abletonlink")
+local has_losc, losc = pcall(require, "losc")
+local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
 _G.struct = nil
-local plugin = require "losc.plugins.udp-socket"
 local types = require "types"
 local Stream = types.Stream
 
@@ -25,36 +25,38 @@ local target = {
 local typeMap = { table = "b", number = "f", string = "s" }
 
 local typesString = function(msg)
-   local types = ""
-   for _index_0 = 1, #msg do
-      local x = msg[_index_0]
+   local ts = ""
+   for i = 1, #msg do
+      local x = msg[i]
       if typeMap[type(x)] then
-         types = types .. typeMap[type(x)]
+         ts = ts .. typeMap[type(x)]
       else
-         types = types .. "b"
+         ts = ts .. "b"
       end
    end
-   return types
+   return ts
 end
 
-local osc = losc.new {
-   plugin = plugin.new {
-      sendPort = target.port,
-      sendAddr = target.address,
-   },
-}
-
-local sendOSC = function(value, ts)
-   local msg = {}
-   for key, val in pairs(value) do
-      msg[#msg + 1] = key
-      msg[#msg + 1] = val
+local osc, sendOSC
+if has_losc then
+   osc = losc.new {
+      plugin = plugin.new {
+         sendPort = target.port,
+         sendAddr = target.address,
+      },
+   }
+   sendOSC = function(value, ts)
+      local msg = {}
+      for key, val in pairs(value) do
+         msg[#msg + 1] = key
+         msg[#msg + 1] = val
+      end
+      msg.types = typesString(msg)
+      msg.address = "/dirt/play"
+      -- local b = osc.new_message(msg)
+      local b = osc.new_bundle(ts, osc.new_message(msg))
+      osc:send(b)
    end
-   msg.types = typesString(msg)
-   msg.address = "/dirt/play"
-   -- local b = osc.new_message(msg)
-   local b = osc.new_bundle(ts, osc.new_message(msg))
-   osc:send(b)
 end
 
 local mt = { __class = "clock" }
@@ -137,8 +139,8 @@ function Clock(bpm, sampleRate, beatsPerCycle)
       bpm = bpm,
       sampleRate = sampleRate,
       beatsPerCycle = beatsPerCycle,
-      link = al.create(bpm),
-      sessionState = al.create_session_state(),
+      link = has_al and al.create(bpm) or {}, -- HACK:
+      sessionState = has_al and al.create_session_state() or {},
       subscribers = {},
       running = false,
       latency = 0.2,

@@ -21,6 +21,8 @@ local d_gethook = debug.gethook
 local d_getupvalue = debug.getupvalue
 local d_setupvalue = debug.setupvalue
 
+Usecolor = false
+
 -- from https://www.lua.org/gems/sample.pdf
 -- TODO: smarter cache over time maybe
 local function memoize(f)
@@ -377,7 +379,7 @@ function ut.tdump(o)
       end
       return tconcat(s)
    else
-      return tostring(ut.colors.red(o))
+      return tostring(Usecolor and ut.colors.red(o) or o)
    end
 end
 
@@ -388,7 +390,7 @@ function ut.dump(o)
    if ut.T(o) == "table" then
       local s = {}
       for k, v in pairs(o) do
-         s[#s + 1] = ut.colors.cyan(k)
+         s[#s + 1] = Usecolor and ut.colors.cyan(k) or k
          s[#s + 1] = ": "
          s[#s + 1] = ut.dump(v)
          s[#s + 1] = (k ~= #o) and "\n" or ""

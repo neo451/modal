@@ -3,7 +3,7 @@ local notation = require "notation"
 local ut = require "utils"
 local factory = require "factory"
 local theory = require "theory"
-local params = require "params"
+local control = require "control"
 local mt = pattern.mt
 local types = require "types"
 local Clock = require "clock"
@@ -43,7 +43,7 @@ for name, func in pairs(pattern) do
    modal[name] = func
 end
 
-for name, func in pairs(params) do
+for name, func in pairs(control) do
    modal[name] = func
    mt[name] = function(self, ...)
       return self .. func(...)

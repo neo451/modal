@@ -525,7 +525,7 @@ local ops = {
    pow = function(a, b) return a ^ b end,
    concat = function (a, b) return a .. b end,
    keepif = function (a, b) return b and a or nil end,
-   uni = function (a, b) return union(a, b) end, -- TODO: use local
+   uni = function (a, b) return union(a, b) end,
    funi = function (a, b) return flip(union)(a, b) end,
 }
 -- stylua: ignore end
@@ -964,7 +964,6 @@ local _irand = function(i)
    end)
 end
 
--- TODO: use in maxi?
 local irand = function(ipat)
    return innerJoin(fmap(ipat, _irand))
 end
@@ -1111,11 +1110,10 @@ local function reviter(n, pat)
 end
 register("reviter :: Pattern Int -> Pattern a -> Pattern a", reviter)
 
---- TODO:
-local function echoWith(times, time, f, pat)
+local function echoWith(times, tim, f, pat)
    local acc = {}
    for i = 0, times - 1 do
-      acc[i] = f(pattern.late(time * i, pat))
+      acc[i] = f(pattern.late(tim * i, pat))
    end
    return stack(acc)
 end
@@ -1223,8 +1221,7 @@ local function drawLine(pat, chars)
                local isOnset = event.whole.start == start
                local char = nil
                if isOnset then
-                  -- TODO: proper dump
-                  char = ut.dump(event.value)
+                  char = dump(event.value)
                else
                   char = "-"
                end
