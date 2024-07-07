@@ -1195,6 +1195,111 @@ register(
    juxBy
 )
 
+local function striate(n, pat)
+   local ranges = {}
+   for i = 0, n - 1 do
+      ranges[i] = { ["begin"] = i / n, ["end"] = (i + 1) / n }
+   end
+   local merge_sample = function(range)
+      local f = function(v)
+         return union(range, { sound = v.sound })
+      end
+      return pat:fmap(f)
+   end
+   local pats = {}
+   for i = 1, n do
+      pats[i] = merge_sample(ranges[i])
+   end
+   return fastcat(pats)
+end
+
+-- register("chop", function(n, pat)
+--    local ranges
+--    do
+--       local _accum_0 = {}
+--       local _len_0 = 1
+--       for i = 0, n - 1 do
+--          _accum_0[_len_0] = {
+--             begin = i / n,
+--             ["end"] = (i + 1) / n,
+--          }
+--          _len_0 = _len_0 + 1
+--       end
+--       ranges = _accum_0
+--    end
+--    local func
+--    func = function(o)
+--       local f
+--       f = function(slice)
+--          return union(slice, o)
+--       end
+--       return fastcat(map(f, ranges))
+--    end
+--    return pat:squeezeBind(func)
+-- end)
+--
+-- register("slice", function(npat, ipat, opat)
+--    return npat:innerBind(function(n)
+--       return ipat:outerBind(function(i)
+--          return opat:outerBind(function(o)
+--             local begin
+--             if type(n) == table then
+--                begin = n[i]
+--             else
+--                begin = i / n
+--             end
+--             local _end
+--             if type(n) == table then
+--                _end = n[i + 1]
+--             else
+--                _end = (i + 1) / n
+--             end
+--             return pure(union(o, {
+--                begin = begin,
+--                ["end"] = _end,
+--                _slices = n,
+--             }))
+--          end)
+--       end)
+--    end)
+-- end)
+--
+-- register("splice", function(npat, ipat, opat)
+--    local sliced = M.slice(npat, ipat, opat)
+--    return sliced:withEvent(function(event)
+--       return event:withValue(function(value)
+--          local new_attri = {
+--             speed = tofloat(tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
+--             unit = "c",
+--          }
+--          return union(new_attri, value)
+--       end)
+--    end)
+-- end)
+--
+-- register("_loopAt", function(factor, pat)
+--    pat = pat .. P.speed(1 / factor) .. P.unit "c"
+--    return slow(factor, pat)
+-- end)
+--
+-- register("fit", function(pat)
+--    return pat:withEvent(function(event)
+--       return event:withValue(function(value)
+--          return union(value, {
+--             speed = tofrac(1) / event.whole:duration(),
+--             unit = "c",
+--          })
+--       end)
+--    end)
+-- end)
+--
+-- register("legato", function(factor, pat)
+--    factor = tofrac(factor)
+--    return pat:withEventSpan(function(span)
+--       return Span(span._begin, (span._begin + span:duration() * factor))
+--    end)
+-- end)
+
 local gcd_reduce = function(tab)
    return reduce(function(acc, value)
       return acc:gcd(value)
@@ -1256,6 +1361,97 @@ local function drawLine(pat, chars)
 end
 mt.drawLine = drawLine
 pattern.drawLine = drawLine
+
+---CONTROLS
+local parseChord = theory.parseChord
+local control = require "control"
+local genericParams, aliasParams = control.genericParams, control.aliasParams
+
+---@param name string
+local create = function(name)
+   local withVal, f
+   if type(name) == "table" then
+      withVal = function(xs)
+         if type(xs) == "table" then
+            local acc = {}
+            for i, x in ipairs(xs) do
+               acc[name[i]] = x
+            end
+            return ValueMap(acc)
+         else
+            return ValueMap { [name] = xs }
+         end
+      end
+      f = function(args)
+         return reify(args):fmap(withVal)
+      end
+      name = name[1]
+   else
+      f = function(arg)
+         return reify { [name] = arg }
+      end
+   end
+   pattern[name] = f
+   mt[name] = function(self, arg)
+      return self .. f(arg)
+   end
+end
+
+for _, param in ipairs(genericParams) do
+   create(param)
+   if aliasParams[param] ~= nil then
+      local alias = aliasParams[param]
+      if type(alias) == "table" then
+         for _, al in ipairs(alias) do
+            pattern[al] = pattern[param]
+            mt[al] = mt[param]
+         end
+      else
+         pattern[alias] = pattern[param]
+         mt[alias] = mt[param]
+      end
+   end
+end
+
+pattern.note = function(pat)
+   local notemt = {
+      __add = function(self, other)
+         -- HACK:
+         if type(other) ~= "table" then
+            other = { note = other }
+         end
+         return { note = self.note + other.note }
+      end,
+   }
+
+   local function chordToStack(thing)
+      if type(thing) == "string" then
+         if type(parseChord(thing)) == "table" then
+            return stack(parseChord(thing))
+         end
+         return reify(thing)
+      elseif T(thing) == "pattern" then
+         return thing
+            :fmap(function(chord)
+               return stack(parseChord(chord))
+            end)
+            :outerJoin()
+      else
+         return reify(thing)
+      end
+   end
+   local withVal = function(v)
+      return setmetatable({ note = v }, notemt)
+      -- return { note = v }
+   end
+   return chordToStack(pat):fmap(withVal)
+end
+
+pattern.n = pattern.note
+mt.note = function(self, arg)
+   return self .. pattern.note(arg)
+end
+mt.n = mt.note
 
 pattern.op = op
 pattern.id = id

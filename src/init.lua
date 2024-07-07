@@ -34,20 +34,8 @@ for name, func in pairs(types) do
    modal[name] = func
 end
 
--- todo:
--- for type, func in pairs(ui) do
---    pattern.register(type, func)
--- end
-
 for name, func in pairs(pattern) do
    modal[name] = func
-end
-
-for name, func in pairs(control) do
-   modal[name] = func
-   mt[name] = function(self, ...)
-      return self .. func(...)
-   end
 end
 
 setmetatable(modal, {

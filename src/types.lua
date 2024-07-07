@@ -615,7 +615,7 @@ local valuemap = {
 }
 valuemap.__index = valuemap
 
-function ValueMap(valmap)
+local function ValueMap(valmap)
    return setmetatable(valmap, valuemap)
 end
 

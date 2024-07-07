@@ -23,3 +23,17 @@ describe("table arith", function()
       assert.same(ValueMap { pan = 3 }, ValueMap { pan = 1 } + ValueMap { pan = 1 } + ValueMap { pan = 1 })
    end)
 end)
+
+describe("control", function()
+   it("", function()
+      assert.pat(reify { note = 1 }, n(1))
+      assert.pat(reify { note = 1, s = "bd" }, n(1):s "bd")
+   end)
+end)
+
+describe("note", function()
+   it("shoudl parse chords", function()
+      ---TODO:
+      -- assert.pat(stack { n(0), n(4), n(7) }, note "c'maj")
+   end)
+end)

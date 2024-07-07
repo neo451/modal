@@ -1316,7 +1316,7 @@ local valuemap = {
 }
 valuemap.__index = valuemap
 
-function ValueMap(valmap)
+local function ValueMap(valmap)
    return setmetatable(valmap, valuemap)
 end
 
@@ -3053,6 +3053,238 @@ factory.cps = factory.setcps
 end
    
 do
+   local genericParams = {
+   { "s", "n", "gain" },
+   { "cutoff", "resonance" },
+   { "hcutoff", "hresonance" },
+
+   { "delay", "delaytime", "delayfeedback" },
+   { "room", "size" },
+   { "bandf", "bandq" }, --bpenv
+   "toArg",
+   "from",
+   "to",
+   "accelerate",
+   "amp",
+   "attack",
+   "bandq",
+   "begin",
+   "legato",
+   "clhatdecay",
+   "crush",
+   "coarse",
+   "channel",
+   "cut",
+   "cutoff",
+   "cutoffegint",
+   "decay",
+   "delayfeedback",
+   "delaytime",
+   "detune",
+   "djf",
+   "dry",
+   "end",
+   "fadeTime",
+   "fadeInTime",
+   "freq",
+   "gain",
+   "gate",
+   "hatgrain",
+   "hold",
+   "hresonance",
+   "lagogo",
+   "lclap",
+   "lclaves",
+   "lclhat",
+   "lcrash",
+   "leslie",
+   "lrate",
+   "lfodelay",
+   "lfosync",
+   "lock",
+   "metatune",
+   "mtranspose",
+   "octaveR",
+   "ophatdecay",
+   "orbit",
+   "pan",
+   "panorient",
+   "portamento",
+   "sagogo",
+   "semitone",
+   "speed",
+   "sustain",
+   "unit",
+   "voice",
+   "modwheel",
+   "tremolorate",
+   "fshiftnote",
+   "kcutoff",
+   "octer",
+   "octersub",
+   "octersubsub",
+   "ring",
+   "ringf",
+   "ringdf",
+   "distort",
+   "freeze",
+   "xsdelay",
+   "tsdelay",
+   "real",
+   "imag",
+   "enhance",
+   "partials",
+   "comb",
+   "smear",
+   "scram",
+   "binshift",
+   "hbrick",
+   "lbrick",
+}
+
+local aliasParams = {
+   s = "sound",
+   note = "up",
+   attack = "att",
+   bandf = "bpf",
+   bandq = "bpq",
+   clhatdecay = "chdecay",
+   cutoff = { "ctf", "lpf" },
+   cutoffegint = "ctfg",
+   delayfeedback = { "dfb", "delayfb" },
+   delaytime = { "dt", "delayt" },
+   detune = "det",
+   fadeTime = "fadeOutTime",
+   gate = "gat",
+   hatgrain = "hg",
+   hcutoff = "hpf",
+   hresonance = "hpq",
+   lagogo = "lag",
+   lkick = "lbd",
+   lclhat = "lch",
+   lclaves = "lcl",
+   lclap = "lcp",
+   lcrash = "lcr",
+   lfocutoffint = "lfoc",
+   lfoint = "lfoi",
+   lfopitchint = "lfop",
+   lhitom = "lht",
+   llotom = "llt",
+   lophat = "loh",
+   resonance = "lpq",
+   lsnare = "lsn",
+   n = "number",
+   ophatdecay = "ohdecay",
+   phaserdepth = "phasdp",
+   phaserrate = "phasr",
+   pitch1 = "pit1",
+   pitch2 = "pit2",
+   pitch3 = "pit3",
+   portamento = "por",
+   release = "rel",
+   sagogo = "sag",
+   sclaves = "scl",
+   sclap = "scp",
+   scrash = "scr",
+   size = "sz",
+   slide = "sld",
+   stutterdepth = "std",
+   stuttertime = "stt",
+   sustain = "sus",
+   tomdecay = "tdecay",
+   tremolodepth = "tremdp",
+   tremolorate = "tremr",
+   vcfegint = "vcf",
+   vcoegint = "vco",
+   voice = "voi",
+}
+
+-- -- TODO: move to pattern
+-- local reify, stack = pattern.reify, pattern.stack
+-- local T = ut.T
+-- local parseChord = theory.parseChord
+-- local ValueMap = types.ValueMap
+
+control.genericParams = genericParams
+control.aliasParams = aliasParams
+-- local create = function(name)
+--    local withVal
+--    if type(name) == "table" then
+--       withVal = function(xs)
+--          if type(xs) == "table" then
+--             local acc = {}
+--             for i, x in ipairs(xs) do
+--                acc[name[i]] = x
+--             end
+--             return ValueMap(acc)
+--          else
+--             return ValueMap { [name[1]] = xs }
+--          end
+--       end
+--
+--       control[name[1]] = function(args)
+--          return reify(args):fmap(withVal)
+--       end
+--    else
+--       control[name] = function(arg)
+--          return reify { [name] = arg }
+--       end
+--    end
+-- end
+--
+-- for _, param in ipairs(genericParams) do
+--    create(param)
+--    if aliasParams[param] ~= nil then
+--       local alias = aliasParams[param]
+--       if type(alias) == "table" then
+--          for _, al in ipairs(alias) do
+--             control[al] = control[param]
+--          end
+--       else
+--          control[alias] = control[param]
+--       end
+--    end
+-- end
+--
+-- control.note = function(pat)
+--    local notemt = {
+--       __add = function(self, other)
+--          -- HACK:
+--          if type(other) ~= "table" then
+--             other = { note = other }
+--          end
+--          return { note = self.note + other.note }
+--       end,
+--    }
+--
+--    local function chordToStack(thing)
+--       if type(thing) == "string" then
+--          if type(parseChord(thing)) == "table" then
+--             return stack(parseChord(thing))
+--          end
+--          return reify(thing)
+--       elseif T(thing) == "pattern" then
+--          return thing
+--             :fmap(function(chord)
+--                return stack(parseChord(chord))
+--             end)
+--             :outerJoin()
+--       else
+--          return reify(thing)
+--       end
+--    end
+--    local withVal = function(v)
+--       return setmetatable({ note = v }, notemt)
+--       -- return { note = v }
+--    end
+--    return chordToStack(pat):fmap(withVal)
+-- end
+--
+-- control.n = control.note
+
+end
+   
+do
    
 local bjork, getScale = theory.bjork, theory.getScale
 local Event, Span, Time, TDef, ValueMap = types.Event, types.Span, types.Time, types.TDef, types.ValueMap
@@ -4245,6 +4477,111 @@ register(
    juxBy
 )
 
+local function striate(n, pat)
+   local ranges = {}
+   for i = 0, n - 1 do
+      ranges[i] = { ["begin"] = i / n, ["end"] = (i + 1) / n }
+   end
+   local merge_sample = function(range)
+      local f = function(v)
+         return union(range, { sound = v.sound })
+      end
+      return pat:fmap(f)
+   end
+   local pats = {}
+   for i = 1, n do
+      pats[i] = merge_sample(ranges[i])
+   end
+   return fastcat(pats)
+end
+
+-- register("chop", function(n, pat)
+--    local ranges
+--    do
+--       local _accum_0 = {}
+--       local _len_0 = 1
+--       for i = 0, n - 1 do
+--          _accum_0[_len_0] = {
+--             begin = i / n,
+--             ["end"] = (i + 1) / n,
+--          }
+--          _len_0 = _len_0 + 1
+--       end
+--       ranges = _accum_0
+--    end
+--    local func
+--    func = function(o)
+--       local f
+--       f = function(slice)
+--          return union(slice, o)
+--       end
+--       return fastcat(map(f, ranges))
+--    end
+--    return pat:squeezeBind(func)
+-- end)
+--
+-- register("slice", function(npat, ipat, opat)
+--    return npat:innerBind(function(n)
+--       return ipat:outerBind(function(i)
+--          return opat:outerBind(function(o)
+--             local begin
+--             if type(n) == table then
+--                begin = n[i]
+--             else
+--                begin = i / n
+--             end
+--             local _end
+--             if type(n) == table then
+--                _end = n[i + 1]
+--             else
+--                _end = (i + 1) / n
+--             end
+--             return pure(union(o, {
+--                begin = begin,
+--                ["end"] = _end,
+--                _slices = n,
+--             }))
+--          end)
+--       end)
+--    end)
+-- end)
+--
+-- register("splice", function(npat, ipat, opat)
+--    local sliced = M.slice(npat, ipat, opat)
+--    return sliced:withEvent(function(event)
+--       return event:withValue(function(value)
+--          local new_attri = {
+--             speed = tofloat(tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
+--             unit = "c",
+--          }
+--          return union(new_attri, value)
+--       end)
+--    end)
+-- end)
+--
+-- register("_loopAt", function(factor, pat)
+--    pat = pat .. P.speed(1 / factor) .. P.unit "c"
+--    return slow(factor, pat)
+-- end)
+--
+-- register("fit", function(pat)
+--    return pat:withEvent(function(event)
+--       return event:withValue(function(value)
+--          return union(value, {
+--             speed = tofrac(1) / event.whole:duration(),
+--             unit = "c",
+--          })
+--       end)
+--    end)
+-- end)
+--
+-- register("legato", function(factor, pat)
+--    factor = tofrac(factor)
+--    return pat:withEventSpan(function(span)
+--       return Span(span._begin, (span._begin + span:duration() * factor))
+--    end)
+-- end)
+
 local gcd_reduce = function(tab)
    return reduce(function(acc, value)
       return acc:gcd(value)
@@ -4307,185 +4644,13 @@ end
 mt.drawLine = drawLine
 pattern.drawLine = drawLine
 
-pattern.op = op
-pattern.id = id
-pattern.T = T
-pattern.pipe = ut.pipe
-pattern.dump = ut.dump
-pattern.t = TYPES
-pattern.mt = mt
-pattern.tri2 = tri2
-pattern.tri = tri
-pattern.saw2 = saw2
-pattern.saw = saw
-pattern.isaw = isaw
-pattern.isaw2 = isaw2
-pattern.square2 = square2
-pattern.square = square
-pattern.cosine = cosine
-pattern.cosine2 = cosine2
-pattern.sine = sine
-pattern.sine2 = sine2
-pattern.rand = rand
-pattern.time = time
-
-end
-   
-do
-   local genericParams = {
-   { "s", "n", "gain" },
-   { "cutoff", "resonance" },
-   { "hcutoff", "hresonance" },
-
-   { "delay", "delaytime", "delayfeedback" },
-   { "room", "size" },
-   { "bandf", "bandq" }, --bpenv
-   "toArg",
-   "from",
-   "to",
-   "accelerate",
-   "amp",
-   "attack",
-   "bandq",
-   "begin",
-   "legato",
-   "clhatdecay",
-   "crush",
-   "coarse",
-   "channel",
-   "cut",
-   "cutoff",
-   "cutoffegint",
-   "decay",
-   "delayfeedback",
-   "delaytime",
-   "detune",
-   "djf",
-   "dry",
-   "end",
-   "fadeTime",
-   "fadeInTime",
-   "freq",
-   "gain",
-   "gate",
-   "hatgrain",
-   "hold",
-   "hresonance",
-   "lagogo",
-   "lclap",
-   "lclaves",
-   "lclhat",
-   "lcrash",
-   "leslie",
-   "lrate",
-   "lfodelay",
-   "lfosync",
-   "lock",
-   "metatune",
-   "mtranspose",
-   "octaveR",
-   "ophatdecay",
-   "orbit",
-   "pan",
-   "panorient",
-   "portamento",
-   "sagogo",
-   "semitone",
-   "speed",
-   "sustain",
-   "unit",
-   "voice",
-   "modwheel",
-   "tremolorate",
-   "fshiftnote",
-   "kcutoff",
-   "octer",
-   "octersub",
-   "octersubsub",
-   "ring",
-   "ringf",
-   "ringdf",
-   "distort",
-   "freeze",
-   "xsdelay",
-   "tsdelay",
-   "real",
-   "imag",
-   "enhance",
-   "partials",
-   "comb",
-   "smear",
-   "scram",
-   "binshift",
-   "hbrick",
-   "lbrick",
-}
-
-local aliasParams = {
-   s = "sound",
-   note = "up",
-   attack = "att",
-   bandf = "bpf",
-   bandq = "bpq",
-   clhatdecay = "chdecay",
-   cutoff = { "ctf", "lpf" },
-   cutoffegint = "ctfg",
-   delayfeedback = { "dfb", "delayfb" },
-   delaytime = { "dt", "delayt" },
-   detune = "det",
-   fadeTime = "fadeOutTime",
-   gate = "gat",
-   hatgrain = "hg",
-   hcutoff = "hpf",
-   hresonance = "hpq",
-   lagogo = "lag",
-   lkick = "lbd",
-   lclhat = "lch",
-   lclaves = "lcl",
-   lclap = "lcp",
-   lcrash = "lcr",
-   lfocutoffint = "lfoc",
-   lfoint = "lfoi",
-   lfopitchint = "lfop",
-   lhitom = "lht",
-   llotom = "llt",
-   lophat = "loh",
-   resonance = "lpq",
-   lsnare = "lsn",
-   n = "number",
-   ophatdecay = "ohdecay",
-   phaserdepth = "phasdp",
-   phaserrate = "phasr",
-   pitch1 = "pit1",
-   pitch2 = "pit2",
-   pitch3 = "pit3",
-   portamento = "por",
-   release = "rel",
-   sagogo = "sag",
-   sclaves = "scl",
-   sclap = "scp",
-   scrash = "scr",
-   size = "sz",
-   slide = "sld",
-   stutterdepth = "std",
-   stuttertime = "stt",
-   sustain = "sus",
-   tomdecay = "tdecay",
-   tremolodepth = "tremdp",
-   tremolorate = "tremr",
-   vcfegint = "vcf",
-   vcoegint = "vco",
-   voice = "voi",
-}
-
--- TODO: move to pattern
-local reify, stack = pattern.reify, pattern.stack
-local T = ut.T
+---CONTROLS
 local parseChord = theory.parseChord
-local ValueMap = types.ValueMap
+local genericParams, aliasParams = control.genericParams, control.aliasParams
 
+---@param name string
 local create = function(name)
-   local withVal
+   local withVal, f
    if type(name) == "table" then
       withVal = function(xs)
          if type(xs) == "table" then
@@ -4495,17 +4660,21 @@ local create = function(name)
             end
             return ValueMap(acc)
          else
-            return ValueMap { [name[1]] = xs }
+            return ValueMap { [name] = xs }
          end
       end
-
-      control[name[1]] = function(args)
+      f = function(args)
          return reify(args):fmap(withVal)
       end
+      name = name[1]
    else
-      control[name] = function(arg)
+      f = function(arg)
          return reify { [name] = arg }
       end
+   end
+   pattern[name] = f
+   mt[name] = function(self, arg)
+      return self .. f(arg)
    end
 end
 
@@ -4515,15 +4684,17 @@ for _, param in ipairs(genericParams) do
       local alias = aliasParams[param]
       if type(alias) == "table" then
          for _, al in ipairs(alias) do
-            control[al] = control[param]
+            pattern[al] = pattern[param]
+            mt[al] = mt[param]
          end
       else
-         control[alias] = control[param]
+         pattern[alias] = pattern[param]
+         mt[alias] = mt[param]
       end
    end
 end
 
-control.note = function(pat)
+pattern.note = function(pat)
    local notemt = {
       __add = function(self, other)
          -- HACK:
@@ -4557,7 +4728,33 @@ control.note = function(pat)
    return chordToStack(pat):fmap(withVal)
 end
 
-control.n = control.note
+pattern.n = pattern.note
+mt.note = function(self, arg)
+   return self .. pattern.note(arg)
+end
+mt.n = mt.note
+
+pattern.op = op
+pattern.id = id
+pattern.T = T
+pattern.pipe = ut.pipe
+pattern.dump = ut.dump
+pattern.t = TYPES
+pattern.mt = mt
+pattern.tri2 = tri2
+pattern.tri = tri
+pattern.saw2 = saw2
+pattern.saw = saw
+pattern.isaw = isaw
+pattern.isaw2 = isaw2
+pattern.square2 = square2
+pattern.square = square
+pattern.cosine = cosine
+pattern.cosine2 = cosine2
+pattern.sine = sine
+pattern.sine2 = sine2
+pattern.rand = rand
+pattern.time = time
 
 end
    
@@ -4588,20 +4785,8 @@ for name, func in pairs(types) do
    modal[name] = func
 end
 
--- todo:
--- for type, func in pairs(ui) do
---    pattern.register(type, func)
--- end
-
 for name, func in pairs(pattern) do
    modal[name] = func
-end
-
-for name, func in pairs(control) do
-   modal[name] = func
-   mt[name] = function(self, ...)
-      return self .. func(...)
-   end
 end
 
 setmetatable(modal, {
