@@ -1,7 +1,7 @@
 local has_socket, socket = pcall(require, "socket")
 local has_al, al = pcall(require, "abletonlink")
 local has_losc, losc = pcall(require, "losc")
-local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
+local has_plugin, plugin = pcall(require, "losc.plugins.libuv")
 _G.struct = nil
 local types = require "types"
 local Stream = types.Stream
