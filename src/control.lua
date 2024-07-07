@@ -144,12 +144,15 @@ local aliasParams = {
    voice = "voi",
 }
 
+-- TODO: move to pattern
 local pattern = require "pattern"
 local reify, stack = pattern.reify, pattern.stack
 local ut = require "ut"
 local T = ut.T
 local theory = require "theory"
 local parseChord = theory.parseChord
+local types = require "types"
+local ValueMap = types.ValueMap
 
 local control = {}
 local create = function(name)
@@ -161,9 +164,9 @@ local create = function(name)
             for i, x in ipairs(xs) do
                acc[name[i]] = x
             end
-            return acc
+            return ValueMap(acc)
          else
-            return { [name[1]] = xs }
+            return ValueMap { [name[1]] = xs }
          end
       end
 
@@ -171,11 +174,8 @@ local create = function(name)
          return reify(args):fmap(withVal)
       end
    else
-      withVal = function(v)
-         return { [name] = v }
-      end
-      control[name] = function(args)
-         return reify(args):fmap(withVal)
+      control[name] = function(arg)
+         return reify { [name] = arg }
       end
    end
 end

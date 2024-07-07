@@ -287,6 +287,10 @@ end
 
 -- general utilities
 
+function ut.is_array(tbl)
+   return type(tbl) == "table" and (#tbl > 0 or next(tbl) == nil)
+end
+
 ---return size of hash table
 ---@param t table
 local tsize = function(t)
@@ -707,6 +711,7 @@ local setmetatable = setmetatable
 local tremove = table.remove
 local tconcat = table.concat
 local unpack = _G.unpack or table.unpack
+local is_array = ut.is_array
 
 local Time, Span, Event
 local time = { __class = "time" }
@@ -1261,7 +1266,61 @@ local function TDef(a)
    return tdef, tdef.name
 end
 
-types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef }
+local valuemap = {
+   -- TODO: cover if other types
+   __add = function(t1, t2)
+      if type(t2) == "number" then
+         local k, v = next(t1)
+         return { [k] = v + t2 }
+      elseif type(t2) == "table" and not is_array(t2) then
+         for k, v in pairs(t1) do
+            if type(v) == "number" or tonumber(v) then
+               t1[k] = v + (t2[k] or 0)
+            end
+         end
+         for k, v in pairs(t2) do
+            if not t1[k] then
+               t1[k] = v
+            end
+         end
+         return t1
+      else
+         error "bad table arith"
+      end
+   end,
+   __sub = function(t1, t2)
+      if type(t2) == "number" then
+         local k, v = next(t1)
+         return { [k] = v - t2 }
+      elseif type(t2) == "table" and not is_array(t2) then
+         for k, v in pairs(t1) do
+            if type(v) == "number" or tonumber(v) then
+               t1[k] = v - (t2[k] or 0)
+            end
+         end
+         for k, v in pairs(t2) do
+            if not t1[k] then
+               t1[k] = v
+            end
+         end
+         return t1
+      else
+         error "bad table arith"
+      end
+   end,
+   __unm = function(t)
+      local k, v = next(t)
+      -- TODO: check
+      return ValueMap { [k] = -v }
+   end,
+}
+valuemap.__index = valuemap
+
+function ValueMap(valmap)
+   return setmetatable(valmap, valuemap)
+end
+
+types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef, ValueMap = ValueMap }
 
 end
    
@@ -2996,7 +3055,7 @@ end
 do
    
 local bjork, getScale = theory.bjork, theory.getScale
-local Event, Span, Time, TDef = types.Event, types.Span, types.Time, types.TDef
+local Event, Span, Time, TDef, ValueMap = types.Event, types.Span, types.Time, types.TDef, types.ValueMap
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
@@ -3010,6 +3069,7 @@ local min = math.min
 local max = math.max
 local pi = math.pi
 local floor = math.floor
+local is_array = ut.is_array
 local reduce = ut.reduce
 local map = ut.map
 local id = ut.id
@@ -3041,7 +3101,11 @@ local reify = memoize(function(thing)
       local res = eval(thing)
       return res and res or silence
    elseif "table" == t then
-      return fastcat(thing)
+      if is_array(thing) then
+         return fastcat(thing)
+      else
+         return pure(ValueMap(thing))
+      end
    elseif "pattern" == t then
       return thing
    else
@@ -3555,8 +3619,6 @@ for k, f in pairs(ops) do
    end
 end
 op["#"] = op["|>"]
-
-pattern.op = op
 
 silence = Pattern()
 pattern.silence = silence
@@ -4168,6 +4230,21 @@ local function chain(pat, other)
 end
 register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
 
+-- juxBy n f p = stack [p |+ P.pan 0.5 |- P.pan (n/2), f $ p |+ P.pan 0.5 |+ P.pan (n/2)]
+-- CONTROLS
+local function juxBy(n, f, pat)
+   n = n / 2
+   -- TODO: move control reigister to here
+   local left = reify { pan = 0.5 } - n + pat
+   local right = reify { pan = 0.5 } + n + pat
+   return overlay(left, f(right))
+end
+register(
+   -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+   "juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap",
+   juxBy
+)
+
 local gcd_reduce = function(tab)
    return reduce(function(acc, value)
       return acc:gcd(value)
@@ -4230,6 +4307,7 @@ end
 mt.drawLine = drawLine
 pattern.drawLine = drawLine
 
+pattern.op = op
 pattern.id = id
 pattern.T = T
 pattern.pipe = ut.pipe
@@ -4400,9 +4478,11 @@ local aliasParams = {
    voice = "voi",
 }
 
+-- TODO: move to pattern
 local reify, stack = pattern.reify, pattern.stack
 local T = ut.T
 local parseChord = theory.parseChord
+local ValueMap = types.ValueMap
 
 local create = function(name)
    local withVal
@@ -4413,9 +4493,9 @@ local create = function(name)
             for i, x in ipairs(xs) do
                acc[name[i]] = x
             end
-            return acc
+            return ValueMap(acc)
          else
-            return { [name[1]] = xs }
+            return ValueMap { [name[1]] = xs }
          end
       end
 
@@ -4423,11 +4503,8 @@ local create = function(name)
          return reify(args):fmap(withVal)
       end
    else
-      withVal = function(v)
-         return { [name] = v }
-      end
-      control[name] = function(args)
-         return reify(args):fmap(withVal)
+      control[name] = function(arg)
+         return reify { [name] = arg }
       end
    end
 end
@@ -4530,15 +4607,6 @@ end
 setmetatable(modal, {
    __index = _G,
 })
-
--- pattern.sl = ut.string_lambda(modal)
--- modal.sl = pattern.sl
-
---- TODO:lib pats and funcs?
-modal.fonf = "bd [bd, sd] bd [bd, sd]"
-
--- pattern.mini = maxi(modal, false)
--- modal.mini = pattern.mini
 
 setmetatable(modal, {
    __call = function(t, override)

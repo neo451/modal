@@ -6,23 +6,6 @@ local register = pattern.register
 
 -- local P = require "modal.params"
 
-local function juxBy(by, f, pat)
-   by = by / 2
-   local elem_or = function(dict, key, default)
-      if dict[key] ~= nil then
-         return dict[key]
-      end
-      return default
-   end
-   local left = pat:fmap(function(valmap)
-      return union({ pan = elem_or(valmap, "pan", 0.5) - by }, valmap)
-   end)
-   local right = pat:fmap(function(valmap)
-      return union({ pan = elem_or(valmap, "pan", 0.5) + by }, valmap)
-   end)
-   return stack(left, f(right))
-end
-
 local function striate(n, pat)
    local ranges = {}
    for i = 0, n - 1 do

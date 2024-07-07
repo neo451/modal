@@ -9,6 +9,7 @@ local setmetatable = setmetatable
 local tremove = table.remove
 local tconcat = table.concat
 local unpack = _G.unpack or table.unpack
+local is_array = ut.is_array
 
 local Time, Span, Event
 local time = { __class = "time" }
@@ -564,6 +565,60 @@ local function TDef(a)
    return tdef, tdef.name
 end
 
-types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef }
+local valuemap = {
+   -- TODO: cover if other types
+   __add = function(t1, t2)
+      if type(t2) == "number" then
+         local k, v = next(t1)
+         return { [k] = v + t2 }
+      elseif type(t2) == "table" and not is_array(t2) then
+         for k, v in pairs(t1) do
+            if type(v) == "number" or tonumber(v) then
+               t1[k] = v + (t2[k] or 0)
+            end
+         end
+         for k, v in pairs(t2) do
+            if not t1[k] then
+               t1[k] = v
+            end
+         end
+         return t1
+      else
+         error "bad table arith"
+      end
+   end,
+   __sub = function(t1, t2)
+      if type(t2) == "number" then
+         local k, v = next(t1)
+         return { [k] = v - t2 }
+      elseif type(t2) == "table" and not is_array(t2) then
+         for k, v in pairs(t1) do
+            if type(v) == "number" or tonumber(v) then
+               t1[k] = v - (t2[k] or 0)
+            end
+         end
+         for k, v in pairs(t2) do
+            if not t1[k] then
+               t1[k] = v
+            end
+         end
+         return t1
+      else
+         error "bad table arith"
+      end
+   end,
+   __unm = function(t)
+      local k, v = next(t)
+      -- TODO: check
+      return ValueMap { [k] = -v }
+   end,
+}
+valuemap.__index = valuemap
+
+function ValueMap(valmap)
+   return setmetatable(valmap, valuemap)
+end
+
+types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef, ValueMap = ValueMap }
 
 return types

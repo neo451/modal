@@ -5,7 +5,7 @@ local notation = require "notation"
 local pattern = {}
 
 local bjork, getScale = theory.bjork, theory.getScale
-local Event, Span, Time, TDef = types.Event, types.Span, types.Time, types.TDef
+local Event, Span, Time, TDef, ValueMap = types.Event, types.Span, types.Time, types.TDef, types.ValueMap
 
 local unpack = unpack or rawget(table, "unpack")
 local pairs = pairs
@@ -19,6 +19,7 @@ local min = math.min
 local max = math.max
 local pi = math.pi
 local floor = math.floor
+local is_array = ut.is_array
 local reduce = ut.reduce
 local map = ut.map
 local id = ut.id
@@ -50,7 +51,11 @@ local reify = memoize(function(thing)
       local res = eval(thing)
       return res and res or silence
    elseif "table" == t then
-      return fastcat(thing)
+      if is_array(thing) then
+         return fastcat(thing)
+      else
+         return pure(ValueMap(thing))
+      end
    elseif "pattern" == t then
       return thing
    else
@@ -564,8 +569,6 @@ for k, f in pairs(ops) do
    end
 end
 op["#"] = op["|>"]
-
-pattern.op = op
 
 silence = Pattern()
 pattern.silence = silence
@@ -1177,6 +1180,21 @@ local function chain(pat, other)
 end
 register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
 
+-- juxBy n f p = stack [p |+ P.pan 0.5 |- P.pan (n/2), f $ p |+ P.pan 0.5 |+ P.pan (n/2)]
+-- CONTROLS
+local function juxBy(n, f, pat)
+   n = n / 2
+   -- TODO: move control reigister to here
+   local left = reify { pan = 0.5 } - n + pat
+   local right = reify { pan = 0.5 } + n + pat
+   return overlay(left, f(right))
+end
+register(
+   -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+   "juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap",
+   juxBy
+)
+
 local gcd_reduce = function(tab)
    return reduce(function(acc, value)
       return acc:gcd(value)
@@ -1239,6 +1257,7 @@ end
 mt.drawLine = drawLine
 pattern.drawLine = drawLine
 
+pattern.op = op
 pattern.id = id
 pattern.T = T
 pattern.pipe = ut.pipe

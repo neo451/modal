@@ -269,6 +269,10 @@ end
 
 -- general utilities
 
+function ut.is_array(tbl)
+   return type(tbl) == "table" and (#tbl > 0 or next(tbl) == nil)
+end
+
 ---return size of hash table
 ---@param t table
 local tsize = function(t)
