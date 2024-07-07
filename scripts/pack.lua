@@ -53,7 +53,7 @@ local function get_content(name, file)
    local contents = {}
    for i in file:lines() do
       if not i:find "require" and not i:match(("local %s = {}"):format(name)) then
-         contents[#contents + 1] = i
+         contents[#contents + 1] = "   " .. i
       end
    end
    contents[#contents] = nil
@@ -62,11 +62,10 @@ local function get_content(name, file)
 end
 
 local function wrap(name, file)
-   local format = [[
-do
-   %s
+   local format = [[do
+%s
 end
-   ]]
+]]
    return format:format(get_content(name, file))
 end
 
@@ -74,7 +73,6 @@ function load(name)
    header = header .. "\n" .. wrap(name, files[name])
 end
 
--- BUG: parseChord??
 load "ut"
 load "types"
 load "a2s"
@@ -88,7 +86,6 @@ header = header .. "\n" .. get_content("init", files["init"])
 load "repl"
 load "server"
 header = header .. "\n" .. "modal.ut = ut"
-header = header .. "\n" .. "modal.control = control"
 header = header .. "\n" .. "return modal"
 
 print(header)
