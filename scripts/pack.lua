@@ -53,6 +53,9 @@ local function get_content(name, file)
    local contents = {}
    for i in file:lines() do
       if not i:find "require" and not i:match(("local %s = {}"):format(name)) then
+         -- if i:find "M." or i:find "M " then
+         --    i = i:gsub("M", name)
+         -- end
          contents[#contents + 1] = "   " .. i
       end
    end

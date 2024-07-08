@@ -607,3 +607,37 @@ describe("striate", function()
       assert.pat(expected, pat)
    end)
 end)
+
+describe("chop", function()
+   it("", function()
+      local pat = chop(2, s "bd sd")
+      local expected = fastcat {
+         reify { ["begin"] = 0, ["end"] = 0.5, s = "bd" },
+         reify { ["begin"] = 0.5, ["end"] = 1, s = "bd" },
+         reify { ["begin"] = 0, ["end"] = 0.5, s = "sd" },
+         reify { ["begin"] = 0.5, ["end"] = 1, s = "sd" },
+      }
+      assert.pat(expected, pat)
+   end)
+end)
+
+describe("loopAt", function()
+   it("", function()
+      local pat = s("bd sd"):chop(2):loopAt(2)
+      local expected = fastcat {
+         reify { ["begin"] = 0, ["end"] = 0.5, s = "bd", speed = 0.5, unit = "c" },
+         reify { ["begin"] = 0.5, ["end"] = 1, s = "bd", speed = 0.5, unit = "c" },
+      }
+      assert.pat(expected, pat)
+   end)
+end)
+describe("fit", function()
+   it("", function()
+      local pat = fit(s "bd sd")
+      local expected = fastcat {
+         reify { speed = 2, unit = "c", s = "bd" },
+         reify { speed = 2, unit = "c", s = "sd" },
+      }
+      assert.pat(expected, pat)
+   end)
+end)

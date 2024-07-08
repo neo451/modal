@@ -522,6 +522,7 @@ end
 
 -- stylua: ignore start
 local ops = {
+   set = function(_, b) return b end,
    add = function(a, b) return a + b end,
    sub = function(a, b) return a - b end,
    mul = function(a, b) return a * b end,
@@ -1198,30 +1199,17 @@ local function striate(n, pat)
 end
 register("striate :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", striate)
 
--- register("chop", function(n, pat)
---    local ranges
---    do
---       local _accum_0 = {}
---       local _len_0 = 1
---       for i = 0, n - 1 do
---          _accum_0[_len_0] = {
---             begin = i / n,
---             ["end"] = (i + 1) / n,
---          }
---          _len_0 = _len_0 + 1
---       end
---       ranges = _accum_0
---    end
---    local func
---    func = function(o)
---       local f
---       f = function(slice)
---          return union(slice, o)
---       end
---       return fastcat(map(f, ranges))
---    end
---    return pat:squeezeBind(func)
--- end)
+local function chop(n, pat)
+   local func = function(p)
+      local acc = {}
+      for i = 1, n do
+         acc[i] = union({ begin = (i - 1) / n, ["end"] = i / n }, p)
+      end
+      return fastcat(acc)
+   end
+   return pat:squeezeBind(func)
+end
+register("chop :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", chop)
 --
 -- register("slice", function(npat, ipat, opat)
 --    return npat:innerBind(function(n)
@@ -1262,21 +1250,26 @@ register("striate :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", stria
 --    end)
 -- end)
 --
--- register("_loopAt", function(factor, pat)
---    pat = pat .. P.speed(1 / factor) .. P.unit "c"
---    return slow(factor, pat)
--- end)
---
--- register("fit", function(pat)
---    return pat:withEvent(function(event)
---       return event:withValue(function(value)
---          return union(value, {
---             speed = tofrac(1) / event.whole:duration(),
---             unit = "c",
---          })
---       end)
---    end)
--- end)
+local function loopAt(factor, pat)
+   print(pat)
+   pat = pat .. pattern.speed(factor:reverse():asFloat())
+   -- .. pattern.unit "c"
+   print(pat)
+   return slow(factor, pat)
+end
+register("loopAt :: Pattern Time -> Pattern ValueMap -> Pattern ValueMap", loopAt)
+
+local function fit(pat)
+   return withEvent(pat, function(event)
+      return event:withValue(function(value)
+         return union(value, {
+            speed = event.whole:duration():reverse():asFloat(),
+            unit = "c",
+         })
+      end)
+   end)
+end
+register("fit :: Pattern ValueMap -> Pattern ValueMap", fit)
 --
 -- register("legato", function(factor, pat)
 --    factor = tofrac(factor)

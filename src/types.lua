@@ -3,6 +3,7 @@ local losc = require "losc" -- TODO: get rid of ??? core should be pure
 local types = {}
 
 local T = ut.T
+local union = ut.union
 local abs = math.abs
 local floor = math.floor
 local setmetatable = setmetatable
@@ -610,7 +611,10 @@ local valuemap = {
    __unm = function(t)
       local k, v = next(t)
       -- TODO: check
-      return ValueMap { [k] = -v }
+      return { [k] = -v }
+   end,
+   __concat = function(lhs, rhs)
+      return union(lhs, rhs)
    end,
 }
 valuemap.__index = valuemap
