@@ -34,6 +34,6 @@ end)
 describe("note", function()
    it("shoudl parse chords", function()
       ---TODO:
-      -- assert.pat(stack { n(0), n(4), n(7) }, note "c'maj")
+      assert.pat(stack { n(0), n(4), n(7) }, note "c'maj")
    end)
 end)

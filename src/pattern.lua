@@ -1391,27 +1391,19 @@ for _, param in ipairs(genericParams) do
    end
 end
 
-pattern.note = function(pat)
-   local notemt = {
-      __add = function(self, other)
-         -- HACK:
-         if type(other) ~= "table" then
-            other = { note = other }
-         end
-         return { note = self.note + other.note }
-      end,
-   }
-
+pattern.note = function(pat, arp)
    local function chordToStack(thing)
       if type(thing) == "string" then
          if type(parseChord(thing)) == "table" then
-            return stack(parseChord(thing))
+            local notes = parseChord(thing)
+            return notes -- arp function
          end
-         return reify(thing)
+         return thing
       elseif T(thing) == "pattern" then
          return thing
             :fmap(function(chord)
-               return stack(parseChord(chord))
+               local notes = parseChord(chord)
+               return arp and fastcat(notes) or stack(notes)
             end)
             :outerJoin()
       else
@@ -1419,7 +1411,7 @@ pattern.note = function(pat)
       end
    end
    local withVal = function(v)
-      return setmetatable({ note = v }, notemt)
+      return ValueMap { note = v }
       -- return { note = v }
    end
    return chordToStack(pat):fmap(withVal)

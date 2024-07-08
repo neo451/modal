@@ -75,7 +75,7 @@ end
 
 function mt:subscribe(key, pattern)
    if not self.subscribers[key] then
-      self.subscribers[key] = Stream(sendOSC)
+      self.subscribers[key] = Stream(self.callback)
    end
    self.subscribers[key].pattern = pattern
 end
@@ -131,11 +131,13 @@ end
 
 mt.__index = mt
 
-function Clock(bpm, sampleRate, beatsPerCycle)
+function Clock(bpm, sampleRate, beatsPerCycle, callback)
    bpm = bpm or 120
    sampleRate = sampleRate or (1 / 20)
    beatsPerCycle = beatsPerCycle or 4
+   callback = callback or sendOSC
    return setmetatable({
+      callback = callback,
       bpm = bpm,
       sampleRate = sampleRate,
       beatsPerCycle = beatsPerCycle,

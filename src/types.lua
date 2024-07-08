@@ -495,13 +495,13 @@ function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
       -- print(link_secs)
       -- print(diff:seconds())
       local ts = diff + (linkOn / mill) + self.latency + nudge
-      self.sendf(value, ts)
+      self.callback(value, ts)
    end
 end
 stream.__index = stream
 
-local function Stream(sendf)
-   return setmetatable({ latency = 0.2, sendf = sendf }, stream)
+local function Stream(callback)
+   return setmetatable({ latency = 0.2, callback = callback }, stream)
 end
 
 local lpeg = require "lpeg"

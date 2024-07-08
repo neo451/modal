@@ -1229,13 +1229,13 @@ do
          -- print(link_secs)
          -- print(diff:seconds())
          local ts = diff + (linkOn / mill) + self.latency + nudge
-         self.sendf(value, ts)
+         self.callback(value, ts)
       end
    end
    stream.__index = stream
    
-   local function Stream(sendf)
-      return setmetatable({ latency = 0.2, sendf = sendf }, stream)
+   local function Stream(callback)
+      return setmetatable({ latency = 0.2, callback = callback }, stream)
    end
    
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
@@ -2953,7 +2953,7 @@ do
    
    function mt:subscribe(key, pattern)
       if not self.subscribers[key] then
-         self.subscribers[key] = Stream(sendOSC)
+         self.subscribers[key] = Stream(self.callback)
       end
       self.subscribers[key].pattern = pattern
    end
@@ -3009,11 +3009,13 @@ do
    
    mt.__index = mt
    
-   function Clock(bpm, sampleRate, beatsPerCycle)
+   function Clock(bpm, sampleRate, beatsPerCycle, callback)
       bpm = bpm or 120
       sampleRate = sampleRate or (1 / 20)
       beatsPerCycle = beatsPerCycle or 4
+      callback = callback or sendOSC
       return setmetatable({
+         callback = callback,
          bpm = bpm,
          sampleRate = sampleRate,
          beatsPerCycle = beatsPerCycle,
@@ -4625,27 +4627,19 @@ do
       end
    end
    
-   pattern.note = function(pat)
-      local notemt = {
-         __add = function(self, other)
-            -- HACK:
-            if type(other) ~= "table" then
-               other = { note = other }
-            end
-            return { note = self.note + other.note }
-         end,
-      }
-   
+   pattern.note = function(pat, arp)
       local function chordToStack(thing)
          if type(thing) == "string" then
             if type(parseChord(thing)) == "table" then
-               return stack(parseChord(thing))
+               local notes = parseChord(thing)
+               return notes -- arp function
             end
-            return reify(thing)
+            return thing
          elseif T(thing) == "pattern" then
             return thing
                :fmap(function(chord)
-                  return stack(parseChord(chord))
+                  local notes = parseChord(chord)
+                  return arp and fastcat(notes) or stack(notes)
                end)
                :outerJoin()
          else
@@ -4653,7 +4647,7 @@ do
          end
       end
       local withVal = function(v)
-         return setmetatable({ note = v }, notemt)
+         return ValueMap { note = v }
          -- return { note = v }
       end
       return chordToStack(pat):fmap(withVal)
