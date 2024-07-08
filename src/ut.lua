@@ -682,4 +682,36 @@ if _VERSION == "Lua 5.1" and not jit then
    end
 end
 
+function ut.getlocal(name, level)
+   local value
+   local found = false
+
+   level = (level or 1) + 1
+
+   for i = 1, huge do
+      local n, v = d_getlocal(level, i)
+      if not n then
+         break
+      end
+      if n == name then
+         value = v
+         found = true
+      end
+   end
+   if found then
+      return value
+   end
+   -- try non-local variables
+   local func = debug.getinfo(level, "f").func
+   for i = 1, math.huge do
+      local n, v = debug.getupvalue(func, i)
+      if not n then
+         break
+      end
+      if n == name then
+         return v
+      end
+   end
+end
+
 return ut

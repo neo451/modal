@@ -788,7 +788,6 @@ local function slow(factor, pat)
       return fast(factor:reverse(), pat)
    end
 end
-
 register("slow :: Pattern Time -> Pattern a -> Pattern a", slow)
 
 -- rotL
@@ -1180,38 +1179,24 @@ local function chain(pat, other)
 end
 register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
 
--- juxBy n f p = stack [p |+ P.pan 0.5 |- P.pan (n/2), f $ p |+ P.pan 0.5 |+ P.pan (n/2)]
 -- CONTROLS
 local function juxBy(n, f, pat)
    n = n / 2
-   -- TODO: move control reigister to here
-   local left = reify { pan = 0.5 } - n + pat
-   local right = reify { pan = 0.5 } + n + pat
+   local left = pattern.pan(0.5) - n + pat
+   local right = pattern.pan(0.5) + n + pat
    return overlay(left, f(right))
 end
-register(
-   -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
-   "juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap",
-   juxBy
-)
+-- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+register("juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap", juxBy)
 
 local function striate(n, pat)
-   local ranges = {}
-   for i = 0, n - 1 do
-      ranges[i] = { ["begin"] = i / n, ["end"] = (i + 1) / n }
-   end
-   local merge_sample = function(range)
-      local f = function(v)
-         return union(range, { sound = v.sound })
-      end
-      return pat:fmap(f)
-   end
    local pats = {}
    for i = 1, n do
-      pats[i] = merge_sample(ranges[i])
+      pats[i] = pat .. { ["begin"] = (i - 1) / n, ["end"] = i / n }
    end
    return fastcat(pats)
 end
+register("striate :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", striate)
 
 -- register("chop", function(n, pat)
 --    local ranges

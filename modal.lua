@@ -38,9 +38,9 @@ do
    local d_gethook = debug.gethook
    local d_getupvalue = debug.getupvalue
    local d_setupvalue = debug.setupvalue
-
+   
    Usecolor = false
-
+   
    -- from https://www.lua.org/gems/sample.pdf
    -- TODO: smarter cache over time maybe
    local function memoize(f)
@@ -57,28 +57,28 @@ do
    end
    ut.memoize = memoize
    ut.loadstring = memoize(loadstring)
-
+   
    ---@table term colors
    local colors = {}
-
+   
    local colormt = {}
-
+   
    function colormt:__tostring()
       return self.value
    end
-
+   
    function colormt:__concat(other)
       return tostring(self) .. tostring(other)
    end
-
+   
    function colormt:__call(s)
       return self .. s .. colors.reset
    end
-
+   
    local function makecolor(value)
       return setmetatable({ value = str_char(27) .. "[" .. tostring(value) .. "m" }, colormt)
    end
-
+   
    local colorvalues = {
       -- attributes
       reset = 0,
@@ -90,7 +90,7 @@ do
       blink = 5,
       reverse = 7,
       hidden = 8,
-
+   
       -- foreground
       black = 30,
       red = 31,
@@ -100,7 +100,7 @@ do
       magenta = 35,
       cyan = 36,
       white = 37,
-
+   
       -- background
       onblack = 40,
       onred = 41,
@@ -111,18 +111,18 @@ do
       oncyan = 46,
       onwhite = 47,
    }
-
+   
    for c, v in pairs(colorvalues) do
       colors[c] = makecolor(v)
    end
-
+   
    ut.colors = colors
-
+   
    ---@table bitwise ops
    local bit = {}
    local MOD = 2 ^ 32
    local MODM = MOD - 1
-
+   
    -- TODO: replace with memoize ...?
    local bit_memo = function(f)
       local mt = {}
@@ -134,7 +134,7 @@ do
       end
       return t
    end
-
+   
    local make_bitop_uncached = function(t, m)
       local bitop = function(a, b)
          local res, p = 0, 1
@@ -150,7 +150,7 @@ do
       end
       return bitop
    end
-
+   
    local make_bitop = function(t)
       local op1 = make_bitop_uncached(t, 2 ^ 1)
       local op2 = bit_memo(function(a)
@@ -160,34 +160,34 @@ do
       end)
       return make_bitop_uncached(op2, 2 ^ (t.n or 1))
    end
-
+   
    local tobit = function(x)
       return x % 2 ^ 32
    end
    bit.tobit = tobit
-
+   
    local bxor = make_bitop {
       [0] = { [0] = 0, [1] = 1 },
       [1] = { [0] = 1, [1] = 0 },
       n = 4,
    }
    bit.bxor = bxor
-
+   
    local bnot = function(a)
       return MODM - a
    end
    bit.bnot = bnot
-
+   
    local band = function(a, b)
       return ((a + b) - bxor(a, b)) / 2
    end
    bit.band = band
-
+   
    local bor = function(a, b)
       return MODM - band(MODM - a, MODM - b)
    end
    bit.bor = bor
-
+   
    local lshift, rshift
    rshift = function(a, disp)
       if disp < 0 then
@@ -196,7 +196,7 @@ do
       return floor(a % 2 ^ 32 / 2 ^ disp)
    end
    bit.rshift = rshift
-
+   
    lshift = function(a, disp)
       if disp < 0 then
          return rshift(a, -disp)
@@ -204,18 +204,18 @@ do
       return (a * 2 ^ disp) % 2 ^ 32
    end
    bit.lshift = lshift
-
+   
    ut.bit = bit
-
+   
    ---Copyright (c) 2016 rxi
    ---@table log
    local log = { _version = "0.1.0" }
    ut.log = log
-
+   
    log.usecolor = true
    log.outfile = nil
    log.level = "trace"
-
+   
    local modes = {
       { name = "trace", color = "\27[34m" },
       { name = "debug", color = "\27[36m" },
@@ -224,20 +224,20 @@ do
       { name = "error", color = "\27[31m" },
       { name = "fatal", color = "\27[35m" },
    }
-
+   
    local levels = {}
    for i, v in ipairs(modes) do
       levels[v.name] = i
    end
-
+   
    local round = function(x, increment)
       increment = increment or 1
       x = x / increment
       return (x > 0 and floor(x + 0.5) or ceil(x - 0.5)) * increment
    end
-
+   
    local _tostring = tostring
-
+   
    local tostring = function(...)
       local t = {}
       for i = 1, select("#", ...) do
@@ -249,7 +249,7 @@ do
       end
       return table.concat(t, " ")
    end
-
+   
    for i, x in ipairs(modes) do
       local nameupper = x.name:upper()
       log[x.name] = function(...)
@@ -257,11 +257,11 @@ do
          if i < levels[log.level] then
             return
          end
-
+   
          local msg = tostring(...)
          local info = debug.getinfo(2, "Sl")
          local lineinfo = info.short_src .. ":" .. info.currentline
-
+   
          -- Output to console
          print(
             string.format(
@@ -274,7 +274,7 @@ do
                msg
             )
          )
-
+   
          -- Output to log file
          if log.outfile then
             local fp = io.open(log.outfile, "a")
@@ -284,13 +284,13 @@ do
          end
       end
    end
-
+   
    -- general utilities
-
+   
    function ut.is_array(tbl)
       return type(tbl) == "table" and (#tbl > 0 or next(tbl) == nil)
    end
-
+   
    ---return size of hash table
    ---@param t table
    local tsize = function(t)
@@ -300,7 +300,7 @@ do
       end
       return size
    end
-
+   
    ---structually compare two table, TODO: needed?
    ---@param rhs table
    ---@param lhs table
@@ -324,7 +324,7 @@ do
       end
       return true
    end
-
+   
    ---@param value any
    ---@return string
    function ut.T(value)
@@ -337,7 +337,7 @@ do
       end
       return base_type
    end
-
+   
    function ut.flatten(t)
       local flat = {}
       for i = 1, #t do
@@ -353,7 +353,7 @@ do
       end
       return flat
    end
-
+   
    ---list filter
    ---@param f function
    ---@param list table
@@ -367,7 +367,7 @@ do
       end
       return res
    end
-
+   
    local function reduce(f, acc, list)
       for i = 1, #list do
          acc = f(acc, list[i])
@@ -375,7 +375,7 @@ do
       return acc
    end
    ut.reduce = reduce
-
+   
    ---list map
    ---@param f function
    ---@param list table
@@ -386,7 +386,7 @@ do
       end
       return list
    end
-
+   
    ---dump table as key value pairs
    ---@param o table
    ---@return string
@@ -404,7 +404,7 @@ do
          return tostring(Usecolor and ut.colors.red(o) or o)
       end
    end
-
+   
    ---dump table of events the tidal way
    ---@param o table
    ---@return string
@@ -422,7 +422,7 @@ do
          return tostring(o)
       end
    end
-
+   
    ---zip two list (xs, ys) with f(xs, ys)
    ---@param f function
    ---@param xs table
@@ -435,7 +435,7 @@ do
       end
       return acc
    end
-
+   
    ---concat two lists
    ---@param a table
    ---@param b table
@@ -448,7 +448,7 @@ do
       return a
    end
    ut.concat = concat
-
+   
    ---concat two hashmaps
    ---@param a table
    ---@param b table
@@ -459,7 +459,7 @@ do
       end
       return a
    end
-
+   
    ---@param index number
    ---@param list table
    ---@return table, table
@@ -475,7 +475,7 @@ do
       return fst, lst
    end
    ut.splitAt = splitAt
-
+   
    ---@param step number
    ---@param list table
    ---@return table
@@ -483,7 +483,7 @@ do
       local a, b = splitAt(step, list)
       return concat(b, a)
    end
-
+   
    ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
    ---@param ... unknown
    ---@return unknown
@@ -495,7 +495,7 @@ do
          end
       end, ut.id, funcs)
    end
-
+   
    local function reverse(...)
       local function reverse_h(acc, v, ...)
          if 0 == select("#", ...) then
@@ -508,7 +508,7 @@ do
       end
       return reverse_h(function() end, ...)
    end
-
+   
    ---curry given function -> f(a, b, c) -> f(a)(b)(c)
    ---@param func function
    ---@param num_args number
@@ -532,7 +532,7 @@ do
       return curry_h(function() end, num_args)
    end
    ut.curry = curry
-
+   
    ---flip two args of f
    ---@param f function
    ---@return function
@@ -541,29 +541,29 @@ do
          return f(b, a)
       end
    end
-
+   
    local function xorwise(x)
       local a = bxor(lshift(x, 13), x)
       local b = bxor(rshift(a, 17), a)
       return bxor(lshift(b, 5), b)
    end
-
+   
    local function _frac(x)
       return (x - x:floor()):asFloat()
    end
-
+   
    local function timeToIntSeed(x)
       return xorwise(floor((_frac(x / 300) * 536870912)))
    end
-
+   
    local function intSeedToRand(x)
       return (x % 536870912) / 536870912
    end
-
+   
    function ut.timeToRand(x)
       return abs(intSeedToRand(timeToIntSeed(x)))
    end
-
+   
    local nparams
    ---returns num_param, is_vararg
    ---@param func function
@@ -583,7 +583,7 @@ do
       end
    end
    ut.nparams = nparams
-
+   
    ---register a f(..., pat) as a method for Pattern.f(self, ...), essentially switch the order of args
    ---@param f function
    ---@return function
@@ -595,7 +595,7 @@ do
          return f(unpack(args))
       end
    end
-
+   
    ---if f gets less args then arity, then curry the f and pass the current amount of args into it
    ---@param arity number
    ---@param f function
@@ -614,11 +614,11 @@ do
          end
       end
    end
-
+   
    function ut.id(x)
       return x
    end
-
+   
    ---for lua5.1 compatibility
    ---@param f any
    ---@param env any
@@ -637,13 +637,13 @@ do
       end
       return f
    end
-
+   
    local function partition(array, left, right, pivotIndex)
       local pivotValue = array[pivotIndex]
       array[pivotIndex], array[right] = array[right], array[pivotIndex]
-
+   
       local storeIndex = left
-
+   
       for i = left, right - 1 do
          if array[i] <= pivotValue then
             array[i], array[storeIndex] = array[storeIndex], array[i]
@@ -651,10 +651,10 @@ do
          end
          array[storeIndex], array[right] = array[right], array[storeIndex]
       end
-
+   
       return storeIndex
    end
-
+   
    local function quicksort(array, left, right)
       if right > left then
          local pivotNewIndex = partition(array, left, right, left)
@@ -663,7 +663,7 @@ do
       end
    end
    ut.quicksort = quicksort
-
+   
    function ut.get_args(f)
       local args = {}
       for i = 1, nparams(f) do
@@ -675,13 +675,13 @@ do
       ut.get_args = function(f)
          local args = {}
          local hook = d_gethook()
-
+   
          local argHook = function()
             local info = d_getinfo(3)
             if "pcall" ~= info.name then
                return
             end
-
+   
             for i = 1, huge do
                local name = d_getlocal(2, i)
                if "(*temporary)" == name then
@@ -692,16 +692,50 @@ do
                args[#args + 1] = name
             end
          end
-
+   
          d_sethook(argHook, "c")
          pcall(f)
-
+   
          return args
       end
    end
+   
+   function ut.getlocal(name, level)
+      local value
+      local found = false
+   
+      level = (level or 1) + 1
+   
+      for i = 1, huge do
+         local n, v = d_getlocal(level, i)
+         if not n then
+            break
+         end
+         if n == name then
+            value = v
+            found = true
+         end
+      end
+      if found then
+         return value
+      end
+      -- try non-local variables
+      local func = debug.getinfo(level, "f").func
+      for i = 1, math.huge do
+         local n, v = debug.getupvalue(func, i)
+         if not n then
+            break
+         end
+         if n == name then
+            return v
+         end
+      end
+   end
+   
 end
 
 do
+   
    local T = ut.T
    local abs = math.abs
    local floor = math.floor
@@ -710,7 +744,7 @@ do
    local tconcat = table.concat
    local unpack = _G.unpack or table.unpack
    local is_array = ut.is_array
-
+   
    local Time, Span, Event
    local time = { __class = "time" }
    local span = { __class = "span" }
@@ -718,7 +752,7 @@ do
    span.__index = span
    event.__index = event
    time.__index = time
-
+   
    function span:spanCycles()
       local spans = {}
       local b, e = self.start, self.stop
@@ -738,47 +772,47 @@ do
       end
       return spans
    end
-
+   
    function span:duration()
       return self.stop - self.start
    end
-
+   
    function span:midpoint()
       return self.start + (self:duration() / 2)
    end
-
+   
    function span:cycleSpan()
       local b = self.start:cyclePos()
       return Span(b, b + self:duration())
    end
-
+   
    function span:__eq(rhs)
       return self.start == rhs.start and self.stop == rhs.stop
    end
-
+   
    function span:__tostring()
       return self.start:show() .. " → " .. self.stop:show()
    end
-
+   
    function span:show()
       return self:__tostring()
    end
-
+   
    function span:withTime(func)
       return Span(func(self.start), func(self.stop))
    end
-
+   
    function span:withEnd(func)
       return Span(self.start, func(self.stop))
    end
-
+   
    function span:withCycle(func)
       local sam = self.start:sam()
       local b = sam + func(self.start - sam)
       local e = sam + func(self.stop - sam)
       return Span(b, e)
    end
-
+   
    function span:sect(other)
       local maxOfStart = self.start:max(other.start)
       local minOfEnd = self.stop:min(other.stop)
@@ -795,7 +829,7 @@ do
       end
       return Span(maxOfStart, minOfEnd)
    end
-
+   
    function span:sect_e(other)
       local result = self:sect(other)
       if not result then
@@ -803,7 +837,7 @@ do
       end
       return result
    end
-
+   
    function Span(b, e)
       b = b or 1
       e = e or 1
@@ -812,7 +846,7 @@ do
          stop = Time(e),
       }, span)
    end
-
+   
    function event:__eq(other)
       --    return (self.part == other.part)
       --       and (self.whole == other.whole)
@@ -821,26 +855,26 @@ do
       --       and (self.stateful == other.stateful)
       return self:__tostring() == other:__tostring()
    end
-
+   
    function event:duration()
       return self.whole.stop - self.whole.start
    end
-
+   
    function event:wholeOrPart()
       if self.whole ~= nil then
          return self.whole
       end
       return self.part
    end
-
+   
    function event:hasWhole()
       return self.whole ~= nil
    end
-
+   
    function event:hasOnset()
       return self.whole ~= nil and self.whole.start == self.part.start
    end
-
+   
    function event:withSpan(func)
       local whole = self.whole
       if whole ~= nil then
@@ -848,15 +882,15 @@ do
       end
       return Event(whole, func(self.part), self.value, self.context, self.stateful)
    end
-
+   
    function event:withValue(func)
       return Event(self.whole, self.part, func(self.value), self.context, self.stateful)
    end
-
+   
    function event:show()
       return self:__tostring()
    end
-
+   
    function event:__tostring()
       local part = self.part:__tostring()
       local h, t = "", ""
@@ -866,15 +900,15 @@ do
       end
       return ("%s(%s)%s | %s"):format(h, part, t, ut.tdump(self.value))
    end
-
+   
    function event:spanEquals(other)
       return ((other.whole == nil) and (self.whole == nil)) or (other.whole == self.whole)
    end
-
+   
    function event:setContext(newContext)
       return Event(self.whole, self.part, self.value, newContext, self.stateful)
    end
-
+   
    function event:combineContext(other)
       local newContext = {}
       for key, value in pairs(self.context) do
@@ -891,7 +925,7 @@ do
       newContext.locations = loc1
       return newContext
    end
-
+   
    function Event(whole, part, value, context, stateful)
       part = part or Span()
       context = context or {}
@@ -907,7 +941,7 @@ do
          stateful = stateful,
       }, event)
    end
-
+   
    local function decimaltofraction(x0, err)
       err = err or 0.0000000001
       local num, den
@@ -930,23 +964,23 @@ do
       error("Time: failed to find a fraction for " .. x0)
       return 0, 1
    end
-
+   
    local function gcd(a, b)
       return (b == 0) and a or gcd(b, a % b)
    end
-
+   
    local function lcm(a, b)
       return (a == 0 or b == 0) and 0 or abs(a * b) / gcd(a, b)
    end
-
+   
    function time:wholeCycle()
       return Span(self:sam(), self:nextSam())
    end
-
+   
    function time:cyclePos()
       return self - self:sam()
    end
-
+   
    function time:__add(f2)
       f2 = Time(f2)
       local na = self.numerator
@@ -965,7 +999,7 @@ do
       end
       return Time(floor(t / g2), s * floor(db / g2), false)
    end
-
+   
    function time:__sub(f2)
       f2 = Time(f2)
       local na = self.numerator
@@ -984,7 +1018,7 @@ do
       end
       return Time(floor(t / g2), s * floor(db / g2), false)
    end
-
+   
    function time:__div(f2)
       f2 = Time(f2)
       local na = self.numerator
@@ -1009,7 +1043,7 @@ do
       end
       return Time(n, d, false)
    end
-
+   
    function time:__mul(f2)
       f2 = Time(f2)
       local na = self.numerator
@@ -1028,7 +1062,7 @@ do
       end
       return Time(na * nb, da * db, false)
    end
-
+   
    function time:__pow(f2)
       f2 = Time(f2)
       if f2.denominator == 1 then
@@ -1044,7 +1078,7 @@ do
          return (self.numerator / self.denominator) ^ (f2.numerator / f2.denominator)
       end
    end
-
+   
    function time:__mod(f2)
       f2 = Time(f2)
       local da = self.denominator
@@ -1053,59 +1087,59 @@ do
       local nb = f2.numerator
       return Time((na * db) % (nb * da), da * db)
    end
-
+   
    function time:__unm()
       return Time(-self.numerator, self.denominator, false)
    end
-
+   
    function time:__eq(rhs)
       return self.numerator / self.denominator == rhs.numerator / rhs.denominator
    end
-
+   
    function time:__lt(rhs)
       return self.numerator / self.denominator < rhs.numerator / rhs.denominator
    end
-
+   
    function time:__lte(rhs)
       return self.numerator / self.denominator <= rhs.numerator / rhs.denominator
    end
-
+   
    function time:eq(rhs)
       return self == (Time(rhs))
    end
-
+   
    function time:lt(rhs)
       return self < Time(rhs)
    end
-
+   
    function time:gt(rhs)
       return self > Time(rhs)
    end
-
+   
    function time:lte(rhs)
       return self <= Time(rhs)
    end
-
+   
    function time:gte(rhs)
       return self <= Time(rhs)
    end
-
+   
    function time:reverse()
       return Time(1) / self
    end
-
+   
    function time:floor()
       return floor(self.numerator / self.denominator)
    end
-
+   
    function time:sam()
       return Time(self:floor())
    end
-
+   
    function time:nextSam()
       return self:sam() + 1
    end
-
+   
    function time:min(other)
       other = Time(other)
       if self < other then
@@ -1114,7 +1148,7 @@ do
          return other
       end
    end
-
+   
    function time:max(other)
       other = Time(other)
       if self > other then
@@ -1123,26 +1157,26 @@ do
          return other
       end
    end
-
+   
    function time:gcd(other)
       other = Time(other)
       local gcd_numerator = gcd(self.numerator, other.numerator)
       local lcm_denominator = lcm(self.denominator, other.denominator)
       return Time(gcd_numerator, lcm_denominator)
    end
-
+   
    function time:asFloat()
       return self.numerator / self.denominator
    end
-
+   
    function time:__tostring()
       return ("%d/%d"):format(self.numerator, self.denominator)
    end
-
+   
    function time:show()
       return self:__tostring()
    end
-
+   
    ---@class Fraction
    function Time(n, d, normalize)
       -- HACK:
@@ -1170,9 +1204,9 @@ do
          denominator = d,
       }, time)
    end
-
+   
    local stream = { __class = "stream" }
-
+   
    function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
       if not self.pattern then
          return
@@ -1198,21 +1232,21 @@ do
       end
    end
    stream.__index = stream
-
+   
    local function Stream(sendf)
       return setmetatable({ latency = 0.2, sendf = sendf }, stream)
    end
-
+   
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-
+   
    local function pId(...)
       return { tconcat { ... } }
    end
-
+   
    local function pComp(const, tvar)
       return { constructor = const[1], tvar[1] }
    end
-
+   
    local function pDef(...)
       local args = { ... }
       local name
@@ -1222,12 +1256,12 @@ do
       local ret = tremove(args, #args)
       return { ret = ret, name = name, unpack(args) }
    end
-
+   
    local function pTab(a)
       a.istable = true
       return a
    end
-
+   
    local typedef = V "typedef"
    local fdef = V "fdef"
    local tab = V "tab"
@@ -1237,7 +1271,7 @@ do
    local name = V "name"
    local ws = S " \n\r\t" ^ 0
    local id = ws * ((char ^ 1) / pId) * ws
-
+   
    local rules = {
       [1] = "typedef",
       name = id * ws * P "::" * ws / function(a)
@@ -1250,9 +1284,9 @@ do
       tab = P "[" * ws * elem * ws * P "]" / pTab,
       comp_type = id * ws * id / pComp,
    }
-
+   
    local grammar = Ct(C(rules))
-
+   
    local function TDef(a)
       local tdef = grammar:match(a)[2]
       tdef.source = a
@@ -1263,7 +1297,7 @@ do
       })
       return tdef, tdef.name
    end
-
+   
    local valuemap = {
       -- TODO: cover if other types
       __add = function(t1, t2)
@@ -1313,25 +1347,26 @@ do
       end,
    }
    valuemap.__index = valuemap
-
+   
    local function ValueMap(valmap)
       return setmetatable(valmap, valuemap)
    end
-
+   
    types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef, ValueMap = ValueMap }
+   
 end
 
 do
    -- Copyright (c) 2006-2013 Fabien Fleutot and others.
    a2s.__index = a2s
-
+   
    local tconcat = table.concat
    local str_match = string.match
    local str_format = string.format
    local unpack = unpack or rawget(table, "unpack")
-
+   
    -- TODO: check AST
-
+   
    -- Instanciate a new AST->source synthetizer
    function a2s.new()
       local self = {
@@ -1341,7 +1376,7 @@ do
       }
       return setmetatable(self, a2s)
    end
-
+   
    --------------------------------------------------------------------------------
    -- Run a synthetizer on the `ast' arg and return the source as a string.
    -- Can also be used as a static method `M.run (ast)'; in this case,
@@ -1355,7 +1390,7 @@ do
       self:node(ast)
       return tconcat(self._acc)
    end
-
+   
    --------------------------------------------------------------------------------
    -- Accumulate a piece of source file in the synthetizer.
    --------------------------------------------------------------------------------
@@ -1364,7 +1399,7 @@ do
          self._acc[#self._acc + 1] = x
       end
    end
-
+   
    --------------------------------------------------------------------------------
    -- Accumulate an indented newline.
    -- Jumps an extra line if indentation is 0, so that
@@ -1376,7 +1411,7 @@ do
       end
       self:acc("\n" .. self.indent_step:rep(self.current_indent))
    end
-
+   
    --------------------------------------------------------------------------------
    -- Increase indentation and accumulate a new line.
    --------------------------------------------------------------------------------
@@ -1384,7 +1419,7 @@ do
       self.current_indent = self.current_indent + 1
       self:nl()
    end
-
+   
    --------------------------------------------------------------------------------
    -- Decrease indentation and accumulate a new line.
    --------------------------------------------------------------------------------
@@ -1392,7 +1427,7 @@ do
       self.current_indent = self.current_indent - 1
       self:acc("\n" .. self.indent_step:rep(self.current_indent))
    end
-
+   
    --------------------------------------------------------------------------------
    -- Keywords, which are illegal as identifiers.
    --------------------------------------------------------------------------------
@@ -1423,14 +1458,14 @@ do
    for _, kw in pairs(keywords_list) do
       keywords[kw] = true
    end
-
+   
    --------------------------------------------------------------------------------
    -- Return true iff string `id' is a legal identifier name.
    --------------------------------------------------------------------------------
    local function is_ident(id)
       return str_match(id, "^[%a_][%w_]*$") and not keywords[id]
    end
-
+   
    -- Return true iff ast represents a legal function name for
    -- syntax sugar ``function foo.bar.gnat() ... end'':
    -- a series of nested string indexes, with an identifier as
@@ -1445,7 +1480,7 @@ do
          return false
       end
    end
-
+   
    --------------------------------------------------------------------------------
    -- Operator precedences, in increasing order.
    -- This is not directly used, it's used to generate op_prec below.
@@ -1460,18 +1495,18 @@ do
       { "pow" },
       { "index" },
    }
-
+   
    --------------------------------------------------------------------------------
    -- operator --> precedence table, generated from op_preprec.
    --------------------------------------------------------------------------------
    local op_prec = {}
-
+   
    for prec, ops in ipairs(op_preprec) do
       for _, op in ipairs(ops) do
          op_prec[op] = prec
       end
    end
-
+   
    --------------------------------------------------------------------------------
    -- operator --> source representation.
    --------------------------------------------------------------------------------
@@ -1515,7 +1550,7 @@ do
          end
       end
    end
-
+   
    --------------------------------------------------------------------------------
    -- Convert every node in the AST list `list' passed as 1st arg.
    -- `sep' is an optional separator to be accumulated between each list element,
@@ -1540,7 +1575,7 @@ do
          end
       end
    end
-
+   
    --------------------------------------------------------------------------------
    --
    -- Tag methods.
@@ -1565,7 +1600,7 @@ do
    -- found in the reference manual or in metalua/doc/ast.txt.
    --
    --------------------------------------------------------------------------------
-
+   
    function a2s:Chunk(node)
       -- TODO: check ret last
       for _, v in ipairs(node) do
@@ -1573,7 +1608,7 @@ do
          self:acc "; "
       end
    end
-
+   
    function a2s:Do(node)
       self:acc "do"
       self:nlindent()
@@ -1581,7 +1616,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Set(node)
       local lhs = node[1]
       local rhs = node[2]
@@ -1627,7 +1662,7 @@ do
          self:list(rhs, ", ")
       end
    end
-
+   
    function a2s:While(_, cond, body)
       self:acc "while "
       self:node(cond)
@@ -1637,7 +1672,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Repeat(_, body, cond)
       self:acc "repeat"
       self:nlindent()
@@ -1646,7 +1681,7 @@ do
       self:acc "until "
       self:node(cond)
    end
-
+   
    function a2s:If(node)
       for i = 1, #node - 1, 2 do
          -- for each ``if/then'' and ``elseif/then'' pair --
@@ -1667,7 +1702,7 @@ do
       end
       self:acc "end"
    end
-
+   
    function a2s:Fornum(node, var, first, last)
       local body = node[#node]
       self:acc "for "
@@ -1686,7 +1721,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Forin(_, vars, generators, body)
       self:acc "for "
       self:list(vars, ", ")
@@ -1698,7 +1733,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Local(_, lhs, rhs, annots)
       self:acc "local "
       if annots then
@@ -1722,7 +1757,7 @@ do
          self:list(rhs, ", ")
       end
    end
-
+   
    function a2s:Localrec(_, lhs, rhs)
       -- ``local function name() ... end'' --
       self:acc "local function "
@@ -1735,7 +1770,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Call(node, f)
       local parens
       if node[2].tag == "String" or node[2].tag == "Table" then
@@ -1748,7 +1783,7 @@ do
       self:list(node, ", ", 2) -- skip `f'.
       self:acc(parens and ")")
    end
-
+   
    function a2s:Invoke(node, f, method)
       -- single string or table literal arg ==> no need for parentheses. --
       local parens
@@ -1764,28 +1799,28 @@ do
       self:list(node, ", ", 3) -- Skip args #1 and #2, object and method name.
       self:acc(parens and ")")
    end
-
+   
    function a2s:Return(node)
       self:acc "return "
       self:list(node, ", ")
    end
-
+   
    a2s.Break = "break"
    a2s.Nil = "nil"
    a2s.False = "false"
    a2s.True = "true"
    a2s.Dots = "..."
-
+   
    function a2s:Number(_, n)
       self:acc(tostring(n))
    end
-
+   
    function a2s:String(_, str)
       -- format "%q" prints '\n' in an umpractical way IMO,
       -- so this is fixed with the :gsub( ) call.
       self:acc(str_format("%q", str):gsub("\\\n", "\\n"))
    end
-
+   
    function a2s:Function(_, params, body, annots)
       self:acc "function("
       if annots then
@@ -1810,7 +1845,7 @@ do
       self:nldedent()
       self:acc "end"
    end
-
+   
    function a2s:Table(node)
       if not node[1] then
          self:acc "{ }"
@@ -1839,7 +1874,7 @@ do
          self:acc " }"
       end
    end
-
+   
    -- TODO: understand associatitivity
    function a2s:Op(node, op, a, b)
       if op == "not" and (node[2][1][1] == "eq") then ---TODO:???
@@ -1860,9 +1895,9 @@ do
          self:acc(left_paren and "(")
          self:node(a)
          self:acc(left_paren and ")")
-
+   
          self:acc(op_symbol[op])
-
+   
          self:acc(right_paren and "(")
          self:node(b)
          self:acc(right_paren and ")")
@@ -1879,13 +1914,13 @@ do
          self:acc(paren and ")")
       end
    end
-
+   
    function a2s:Paren(_, content)
       self:acc "("
       self:node(content)
       self:acc ")"
    end
-
+   
    function a2s:Index(_, table, key)
       local paren_table
       if table.tag == "Op" and op_prec[table[1][1]] < op_prec.index then
@@ -1893,11 +1928,11 @@ do
       else
          paren_table = false
       end
-
+   
       self:acc(paren_table and "(")
       self:node(table)
       self:acc(paren_table and ")")
-
+   
       -- ``table [key]''
       if key.tag == "String" and is_ident(key[1]) then
          self:acc "."
@@ -1909,7 +1944,7 @@ do
          -- ``table.key''
       end
    end
-
+   
    function a2s:Id(_, name)
       if is_ident(name) then
          self:acc(name)
@@ -1917,7 +1952,7 @@ do
          error "invalid identifier"
       end
    end
-
+   
    function a2s:Goto(node, name)
       self:acc "goto "
       if type(name) == "string" then
@@ -1926,7 +1961,7 @@ do
          self:Id(node[1], node[1][1])
       end
    end
-
+   
    function a2s:Label(node, name)
       self:acc "::"
       if type(name) == "string" then
@@ -1936,11 +1971,14 @@ do
       end
       self:acc "::"
    end
+   
 end
 
 do
+   
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
-
+   
+   
    local loadstring = ut.loadstring
    local setfenv = setfenv or ut.setfenv
    local memoize = ut.memoize
@@ -1951,7 +1989,7 @@ do
    local map = ut.map
    local reduce = ut.reduce
    local unpack = _G.unpack or rawget(table, "unpack")
-
+   
    local sequence = V "sequence"
    local slice = V "slice"
    local sub_cycle = V "sub_cycle"
@@ -1978,41 +2016,41 @@ do
    local stat = V "stat"
    local choose = V "choose"
    local dotStack = V "dotStack"
-
+   
    local function Id(a)
       return { tag = "Id", a }
    end
-
+   
    local function Table(a)
       return { tag = "Table", unpack(a) }
    end
-
+   
    local function Str(a)
       return { tag = "String", a }
    end
-
+   
    local function Num(a)
       return { tag = "Number", a }
    end
-
+   
    local function id(x)
       return x
    end
-
+   
    local function Call(name, ...)
       return { tag = "Call", Id(name), ... }
    end
-
+   
    local seed = -1 -- TODO: use this?
    local ws = S " \n\r\t" ^ 0
    local comma = ws * P "," * ws
    local pipe = ws * P "|" * ws
    local dot = ws * P "." * ws
-
+   
    local function pNumber(num)
       return Num(tonumber(num))
    end
-
+   
    local function pStep(chars)
       if chars == "~" then
          return Id "silence"
@@ -2025,7 +2063,7 @@ do
       end
       return Str(chars)
    end
-
+   
    local function rTails(args)
       local f = tremove(args, 1)
       if f.tag == "String" then
@@ -2043,7 +2081,7 @@ do
       end
       return main
    end
-
+   
    local step_char = R("09", "AZ", "az") + S [[~^'._]]
    local tidalop = (S "|+-*/^%><" ^ 2 + P "#") / id
    local arith = (S "+-*/^%" - P "|") / id
@@ -2059,19 +2097,19 @@ do
    local exp = e * (minus + plus) ^ -1 * digit ^ 1
    local frac = decimal_point * digit ^ 1
    local number = (minus ^ -1 * int * frac ^ -1 * exp ^ -1) / pNumber
-
+   
    local function pFast(a)
       return function(x)
          return Call("fast", a, x)
       end
    end
-
+   
    local function pSlow(a)
       return function(x)
          return Call("slow", a, x)
       end
    end
-
+   
    -- local function pRand(a)
    --    lower = a[1] or 0
    --    return function(x)
@@ -2079,7 +2117,7 @@ do
    --       return Num(math.random(lower, x[1]))
    --    end
    -- end
-
+   
    local function pDegrade(a)
       if a == "?" then
          a = Num(0.5)
@@ -2089,20 +2127,20 @@ do
          return Call("degradeBy", a, x)
       end
    end
-
+   
    local function pTail(b)
       return function(a)
          return Call("chain", a, b)
       end
    end
-
+   
    local function pEuclid(p, s, r)
       r = r or Num(0)
       return function(x)
          return Call("euclidRot", p, s, r, x)
       end
    end
-
+   
    local function pRange(s)
       return function(x)
          x.range = s[1]
@@ -2110,21 +2148,21 @@ do
          return x
       end
    end
-
+   
    local function pWeight(a)
       return function(x)
          x.weight = (x.weight or 1) + (tonumber(a[1]) or 2) - 1
          return x
       end
    end
-
+   
    local function pReplicate(a)
       return function(x)
          x.reps = (x.reps or 1) + (tonumber(a[1]) or 2) - 1
          return x
       end
    end
-
+   
    local function rReps(ast)
       local res = {}
       for _, node in ipairs(ast) do
@@ -2144,19 +2182,19 @@ do
       end
       return res
    end
-
+   
    local function pSlices(sli, ...)
       for _, v in ipairs { ... } do
          sli = v(sli)
       end
       return sli
    end
-
+   
    local function addWeight(a, b)
       b = b.weight and b.weight or 1
       return a + b
    end
-
+   
    local function rWeight(args)
       local acc = {}
       for _, v in ipairs(args) do
@@ -2165,7 +2203,7 @@ do
       end
       return acc
    end
-
+   
    local function pSeq(isSlow)
       return function(args)
          local weightSum = reduce(addWeight, 0, args)
@@ -2182,22 +2220,22 @@ do
          end
       end
    end
-
+   
    local function pStack(...)
       local args = map(rReps, { ... })
       return rReps(args), "Stack"
    end
-
+   
    local function pChoose(...)
       local args = map(rReps, { ... })
       return rReps(args), "Choose"
    end
-
+   
    local function pDotStack(...)
       local args = map(rReps, { ... })
       return rReps(args), "DotStack"
    end
-
+   
    local opsymb = {
       ["+"] = "add",
       ["-"] = "sub",
@@ -2213,11 +2251,11 @@ do
       -- ["%"] = { "mod", true },
       -- ["."] = { "pipe", false },
    }
-
+   
    local function is_op(a)
       return opsymb[a]
    end
-
+   
    local function pDollar(...)
       local args = { ... }
       if #args == 1 then
@@ -2225,7 +2263,7 @@ do
       end
       return rTails(args)
    end
-
+   
    local function pList(...)
       local args = { ... }
       if is_op(args[1]) then
@@ -2244,7 +2282,7 @@ do
       end
       return rTails(args)
    end
-
+   
    local function pTailop(...)
       local args = { ... }
       local symb = tremove(args, 1)
@@ -2253,7 +2291,7 @@ do
          return { tag = "Call", { tag = "Index", Id "op", Str(symb) }, x, args }
       end
    end
-
+   
    local function pSubCycle(args, tag)
       args = map(pSeq(false), args)
       if tag == "Stack" then
@@ -2264,17 +2302,17 @@ do
          return Call("fastcat", Table(args))
       end
    end
-
+   
    local function pPolymeterSteps(s)
       return (s ~= "") and s or -1
    end
-
+   
    local function pPolymeter(args, _, steps)
       steps = (steps == -1) and Num(#args[1]) or steps
       args = map(pSeq(false), args)
       return Call("polymeter", steps, Table(args))
    end
-
+   
    local function pSlowSeq(args, tag)
       if tag then
          args = map(pSeq(false), args)
@@ -2286,7 +2324,7 @@ do
       end
       return pSeq(true)(rReps(args))
    end
-
+   
    local function pRoot(...)
       local stats = { ... }
       for i, a in ipairs(stats) do
@@ -2296,16 +2334,16 @@ do
       stats.tag = "Chunk"
       return stats
    end
-
+   
    local function pRet(a)
       return { tag = "Return", a }
    end
-
+   
    local function pSet(lhs, rhs)
       lhs.tag = "Id"
       return { tag = "Set", { lhs }, { rhs } }
    end
-
+   
    local function pStat(...)
       if select("#", ...) == 1 then
          return pRet { ... }
@@ -2315,16 +2353,16 @@ do
       end
       return pRet(rTails { ... })
    end
-
+   
    local function pDot(...)
       return { ... }
    end
    local tab = V "tab"
-
+   
    local function pTab(...)
       return Table { ... }
    end
-
+   
    local semi = P ";" ^ -1
    local grammar = {
       [1] = "root",
@@ -2357,7 +2395,7 @@ do
       weight = ws * (P "@" + P "_") * (number ^ -1) / pWeight,
       euclid = P "(" * ws * mini * comma * mini * ws * comma ^ -1 * mini ^ -1 * ws * P ")" / pEuclid,
    }
-
+   
    local function make_gen(top_level)
       if top_level then
          stat = expr * (P "=" / id) ^ -1 * expr ^ 0 * ws / pStat
@@ -2365,13 +2403,13 @@ do
       else
          grammar.root = (ret * semi) ^ 1 / pRoot
       end
-
+   
       local rules = Ct(C(grammar))
-
+   
       local function read(str)
          return rules:match(str)[2]
       end
-
+   
       return function(env)
          local to_str = function(src)
             local ok, ast
@@ -2382,7 +2420,7 @@ do
             local lua_src = a2s.run(ast) -- TODO: imporve api
             return lua_src
          end
-
+   
          local function to_f(src)
             if not top_level then
                src = "[" .. src .. "]"
@@ -2405,16 +2443,17 @@ do
          return memoize(to_f)
       end
    end
-
+   
    notation = { maxi = make_gen(true), mini = make_gen(false) }
+   
 end
 
 do
    local P, S, V, R, C, Ct, Cc = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct, lpeg.Cc
-
+   
    local concat, map = ut.concat, ut.map
    local qsort = ut.quicksort
-
+   
    -- TODO: handle error for wrong chord names ...
    ---@enum (key) Chords
    local chordTable = {
@@ -2469,7 +2508,7 @@ do
       elevenSharp = { 0, 4, 7, 10, 14, 18 },
       minor11sharp = { 0, 3, 7, 10, 14, 18 },
    }
-
+   
    local alias = {
       major = { "maj", "M" },
       minor = { "min", "m" },
@@ -2482,26 +2521,26 @@ do
       nine = "9", -- ?????
       eleven = "11",
       thirteen = "13",
-
+   
       major7 = "maj7",
       major9 = "maj9",
       major11 = "maj11",
       major13 = "maj13",
-
+   
       minor7 = { "min7", "m7" },
       minor9 = { "min9", "m9" },
       minor11 = { "min11", "m11" },
       minor13 = { "min13", "m13" },
-
+   
       sixNine = { "six9", "sixby9", "6by9" },
-
+   
       sevenFlat5 = "7f5",
       sevenSharp5 = "7s5",
       sevenFlat9 = "7f9",
       minorSharp5 = { "msharp5", "mS5" },
       minor6 = { "min6", "m6" },
       minorSixNine = { "minor69", "min69", "minSixNine", "m69", "mSixNine", "m6by9" },
-
+   
       minor7flat5 = { "minor7f5", "min7flat5", "m7flat5", "m7f5" },
       minor7sharp5 = { "minor7s5", "min7sharp5", "m7sharp5", "m7s5" },
       minor7flat9 = { "minor7f9", "min7flat9", "m7flat9", "min7f9", "m7f9" },
@@ -2509,7 +2548,7 @@ do
       minor9sharp5 = { "minor9s5", "min9sharp5", "min9s5", "m9sharp5", "m9s5" },
       minor7sharp5flat9 = "m7sharp5flat9",
       minor11sharp = "m11s",
-
+   
       sevenSus2 = "7sus2",
       sevenSus4 = "7sus4",
       nineSus4 = { "ninesus4", "9sus4" },
@@ -2517,12 +2556,12 @@ do
       nineSharp5 = { "9sharp5", "9s5" },
       sevenSharp5flat9 = "7s5f9",
       elevenSharp = "11s",
-
+   
       minorMajor7 = { "minMaj7", "mmaj7" },
    }
-
+   
    local alias_lookup = {}
-
+   
    for k, v in pairs(alias) do
       if type(v) == "table" then
          for _, al in ipairs(v) do
@@ -2532,13 +2571,13 @@ do
          alias_lookup[v] = k
       end
    end
-
+   
    setmetatable(chordTable, {
       __index = function(t, k)
          return t[alias_lookup[k]]
       end,
    })
-
+   
    local token = function(id)
       return Ct(Cc(id) * C(V(id)))
    end
@@ -2555,7 +2594,7 @@ do
    local octave = token "octave"
    local number = token "number"
    local sep = V "sep"
-
+   
    local grammar = {
       [1] = "chord",
       chord = note * sep ^ -1 * chordname ^ -1 * chordmods ^ -1,
@@ -2573,24 +2612,24 @@ do
       number = R "09",
       sep = P "'",
    }
-
+   
    grammar = Ct(C(grammar))
-
+   
    local notes = { c = 0, d = 2, e = 4, f = 5, g = 7, a = 9, b = 11 }
-
+   
    open = function(chord)
       chord[1] = chord[1] - 12
       chord[3] = chord[3] - 12
       return chord
    end
-
+   
    drop = function(n, chord)
       chord = qsort(chord)
       local index = #chord - (n - 1)
       chord[index] = chord[index] - 12
       return chord
    end
-
+   
    invert = function(n, chord)
       chord = qsort(chord)
       for i = 1, n do
@@ -2602,7 +2641,7 @@ do
       end
       return chord
    end
-
+   
    range = function(n, chord)
       local new_tones = {}
       n = tonumber(n)
@@ -2625,7 +2664,7 @@ do
          return concat(chord, new_tones)
       end
    end
-
+   
    local parseChord = function(chord)
       if type(chord) == "number" then
          return chord
@@ -2686,7 +2725,7 @@ do
       end
       return chordtable
    end
-
+   
    ---@enum (key) Scales
    local scaleTable = {
       minPent = { 0, 3, 5, 7, 10 },
@@ -2763,9 +2802,9 @@ do
       saba = { 0, 1.5, 3, 4, 6, 8, 10 },
       chromatic = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 },
    }
-
+   
    local floor = math.floor
-
+   
    local getScale = function(name)
       return function(num)
          local istab = false
@@ -2787,24 +2826,24 @@ do
          return note
       end
    end
-
+   
    local flatten, zipWith, splitAt, rotate = ut.flatten, ut.zipWith, ut.splitAt, ut.rotate
    local min = math.min
-
+   
    local function left(n, m)
       local ons, offs = n[1], n[2]
       local xs, ys = m[1], m[2]
       local _xs, __xs = splitAt(offs, xs)
       return { offs, ons - offs }, { zipWith(concat, _xs, ys), __xs }
    end
-
+   
    local function right(n, m)
       local ons, offs = n[1], n[2]
       local xs, ys = m[1], m[2]
       local _ys, __ys = splitAt(ons, ys)
       return { ons, offs - ons }, { zipWith(concat, xs, _ys), __ys }
    end
-
+   
    local function _bjork(n, m)
       local ons, offs = n[1], n[2]
       if min(ons, offs) <= 1 then
@@ -2817,7 +2856,7 @@ do
          end
       end
    end
-
+   
    local function bjork(ons, steps, offset)
       offset = offset or 0
       local offs = steps - ons
@@ -2832,22 +2871,23 @@ do
       result = concat(flatten(result[2][1]), flatten(result[2][2]))
       return rotate(offset, result)
    end
-
+   
    theory = { getScale = getScale, parseChord = parseChord, bjork = bjork }
+   
 end
 
 do
    _G.struct = nil
    local Stream = types.Stream
-
+   
    local floor = math.floor
    local type = type
    local pairs = pairs
-
+   
    local sleep = function(sec)
       return socket.sleep(sec)
    end
-
+   
    local target = {
       name = "SuperDirt",
       address = "127.0.0.1",
@@ -2855,9 +2895,9 @@ do
       latency = 0.2,
       handshake = true,
    }
-
+   
    local typeMap = { table = "b", number = "f", string = "s" }
-
+   
    local typesString = function(msg)
       local ts = ""
       for i = 1, #msg do
@@ -2870,7 +2910,7 @@ do
       end
       return ts
    end
-
+   
    local osc, sendOSC
    if has_losc then
       osc = losc.new {
@@ -2892,42 +2932,42 @@ do
          osc:send(b)
       end
    end
-
+   
    local mt = { __class = "clock" }
-
+   
    function mt:start()
       if not self.running then
          self.running = true
          return self:createNotifyCoroutine()
       end
    end
-
+   
    function mt:stop()
       self.running = false
       print "Clock: stopped"
    end
-
+   
    function mt:subscribe(key, pattern)
       if not self.subscribers[key] then
          self.subscribers[key] = Stream(sendOSC)
       end
       self.subscribers[key].pattern = pattern
    end
-
+   
    function mt:unsubscribe(key)
       self.subscribers[key] = nil
    end
-
+   
    function mt:setbpm(bpm)
       self.sessionState:set_tempo(bpm, 0)
       self.link:commit_audio_session_state(self.sessionState)
    end
-
+   
    function mt:setcps(cps)
       self.sessionState:set_tempo(cps * self.beatsPerCycle * 60, 0)
       self.link:commit_audio_session_state(self.sessionState)
    end
-
+   
    function mt:createNotifyCoroutine()
       self.co = coroutine.create(function(f)
          local start = self.link:clock_micros()
@@ -2962,9 +3002,9 @@ do
          self.linkEnabled = false
       end)
    end
-
+   
    mt.__index = mt
-
+   
    function Clock(bpm, sampleRate, beatsPerCycle)
       bpm = bpm or 120
       sampleRate = sampleRate or (1 / 20)
@@ -2980,36 +3020,37 @@ do
          latency = 0.2,
       }, mt)
    end
+   
 end
 
 do
    local DefaultClock = Clock()
-
+   
    function factory.p(key, pattern)
       DefaultClock:subscribe(key, pattern)
       return pattern
    end
-
+   
    -- TODO: cause server to freeze ...
    function factory._p(key)
       DefaultClock:unsubscribe(key)
    end
-
+   
    factory.p_ = factory._p
-
+   
    function factory.hush()
       for i, _ in pairs(DefaultClock.subscribers) do
          DefaultClock:unsubscribe(i)
       end
    end
-
+   
    -- function M.panic()
    --    M.hush()
    --    once(s "superpanic")
    -- end
    -- panic :: Tidally => IO ()
    -- panic = hush >> once (sound "superpanic")
-
+   
    for i = 1, 16 do
       if i <= 12 then
          factory["d" .. i] = function(a)
@@ -3027,19 +3068,20 @@ do
          return factory._p(i)
       end
    end
-
+   
    factory.DefaultClock = DefaultClock
-
+   
    function factory.setcps(cps)
       DefaultClock:setcps(cps)
    end
-
+   
    function factory.setbpm(bpm)
       DefaultClock:setbpm(bpm)
    end
-
+   
    factory.bpm = factory.setbpm
    factory.cps = factory.setcps
+   
 end
 
 do
@@ -3047,7 +3089,7 @@ do
       { "s", "n", "gain" },
       { "cutoff", "resonance" },
       { "hcutoff", "hresonance" },
-
+   
       { "delay", "delaytime", "delayfeedback" },
       { "room", "size" },
       { "bandf", "bandq" }, --bpenv
@@ -3131,7 +3173,7 @@ do
       "hbrick",
       "lbrick",
    }
-
+   
    control.aliasParams = {
       s = "sound",
       note = "up",
@@ -3188,12 +3230,14 @@ do
       vcoegint = "vco",
       voice = "voi",
    }
+   
 end
 
 do
+   
    local bjork, getScale = theory.bjork, theory.getScale
    local Event, Span, Time, TDef, ValueMap = types.Event, types.Span, types.Time, types.TDef, types.ValueMap
-
+   
    local unpack = unpack or rawget(table, "unpack")
    local pairs = pairs
    local ipairs = ipairs
@@ -3222,15 +3266,15 @@ do
    local timeToRand = ut.timeToRand
    local memoize = ut.memoize
    local T = ut.T
-
+   
    local fast, pure, fastcat, slowcat, stack, silence, focus, range, rev, compress
-
+   
    local TYPES = {}
    local op = {}
-
+   
    -- give mini access to global vars
    setmetatable(pattern, { __index = _G })
-
+   
    local eval = notation.mini(pattern)
    local reify = memoize(function(thing)
       local t = T(thing)
@@ -3250,76 +3294,76 @@ do
       end
    end)
    pattern.reify = reify
-
+   
    local mt = { __class = "pattern" }
-
+   
    function mt:len()
       return #(self(0, 1))
    end
-
+   
    function mt:__call(b, e)
       return self:querySpan(b, e)
    end
-
+   
    function mt:__tostring()
       return dump(self(0, 1))
    end
-
+   
    function mt:show()
       return tostring(self)
    end
-
+   
    -- TODO: not triggered in busted
    function mt:__eq(other)
       return self:__tostring() == other:__tostring()
    end
-
+   
    function mt:__concat(other)
       return op["|>"](self, other)
    end
-
+   
    function mt:__add(other)
       return op["|+"](self, other)
    end
-
+   
    function mt:__sub(other)
       return op["|-"](self, other)
    end
-
+   
    function mt:__mul(other)
       return op["|*"](self, other)
    end
-
+   
    function mt:__div(other)
       return op["|/"](self, other)
    end
-
+   
    function mt:__mod(other)
       return op["|%"](self, other)
    end
-
+   
    function mt:__pow(other)
       return op["|^"](self, other)
    end
-
+   
    function mt:slowcat(pats)
       pats[#pats + 1] = self
       return slowcat(pats)
    end
-
+   
    -- TODO: intuitive??
    function mt:fastcat(pats)
       pats[#pats + 1] = self
       return fastcat(pats)
    end
-
+   
    function mt:stack(pats)
       pats[#pats + 1] = self
       return stack(pats)
    end
-
+   
    mt.__index = mt
-
+   
    ---@class Pattern
    local function Pattern(query)
       query = query or function()
@@ -3328,7 +3372,7 @@ do
       return setmetatable({ query = query }, mt)
    end
    pattern.Pattern = Pattern
-
+   
    local function querySpan(pat, b, e)
       local span = Span(b, e)
       -- local state = State(span)
@@ -3339,7 +3383,7 @@ do
       })
    end
    mt.querySpan = querySpan
-
+   
    local function filterEvents(pat, func)
       local query = function(state)
          local events = pat.query(state)
@@ -3348,7 +3392,7 @@ do
       return Pattern(query)
    end
    mt.filterEvents = filterEvents
-
+   
    local function filterValues(pat, condf)
       local query = function(state)
          local events = pat.query(state)
@@ -3360,14 +3404,14 @@ do
       return Pattern(query)
    end
    mt.filterValues = filterValues
-
+   
    local function removeNils(pat)
       return filterValues(pat, function(v)
          return v ~= nil
       end)
    end
    mt.removeNils = removeNils
-
+   
    local function splitQueries(pat)
       local query = function(span)
          local cycles = span:spanCycles()
@@ -3383,7 +3427,7 @@ do
       return Pattern(query)
    end
    mt.splitQueries = splitQueries
-
+   
    local function withValue(pat, f)
       local query = function(state)
          local events = pat.query(state)
@@ -3395,10 +3439,10 @@ do
       return Pattern(query)
    end
    mt.withValue = withValue
-
+   
    local fmap = withValue
    mt.fmap = fmap
-
+   
    local function withQuerySpan(pat, f)
       local query = function(span)
          return pat.query(f(span))
@@ -3406,21 +3450,21 @@ do
       return Pattern(query)
    end
    mt.withQuerySpan = withQuerySpan
-
+   
    local function withQueryTime(pat, f)
       return withQuerySpan(pat, function(span)
          return span:withTime(f)
       end)
    end
    mt.withQueryTime = withQueryTime
-
+   
    local function withEvents(pat, f)
       return Pattern(function(state)
          return f(pat.query(state))
       end)
    end
    mt.withEvents = withEvents
-
+   
    local function withEvent(pat, f)
       return withEvents(pat, function(events)
          for i = 1, #events do
@@ -3430,7 +3474,7 @@ do
       end)
    end
    mt.withEvent = withEvent
-
+   
    local function withEventSpan(pat, f)
       local query = function(state)
          local events = pat.query(state)
@@ -3442,7 +3486,7 @@ do
       return Pattern(query)
    end
    mt.withEventSpan = withEventSpan
-
+   
    local function withEventTime(pat, f)
       local query = function(state)
          local events = pat.query(state)
@@ -3460,28 +3504,28 @@ do
       return Pattern(query)
    end
    mt.withEventTime = withEventTime
-
+   
    local function withTime(pat, qf, ef)
       local query = withQueryTime(pat, qf)
       local pattern = withEventTime(query, ef)
       return pattern
    end
    mt.withTime = withTime
-
+   
    local function onsetsOnly(pat)
       return filterEvents(pat, function(event)
          return event:hasOnset()
       end)
    end
    mt.onsetsOnly = onsetsOnly
-
+   
    local function discreteOnly(pat)
       return filterEvents(pat, function(event)
          return event.whole
       end)
    end
    mt.discreteOnly = discreteOnly
-
+   
    local function appWhole(pat, whole_func, pat_val)
       local query = function(state)
          local event_funcs = pat.query(state)
@@ -3504,7 +3548,7 @@ do
       return Pattern(query)
    end
    mt.appWhole = appWhole
-
+   
    -- Tidal's <*>
    local function appBoth(pat, pat_val)
       local whole_func = function(span_a, span_b)
@@ -3516,7 +3560,7 @@ do
       return appWhole(pat, whole_func, pat_val)
    end
    mt.appBoth = appBoth
-
+   
    -- Tidal's <*
    local function appLeft(pat, pat_val)
       local query = function(state)
@@ -3539,7 +3583,7 @@ do
       return Pattern(query)
    end
    mt.appLeft = appLeft
-
+   
    -- Tidal's *>
    local function appRight(pat, pat_val)
       local query = function(state)
@@ -3562,7 +3606,7 @@ do
       return Pattern(query)
    end
    mt.appRight = appRight
-
+   
    local function bindWhole(pat, choose_whole, func)
       local query = function(state)
          local events = pat.query(state)
@@ -3578,7 +3622,7 @@ do
       return Pattern(query)
    end
    mt.bindWhole = bindWhole
-
+   
    local function bind(pat, func)
       local whole_func = function(a, b)
          if a == nil or b == nil then
@@ -3589,36 +3633,36 @@ do
       return bindWhole(pat, whole_func, func)
    end
    mt.bind = bind
-
+   
    local function join(pat)
       return bind(pat, id)
    end
    mt.join = join
-
+   
    local function outerBind(pat, func)
       return bindWhole(pat, function(a, _)
          return a
       end, func)
    end
    mt.outerBind = outerBind
-
+   
    local function innerBind(pat, func)
       return bindWhole(pat, function(_, b)
          return b
       end, func)
    end
    mt.innerBind = innerBind
-
+   
    local function outerJoin(pat)
       return outerBind(pat, id)
    end
    mt.outerJoin = outerJoin
-
+   
    local function innerJoin(pat)
       return innerBind(pat, id)
    end
    mt.innerJoin = innerJoin
-
+   
    local function squeezeJoin(pat)
       local query = function(state)
          local events = discreteOnly(pat).query(state)
@@ -3659,12 +3703,12 @@ do
       return Pattern(query)
    end
    mt.squeezeJoin = squeezeJoin
-
+   
    local function squeezeBind(pat, func)
       return squeezeJoin(fmap(pat, func))
    end
    mt.squeezeBind = squeezeBind
-
+   
    local _op = {}
    function _op.In(f)
       return function(a, b)
@@ -3672,21 +3716,21 @@ do
          return appLeft(a, b):removeNils()
       end
    end
-
+   
    function _op.Out(f)
       return function(a, b)
          a, b = fmap(reify(a), curry(f, 2)), reify(b)
          return appRight(a, b):removeNils()
       end
    end
-
+   
    function _op.Mix(f)
       return function(a, b)
          a, b = fmap(reify(a), curry(f, 2)), reify(b)
          return appBoth(a, b):removeNils()
       end
    end
-
+   
    function _op.Squeeze(f)
       return function(a, b)
          return squeezeJoin(fmap(reify(a), function(c)
@@ -3696,7 +3740,7 @@ do
          end)):removeNils()
       end
    end
-
+   
    function _op.SqueezeOut(f)
       return function(a, b)
          return squeezeJoin(fmap(reify(b), function(c)
@@ -3721,7 +3765,7 @@ do
       funi = function (a, b) return flip(union)(a, b) end,
    }
    -- stylua: ignore end
-
+   
    -- local hows = { "In", "Out", "Mix", "Squeeze", "Squeezeout", "Trig", "Trigzero" }
    local hows = { "In", "Out", "Mix", "Squeeze", "SqueezeOut" }
    local op_set = {
@@ -3736,7 +3780,7 @@ do
       uni = "<",
       funi = ">",
    }
-
+   
    local how_format = {
       In = "|%s",
       Out = "%s|",
@@ -3744,7 +3788,7 @@ do
       Squeeze = "||%s",
       SqueezeOut = "%s||",
    }
-
+   
    for k, f in pairs(ops) do
       op[k] = {}
       for _, v in ipairs(hows) do
@@ -3756,10 +3800,10 @@ do
       end
    end
    op["#"] = op["|>"]
-
+   
    silence = Pattern()
    pattern.silence = silence
-
+   
    function pure(value)
       local query = function(span)
          local cycles = span:spanCycles()
@@ -3771,7 +3815,7 @@ do
       return Pattern(query)
    end
    pattern.pure = pure
-
+   
    local function purify(value)
       if T(value) == "pattern" then
          return value
@@ -3779,7 +3823,7 @@ do
          return pure(value)
       end
    end
-
+   
    local function patternify(arity, func)
       return function(...)
          local pats = { ... }
@@ -3797,7 +3841,7 @@ do
          return innerJoin(reduce(appLeft, fmap(left, mapFn), pats))
       end
    end
-
+   
    local function type_wrap(f, name)
       local sig = TYPES[name]
       return function(...)
@@ -3830,7 +3874,7 @@ do
          return f(unpack(args))
       end
    end
-
+   
    local function register(type_sig, f, nify)
       local tdef, name = TDef(type_sig)
       if T(nify) == "nil" then
@@ -3857,7 +3901,7 @@ do
       end
    end
    pattern.register = register
-
+   
    local function overlay(a, b)
       local query = function(st)
          return concat(a.query(st), b.query(st))
@@ -3865,12 +3909,12 @@ do
       return Pattern(query)
    end
    register("overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false)
-
+   
    function stack(pats)
       return reduce(overlay, silence, pats)
    end
    register("stack :: [Pattern a] -> Pattern a", stack, false)
-
+   
    function pattern.polymeter(steps, pats)
       for i, pat in ipairs(pats) do
          pats[i] = pattern.fast(steps / pat:len(), pat)
@@ -3878,7 +3922,7 @@ do
       return stack(pats)
    end
    -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
-
+   
    function slowcat(pats)
       local query = function(span)
          local cyc = span.start:sam():asFloat()
@@ -3898,12 +3942,12 @@ do
       return splitQueries(Pattern(query))
    end
    register("slowcat :: [Pattern a] -> Pattern a", slowcat, false)
-
+   
    function fastcat(pats)
       return pattern.fast(#pats, pattern.slowcat(pats))
    end
    register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
-
+   
    local function timecat(tups)
       local total = 0
       for i, v in ipairs(tups) do
@@ -3923,7 +3967,7 @@ do
       return stack(pats)
    end
    pattern.timecat = timecat
-
+   
    local function arrange(tups)
       local total = 0
       for i, v in ipairs(tups) do
@@ -3939,12 +3983,12 @@ do
       return slow(total, timecat(tups))
    end
    pattern.arrange = arrange
-
+   
    local function superimpose(f, pat)
       return overlay(pat, f(pat))
    end
    register("superimpose :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", superimpose, false)
-
+   
    local function layer(tf, pat)
       for i, f in ipairs(tf) do
          tf[i] = f(pat)
@@ -3952,7 +3996,7 @@ do
       return stack(tf)
    end
    register("layer :: [(Pattern a -> Pattern b)] -> Pattern a -> Pattern b", layer, false) -- a little ugly lol layer
-
+   
    function fast(factor, pat)
       if factor:eq(0) then
          return silence
@@ -3967,7 +4011,7 @@ do
       end
    end
    register("fast :: Pattern Time -> Pattern a -> Pattern a", fast)
-
+   
    local function slow(factor, pat)
       if factor:eq(0) then
          return silence
@@ -3975,9 +4019,8 @@ do
          return fast(factor:reverse(), pat)
       end
    end
-
    register("slow :: Pattern Time -> Pattern a -> Pattern a", slow)
-
+   
    -- rotL
    local function early(offset, pat)
       return withTime(pat, function(t)
@@ -3987,13 +4030,13 @@ do
       end)
    end
    register("early :: Time -> Pattern a -> Pattern a", early, false) -- HACK: why not patternify TIME??
-
+   
    -- rotR
    local function late(offset, pat)
       return early(-offset, pat)
    end
    register("late :: Time -> Pattern a -> Pattern a", late, false)
-
+   
    local function inside(np, f, pat)
       local function _inside(n)
          return fast(n, f(slow(n, pat)))
@@ -4001,12 +4044,12 @@ do
       return innerJoin(fmap(np, _inside))
    end
    register("inside :: Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", inside, false)
-
+   
    local function outside(factor, f, pat)
       return inside(1 / factor, f, pat)
    end
    register("outside :: Pattern Time -> (Pattern b -> Pattern a) -> Pattern b -> Pattern a", outside, false)
-
+   
    local function ply(n, pat)
       pat = fmap(pat, function(x)
          return fast(n, pure(x))
@@ -4014,7 +4057,7 @@ do
       return squeezeJoin(pat)
    end
    register("ply :: Pattern Time -> Pattern a -> Pattern a", ply)
-
+   
    local function fastgap(factor, pat)
       if factor:lte(0) then
          return silence
@@ -4042,7 +4085,7 @@ do
       return splitQueries(Pattern(query))
    end
    register("fastgap :: Pattern Time -> Pattern a -> Pattern a", fastgap)
-
+   
    function compress(b, e, pat)
       if b:gt(e) or e:gt(1) or b:gt(1) or b:lt(0) or e:lt(0) then
          return silence
@@ -4051,13 +4094,13 @@ do
       return late(b, fasted)
    end
    register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
-
+   
    function focus(b, e, pat)
       local fasted = fast((e - b):reverse(), pat)
       return late(b:cyclePos(), fasted)
    end
    register("focus :: Time -> Time -> Pattern a -> Pattern a", focus, false)
-
+   
    local function zoom(s, e, pat)
       local dur = e - s
       local qf = function(span)
@@ -4073,7 +4116,7 @@ do
       return splitQueries(withEventSpan(withQuerySpan(pat, qf), ef))
    end
    register("zoom :: Time -> Time -> Pattern a -> Pattern a", zoom, false)
-
+   
    local _run = function(n)
       local list = {}
       for i = 1, n do
@@ -4081,12 +4124,12 @@ do
       end
       return fastcat(list)
    end
-
+   
    local function run(n)
       return join(fmap(n, _run))
    end
    register("run :: Pattern Int -> Pattern Int", run, false)
-
+   
    local _scan = function(n)
       local res = {}
       for i = 1, n do
@@ -4094,30 +4137,30 @@ do
       end
       return slowcat(res)
    end
-
+   
    local function scan(n)
       return join(fmap(n, _scan))
    end
    register("scan :: Pattern Int -> Pattern Int", scan, false)
-
+   
    local function segment(n, pat)
       return appLeft(fast(n, pure(id)), pat)
    end
    register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
-
+   
    function range(mi, ma, pat)
       return pat * (ma - mi) + mi
    end
    register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
-
+   
    local waveform = function(func)
       local query = function(span)
          return { Event(nil, span, func(span:midpoint())) }
       end
-
+   
       return Pattern(query)
    end
-
+   
    pattern.steady = function(value)
       return Pattern(function(state)
          return { Event(nil, state.span, value) }
@@ -4126,7 +4169,7 @@ do
    local toBipolar = function(pat)
       return pat * 2 - 1
    end
-
+   
    local fromBipolar = function(pat)
       return (pat + 1) / 2
    end
@@ -4147,18 +4190,18 @@ do
    local time = waveform(id)
    local rand = waveform(timeToRand)
    -- stylua: ignore end
-
+   
    local _irand = function(i)
       return fmap(rand, function(x)
          return floor(x * i)
       end)
    end
-
+   
    local irand = function(ipat)
       return innerJoin(fmap(ipat, _irand))
    end
    register("irand :: Pattern Num -> Pattern Num", irand)
-
+   
    local _chooseWith = function(pat, vals)
       if #vals == 0 then
          return silence
@@ -4168,24 +4211,24 @@ do
          return vals[key]
       end)
    end
-
+   
    local chooseWith = function(pat, ...)
       return _chooseWith(pat, ...):outerJoin()
    end
-
+   
    local chooseInWith = function(pat, vals)
       return innerJoin(_chooseWith(pat, vals))
    end
-
+   
    local choose = function(vals)
       return chooseInWith(rand, vals)
    end
-
+   
    local randcat = function(pats)
       return pattern.segment(1, choose(pats))
    end
    register("randcat :: [Pattern a] -> Pattern a", randcat, false)
-
+   
    local function degradeByWith(prand, by, pat)
       if T(by) == "time" then
          by = by:asFloat()
@@ -4202,14 +4245,14 @@ do
          filterValues(prand, f)
       )
    end
-
+   
    register("degradeByWith :: Pattern Double -> Double -> Pattern a -> Pattern a", degradeByWith)
-
+   
    local function degradeBy(by, pat)
       return degradeByWith(rand, by, pat)
    end
    register("degradeBy :: Pattern Double -> Pattern a -> Pattern a", degradeBy)
-
+   
    local function undegradeBy(by, pat)
       return degradeByWith(
          fmap(rand, function(r)
@@ -4220,17 +4263,17 @@ do
       )
    end
    register("undegradeBy :: Pattern Double -> Pattern a -> Pattern a", undegradeBy)
-
+   
    local function degrade(pat)
       return degradeBy(0.5, pat)
    end
    register("degrade :: Pattern a -> Pattern a", degrade)
-
+   
    local function undegrade(pat)
       return undegradeBy(0.5, pat)
    end
    register("undegrade :: Pattern a -> Pattern a", undegrade)
-
+   
    local function sometimesBy(by, func, pat)
       local f = function()
          return overlay(degradeBy(by, pat), func(undegradeBy(1 - by, pat)))
@@ -4238,27 +4281,27 @@ do
       return innerJoin(fmap(by, f))
    end
    register("sometimesBy :: Pattern Double -> (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimesBy)
-
+   
    local function sometimes(func, pat)
       return sometimesBy(0.5, func, pat)
    end
    register("sometimes :: (Pattern a -> Pattern a) -> Pattern a -> Pattern a", sometimes)
-
+   
    local function struct(boolpat, pat)
       return op.keepif.Out(pat, boolpat)
    end
    register("struct :: [Pattern bool] -> Pattern a -> Pattern a", struct, false)
-
+   
    local function euclid(n, k, pat)
       return struct(bjork(n, k, 0), pat)
    end
    register("euclid :: Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclid)
-
+   
    local function euclidRot(n, k, rot, pat)
       return struct(bjork(n, k, rot), pat)
    end
    register("euclidRot :: Pattern Int -> Pattern Int -> Pattern Int -> Pattern a -> Pattern a", euclidRot)
-
+   
    function rev(pat)
       local query = function(span)
          local cycle = span.start:sam()
@@ -4281,7 +4324,7 @@ do
       return Pattern(query)
    end
    register("rev :: Pattern a -> Pattern a", rev)
-
+   
    local function iter_(n, pat)
       local acc = {}
       for i = 1, n do
@@ -4290,7 +4333,7 @@ do
       return slowcat(acc)
    end
    register("iter :: Pattern Int -> Pattern a -> Pattern a", iter_)
-
+   
    local function reviter(n, pat)
       local acc = {}
       for i = 1, n do
@@ -4299,7 +4342,7 @@ do
       return slowcat(acc)
    end
    register("reviter :: Pattern Int -> Pattern a -> Pattern a", reviter)
-
+   
    local function echoWith(times, tim, f, pat)
       local acc = {}
       for i = 0, times - 1 do
@@ -4308,7 +4351,7 @@ do
       return stack(acc)
    end
    register("echoWith :: Pattern Int -> Pattern Int -> Pattern f -> Pattern a -> Pattern a", echoWith)
-
+   
    local function when(test, f, pat)
       local query = function(state)
          local cycle_idx = state.span.start:sam()
@@ -4321,7 +4364,7 @@ do
       return splitQueries(Pattern(query))
    end
    register("when :: (Int -> Bool) -> (Pattern a -> Pattern a) ->  Pattern a -> Pattern a", when)
-
+   
    local slowcatPrime = function(pats)
       local query = function(span)
          local index = span.start:sam():asFloat() % #pats + 1
@@ -4330,7 +4373,7 @@ do
       end
       return splitQueries(Pattern(query))
    end
-
+   
    local function every(n, f, pat)
       local acc = {}
       for i = 1, n do
@@ -4341,19 +4384,19 @@ do
    -- nicer to write than f as ( -> ), just reify f
    -- register("every :: Pattern Int -> Pattern (a -> a) -> Pattern a -> Pattern a", every)
    register("every :: Pattern Int -> Pattern f -> Pattern a -> Pattern a", every)
-
+   
    local function off(tp, f, pat)
       return overlay(f(late(tp, pat)), pat)
    end
    -- HACK:
    register("off :: Pattern Time -> Pattern b -> Pattern a -> Pattern a", off)
-
+   
    local function scale(name, pat)
       return fmap(pat, getScale(name))
    end
    -- TODO: "Pattern String -> Pattern a -> Pattern a",
    register("scale :: String -> Pattern a -> Pattern a", scale, false)
-
+   
    local function chain(pat, other)
       return fmap(pat, function(a)
          return function(b)
@@ -4366,40 +4409,26 @@ do
       end):appLeft(other)
    end
    register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", chain, false)
-
-   -- juxBy n f p = stack [p |+ P.pan 0.5 |- P.pan (n/2), f $ p |+ P.pan 0.5 |+ P.pan (n/2)]
+   
    -- CONTROLS
    local function juxBy(n, f, pat)
       n = n / 2
-      -- TODO: move control reigister to here
-      local left = reify { pan = 0.5 } - n + pat
-      local right = reify { pan = 0.5 } + n + pat
+      local left = pattern.pan(0.5) - n + pat
+      local right = pattern.pan(0.5) + n + pat
       return overlay(left, f(right))
    end
-   register(
-      -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
-      "juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap",
-      juxBy
-   )
-
+   -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
+   register("juxBy :: Pattern Double -> Pattern f -> Pattern ValueMap -> Pattern ValueMap", juxBy)
+   
    local function striate(n, pat)
-      local ranges = {}
-      for i = 0, n - 1 do
-         ranges[i] = { ["begin"] = i / n, ["end"] = (i + 1) / n }
-      end
-      local merge_sample = function(range)
-         local f = function(v)
-            return union(range, { sound = v.sound })
-         end
-         return pat:fmap(f)
-      end
       local pats = {}
       for i = 1, n do
-         pats[i] = merge_sample(ranges[i])
+         pats[i] = pat .. { ["begin"] = (i - 1) / n, ["end"] = i / n }
       end
       return fastcat(pats)
    end
-
+   register("striate :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", striate)
+   
    -- register("chop", function(n, pat)
    --    local ranges
    --    do
@@ -4486,13 +4515,13 @@ do
    --       return Span(span._begin, (span._begin + span:duration() * factor))
    --    end)
    -- end)
-
+   
    local gcd_reduce = function(tab)
       return reduce(function(acc, value)
          return acc:gcd(value)
       end, tab[1], tab)
    end
-
+   
    local function drawLine(pat, chars)
       chars = chars or 60
       pat = reify(pat)
@@ -4548,11 +4577,11 @@ do
    end
    mt.drawLine = drawLine
    pattern.drawLine = drawLine
-
+   
    ---CONTROLS
    local parseChord = theory.parseChord
    local genericParams, aliasParams = control.genericParams, control.aliasParams
-
+   
    ---@param name string
    local create = function(name)
       local withVal, f
@@ -4582,7 +4611,7 @@ do
          return self .. f(arg)
       end
    end
-
+   
    for _, param in ipairs(genericParams) do
       create(param)
       if aliasParams[param] ~= nil then
@@ -4598,7 +4627,7 @@ do
          end
       end
    end
-
+   
    pattern.note = function(pat)
       local notemt = {
          __add = function(self, other)
@@ -4609,7 +4638,7 @@ do
             return { note = self.note + other.note }
          end,
       }
-
+   
       local function chordToStack(thing)
          if type(thing) == "string" then
             if type(parseChord(thing)) == "table" then
@@ -4632,13 +4661,13 @@ do
       end
       return chordToStack(pat):fmap(withVal)
    end
-
+   
    pattern.n = pattern.note
    mt.note = function(self, arg)
       return self .. pattern.note(arg)
    end
    mt.n = mt.note
-
+   
    pattern.op = op
    pattern.id = id
    pattern.T = T
@@ -4660,79 +4689,80 @@ do
    pattern.sine2 = sine2
    pattern.rand = rand
    pattern.time = time
+   
 end
 
-local mt = pattern.mt
-
-local modal = {}
-modal.version = "modal dev-1"
-modal.url = "https://github.com/noearc/modal"
-
-local pairs = pairs
-
-modal.Clock = Clock
-
-for name, func in pairs(notation) do
-   modal[name] = func
-end
-
-for name, func in pairs(theory) do
-   modal[name] = func
-end
-
-for name, func in pairs(factory) do
-   modal[name] = func
-   mt[name] = ut.method_wrap(func)
-end
-
-for name, func in pairs(types) do
-   modal[name] = func
-end
-
-for name, func in pairs(pattern) do
-   modal[name] = func
-end
-
-setmetatable(modal, {
-   __index = _G,
-})
-
-setmetatable(modal, {
-   __call = function(t, override)
-      for k, v in pairs(t) do
-         if _G[k] ~= nil then
-            local msg = "function " .. k .. " already exists in global scope."
-            print("WARNING: " .. msg)
-            if override then
+   local mt = pattern.mt
+   
+   local modal = {}
+   modal.version = "modal dev-1"
+   modal.url = "https://github.com/noearc/modal"
+   
+   local pairs = pairs
+   
+   modal.Clock = Clock
+   
+   for name, func in pairs(notation) do
+      modal[name] = func
+   end
+   
+   for name, func in pairs(theory) do
+      modal[name] = func
+   end
+   
+   for name, func in pairs(factory) do
+      modal[name] = func
+      mt[name] = ut.method_wrap(func)
+   end
+   
+   for name, func in pairs(types) do
+      modal[name] = func
+   end
+   
+   for name, func in pairs(pattern) do
+      modal[name] = func
+   end
+   
+   setmetatable(modal, {
+      __index = _G,
+   })
+   
+   setmetatable(modal, {
+      __call = function(t, override)
+         for k, v in pairs(t) do
+            if _G[k] ~= nil then
+               local msg = "function " .. k .. " already exists in global scope."
+               print("WARNING: " .. msg)
+               if override then
+                  _G[k] = v
+                  print("WARNING: " .. msg .. " Overwritten.")
+               end
+            else
                _G[k] = v
-               print("WARNING: " .. msg .. " Overwritten.")
             end
-         else
-            _G[k] = v
          end
-      end
-   end,
-})
-
+      end,
+   })
+   
 do
    local function repl()
       local host = "localhost"
       local port = 9000
       local maxi = notation.maxi(modal)
-
+   
       local keywords = {}
       for i, _ in pairs(modal) do
          keywords[#keywords + 1] = i
       end
-
+   
       if has_RL then
          RL.set_complete_list(keywords)
          RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
          RL.set_readline_name "modal"
       end
-
+   
       local ok, c = pcall(socket.connect, host, port)
-
+   
       local optf = {
          ["?"] = function()
             return [[
@@ -4756,7 +4786,7 @@ do
             os.exit()
          end,
       }
-
+   
       -- TODO: see luaish, first run as lua with multiline? no ambiguiaty?>
       local eval = function(a)
          if a:sub(1, 1) == ":" then
@@ -4769,14 +4799,14 @@ do
             return fn
          end
       end
-
+   
       local function readline(a)
          io.write(a)
          return io.read()
       end
-
+   
       local read = has_RL and RL.readline or readline
-
+   
       local line
       print "modal repl   :? for help"
       while true do
@@ -4787,7 +4817,7 @@ do
             end
             break
          end
-
+   
          if line ~= "" then
             local res = eval(line)
             if res then
@@ -4802,33 +4832,34 @@ do
             end
          end
       end
-
+   
       c:close()
       os.exit()
    end
    modal.repl = repl
+   
 end
 
 do
    local function server()
       local maxi = notation.maxi(modal)
       local log = ut.log
-
+   
       local clock = modal.DefaultClock
       clock:start()
-
+   
       local host = "*"
       local port = arg[1] or 9000
       local sock = assert(socket.bind(host, port))
       local i, p = sock:getsockname()
       assert(i, p)
-
+   
       print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
       local c = assert(sock:accept())
       c:settimeout(0)
-
+   
       print "Connected"
-
+   
       local eval = function(a)
          local ok, fn = pcall(maxi, a)
          if not ok then
@@ -4837,22 +4868,23 @@ do
             print(fn)
          end
       end
-
+   
       local l, e
-
+   
       local listen = function()
          l, e = c:receive()
          if not e then
             eval(l)
          end
       end
-
+   
       repeat
          coroutine.resume(clock.co, listen)
       until false
    end
-
+   
    modal.server = server
+   
 end
 
 modal.ut = ut

@@ -598,3 +598,12 @@ describe("juxBy", function()
       assert.pat(stack { s("bd"):pan(0.25), s("bd"):fast(2):pan(0.75) }, juxBy(0.5, fast(2), s "bd"))
    end)
 end)
+
+describe("striate", function()
+   it("", function()
+      local pat = striate(2, s "bd")
+      local expected =
+         fastcat { reify { ["begin"] = 0, ["end"] = 0.5, s = "bd" }, { ["begin"] = 0.5, ["end"] = 1, s = "bd" } }
+      assert.pat(expected, pat)
+   end)
+end)
