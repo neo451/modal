@@ -4447,51 +4447,45 @@ do
       return pat:squeezeBind(func)
    end
    register("chop :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", chop)
-   --
-   -- register("slice", function(npat, ipat, opat)
-   --    return npat:innerBind(function(n)
-   --       return ipat:outerBind(function(i)
-   --          return opat:outerBind(function(o)
-   --             local begin
-   --             if type(n) == table then
-   --                begin = n[i]
-   --             else
-   --                begin = i / n
-   --             end
-   --             local _end
-   --             if type(n) == table then
-   --                _end = n[i + 1]
-   --             else
-   --                _end = (i + 1) / n
-   --             end
-   --             return pure(union(o, {
-   --                begin = begin,
-   --                ["end"] = _end,
-   --                _slices = n,
-   --             }))
-   --          end)
-   --       end)
-   --    end)
-   -- end)
-   --
-   -- register("splice", function(npat, ipat, opat)
-   --    local sliced = M.slice(npat, ipat, opat)
-   --    return sliced:withEvent(function(event)
-   --       return event:withValue(function(value)
-   --          local new_attri = {
-   --             speed = tofloat(tofrac(1) / tofrac(value._slices) / event.whole:duration()) * (value.speed or 1),
-   --             unit = "c",
-   --          }
-   --          return union(new_attri, value)
-   --       end)
-   --    end)
-   -- end)
-   --
+   
+   local function slice(npat, ipat, opat)
+      return innerBind(npat, function(n)
+         return outerBind(ipat, function(i)
+            return outerBind(opat, function(o)
+               o = (type(o) == "table") and o or { s = o }
+               if type(n) == "table" then
+                  o["begin"] = n[i]
+                  o["end"] = n[i + 1]
+               else
+                  o["begin"] = i / n
+                  o["end"] = (i + 1) / n
+               end
+               return pure(o)
+            end)
+         end)
+      end)
+   end
+   register("slice :: Pattern b -> Pattern b -> Pattern a -> Pattern a", slice, false)
+   
+   local function splice(npat, ipat, opat)
+      return innerJoin(fmap(npat, function(n)
+         local sliced = slice(pure(n), ipat, opat)
+         return withEvent(sliced, function(event)
+            return event:withValue(function(v)
+               local new_attri = {
+                  -- TODO: cps
+                  speed = 1 / n / event.whole:duration():asFloat() * (v.speed or 1),
+                  unit = "c",
+               }
+               return union(new_attri, v)
+            end)
+         end)
+      end))
+   end
+   register("splice :: Pattern b -> Pattern b -> Pattern a -> Pattern a", splice, false)
+   
    local function loopAt(factor, pat)
-      print(pat)
-      pat = pat .. pattern.speed(factor:reverse():asFloat())
-      -- .. pattern.unit "c"
-      print(pat)
+      pat = pat .. pattern.speed(factor:reverse():asFloat()) .. pattern.unit "c"
       return slow(factor, pat)
    end
    register("loopAt :: Pattern Time -> Pattern ValueMap -> Pattern ValueMap", loopAt)
@@ -4507,13 +4501,14 @@ do
       end)
    end
    register("fit :: Pattern ValueMap -> Pattern ValueMap", fit)
-   --
-   -- register("legato", function(factor, pat)
-   --    factor = tofrac(factor)
-   --    return pat:withEventSpan(function(span)
-   --       return Span(span._begin, (span._begin + span:duration() * factor))
-   --    end)
-   -- end)
+   
+   -- TODO: clashes with the control name ... should there be control(2) ??
+   local function legato(factor, pat)
+      return withEventSpan(pat, function(span)
+         return Span(span.start, (span.start + span:duration() * factor))
+      end)
+   end
+   register("legato :: Pattern Time -> Pattern a -> Pattern a", legato)
    
    local gcd_reduce = function(tab)
       return reduce(function(acc, value)
@@ -4632,9 +4627,9 @@ do
          if type(thing) == "string" then
             if type(parseChord(thing)) == "table" then
                local notes = parseChord(thing)
-               return notes -- arp function
+               return arp and fastcat(notes) or stack(notes) -- arp function
             end
-            return thing
+            return reify(thing)
          elseif T(thing) == "pattern" then
             return thing
                :fmap(function(chord)
@@ -4648,9 +4643,8 @@ do
       end
       local withVal = function(v)
          return ValueMap { note = v }
-         -- return { note = v }
       end
-      return chordToStack(pat):fmap(withVal)
+      return fmap(chordToStack(pat), withVal)
    end
    
    pattern.n = pattern.note

@@ -631,12 +631,36 @@ describe("loopAt", function()
       assert.pat(expected, pat)
    end)
 end)
-describe("fit", function()
+
+-- describe("fit", function()
+--    it("", function()
+--       local pat = fit(s "bd sd")
+--       local expected = fastcat {
+--          reify { speed = 2, unit = "c", s = "bd" },
+--          reify { speed = 2, unit = "c", s = "sd" },
+--       }
+--       assert.pat(expected, pat)
+--    end)
+-- end)
+
+-- describe("legato", function()
+--    it("", function()
+--       local pat = legato(2, "bd")
+--       local expected = fastcat {
+--          reify { speed = 2, unit = "c", s = "bd" },
+--          reify { speed = 2, unit = "c", s = "sd" },
+--       }
+--       assert.pat(expected, pat)
+--    end)
+-- end)
+--
+
+describe("slice", function()
    it("", function()
-      local pat = fit(s "bd sd")
+      local pat = slice(8, " 0 1", "bd")
       local expected = fastcat {
-         reify { speed = 2, unit = "c", s = "bd" },
-         reify { speed = 2, unit = "c", s = "sd" },
+         reify { ["begin"] = 0, ["end"] = 1 / 8, s = "bd" },
+         reify { ["begin"] = 1 / 8, ["end"] = 1 / 4, s = "bd" },
       }
       assert.pat(expected, pat)
    end)
