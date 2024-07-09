@@ -1,4 +1,11 @@
-local header = [[
+local header = [==[
+--[[lit-meta
+  name = "noearc/modal"
+  version = "0.0.1.1"
+  homepage = "https://github.com/noearc/modal"
+  description = "tidal cycles in lua!"
+  license = "GPL3"
+]]
 local ut = {}
 local pattern = {}
 local control = {}
@@ -16,7 +23,7 @@ local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
 _G.struct = nil
 local has_RL, RL = pcall(require, "readline")
 local Clock
-]]
+]==]
 
 -- path = "../src/core/"
 

@@ -238,27 +238,12 @@ describe("appBoth", function()
    end)
 end)
 
-describe("outerJoin", function()
-   it(
-      "it should convert a pattern of patterns into a single pattern with time structure coming from the outer pattern",
-      function()
-         local patOfPats = pure(fastcat { "a", "b" })
-         local pat = patOfPats:outerJoin()
-         local expected = {
-            Event(Span(0, 1), Span(0, 1 / 2), "a"),
-            Event(Span(0, 1), Span(1 / 2, 1), "b"),
-         }
-         assert.same(expected, pat(0, 1))
-      end
-   )
-end)
-
 describe("squeezeJoin", function()
    it(
       "it should convert a pattern of patterns into a single pattern, takes whole cycles of the inner pattern to fit each Event in the outer pattern.\n ",
       function()
          local patOfPats = fastcat { fastcat { 1, 2, 3 }, fastcat { 1, 2, 3 } }
-         local pat = patOfPats:squeezeJoin()
+         local pat = squeezeJoin(patOfPats)
          local expected = {
             Event(Span(0, 1 / 6), Span(0, 1 / 6), 1),
             Event(Span(1 / 6, 1 / 3), Span(1 / 6, 1 / 3), 2),

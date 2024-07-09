@@ -71,7 +71,13 @@ function mt:len()
 end
 
 function mt:__call(b, e, controls)
-   return self:querySpan(b, e, controls)
+   local span = Span(b, e)
+   span.controls = controls
+   return setmetatable(self.query(span), {
+      __tostring = function(t)
+         return dump(t)
+      end,
+   })
 end
 
 function mt:__tostring()
@@ -142,20 +148,9 @@ local function Pattern(query)
 end
 pattern.Pattern = Pattern
 
-local function querySpan(pat, b, e, controls)
-   local span = Span(b, e)
-   span.controls = controls
-   return setmetatable(pat.query(span), {
-      __tostring = function(self)
-         return dump(self)
-      end,
-   })
-end
-mt.querySpan = querySpan
-
 local function filterEvents(pat, func)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       return filter(func, events)
    end
    return Pattern(query)
@@ -163,8 +158,8 @@ end
 mt.filterEvents = filterEvents
 
 local function filterValues(pat, condf)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       local f = function(event)
          return condf(event.value)
       end
@@ -198,8 +193,8 @@ end
 mt.splitQueries = splitQueries
 
 local function withValue(pat, f)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       for i = 1, #events do
          events[i] = events[i]:withValue(f)
       end
@@ -228,8 +223,8 @@ end
 mt.withQueryTime = withQueryTime
 
 local function withEvents(pat, f)
-   return Pattern(function(state)
-      return f(pat.query(state))
+   return Pattern(function(span)
+      return f(pat.query(span))
    end)
 end
 mt.withEvents = withEvents
@@ -245,8 +240,8 @@ end
 mt.withEvent = withEvent
 
 local function withEventSpan(pat, f)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       for i = 1, #events do
          events[i] = events[i]:withSpan(f)
       end
@@ -257,8 +252,8 @@ end
 mt.withEventSpan = withEventSpan
 
 local function withEventTime(pat, f)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       local time_func = function(span)
          return span:withTime(f)
       end
@@ -296,9 +291,9 @@ end
 mt.discreteOnly = discreteOnly
 
 local function appWhole(pat, whole_func, pat_val)
-   local query = function(state)
-      local event_funcs = pat.query(state)
-      local event_vals = pat_val.query(state)
+   local query = function(span)
+      local event_funcs = pat.query(span)
+      local event_vals = pat_val.query(span)
       local apply = function(event_func, event_val)
          local new_part = event_func.part:sect(event_val.part)
          if not new_part then
@@ -332,9 +327,9 @@ mt.appBoth = appBoth
 
 -- Tidal's <*
 local function appLeft(pat, pat_val)
-   local query = function(state)
+   local query = function(span)
       local events = {}
-      local event_funcs = pat.query(state)
+      local event_funcs = pat.query(span)
       for _, event_func in ipairs(event_funcs) do
          local whole = event_func:wholeOrPart()
          local event_vals = pat_val.query(whole)
@@ -355,9 +350,9 @@ mt.appLeft = appLeft
 
 -- Tidal's *>
 local function appRight(pat, pat_val)
-   local query = function(state)
+   local query = function(span)
       local events = {}
-      local event_vals = pat_val.query(state)
+      local event_vals = pat_val.query(span)
       for _, event_val in ipairs(event_vals) do
          local whole = event_val:wholeOrPart()
          local event_funcs = pat.query(whole)
@@ -377,8 +372,8 @@ end
 mt.appRight = appRight
 
 local function bindWhole(pat, choose_whole, func)
-   local query = function(state)
-      local events = pat.query(state)
+   local query = function(span)
+      local events = pat.query(span)
       local res = {}
       for _, a in ipairs(events) do
          local evs = func(a.value).query(a.part)
@@ -390,7 +385,6 @@ local function bindWhole(pat, choose_whole, func)
    end
    return Pattern(query)
 end
-mt.bindWhole = bindWhole
 
 local function bind(pat, func)
    local whole_func = function(a, b)
@@ -401,40 +395,34 @@ local function bind(pat, func)
    end
    return bindWhole(pat, whole_func, func)
 end
-mt.bind = bind
 
 local function join(pat)
    return bind(pat, id)
 end
-mt.join = join
 
 local function outerBind(pat, func)
    return bindWhole(pat, function(a, _)
       return a
    end, func)
 end
-mt.outerBind = outerBind
 
 local function innerBind(pat, func)
    return bindWhole(pat, function(_, b)
       return b
    end, func)
 end
-mt.innerBind = innerBind
 
 local function outerJoin(pat)
    return outerBind(pat, id)
 end
-mt.outerJoin = outerJoin
 
 local function innerJoin(pat)
    return innerBind(pat, id)
 end
-mt.innerJoin = innerJoin
 
 local function squeezeJoin(pat)
-   local query = function(state)
-      local events = discreteOnly(pat).query(state)
+   local query = function(span)
+      local events = discreteOnly(pat).query(span)
       local flatEvent = function(outerEvent)
          local span = outerEvent:wholeOrPart()
          local innerPat = pattern.focus(span.start, span.stop, outerEvent.value)
@@ -471,12 +459,10 @@ local function squeezeJoin(pat)
    end
    return Pattern(query)
 end
-mt.squeezeJoin = squeezeJoin
 
 local function squeezeBind(pat, func)
    return squeezeJoin(fmap(pat, func))
 end
-mt.squeezeBind = squeezeBind
 
 local _op = {}
 function _op.In(f)
@@ -932,7 +918,7 @@ local waveform = function(func)
 end
 
 pattern.steady = function(value)
-   return Pattern(function(state)
+   return Pattern(function(span)
       return { Event(nil, state.span, value) }
    end)
 end
@@ -983,7 +969,7 @@ local _chooseWith = function(pat, vals)
 end
 
 local chooseWith = function(pat, ...)
-   return _chooseWith(pat, ...):outerJoin()
+   return outerJoin(_chooseWith(pat, ...))
 end
 
 local chooseInWith = function(pat, vals)
@@ -1095,14 +1081,14 @@ function rev(pat)
 end
 register("rev :: Pattern a -> Pattern a", rev)
 
-local function iter_(n, pat)
+local function iter(n, pat)
    local acc = {}
    for i = 1, n do
       acc[i] = early((i - 1) / n, pat)
    end
    return slowcat(acc)
 end
-register("iter :: Pattern Int -> Pattern a -> Pattern a", iter_)
+register("iter :: Pattern Int -> Pattern a -> Pattern a", iter)
 
 local function reviter(n, pat)
    local acc = {}
@@ -1123,12 +1109,12 @@ end
 register("echoWith :: Pattern Int -> Pattern Int -> Pattern f -> Pattern a -> Pattern a", echoWith)
 
 local function when(test, f, pat)
-   local query = function(state)
-      local cycle_idx = state.span.start:sam()
+   local query = function(span)
+      local cycle_idx = span.start:sam()
       if test(cycle_idx) then
-         return f(pat).query(state)
+         return f(pat).query(span)
       else
-         return pat.query(state)
+         return pat.query(span)
       end
    end
    return splitQueries(Pattern(query))
@@ -1207,7 +1193,7 @@ local function chop(n, pat)
       end
       return fastcat(acc)
    end
-   return pat:squeezeBind(func)
+   return squeezeBind(pat, func)
 end
 register("chop :: Pattern Int -> Pattern ValueMap -> Pattern ValueMap", chop)
 
@@ -1395,12 +1381,10 @@ pattern.note = function(pat, arp)
          end
          return reify(thing)
       elseif T(thing) == "pattern" then
-         return thing
-            :fmap(function(chord)
-               local notes = parseChord(chord)
-               return arp and fastcat(notes) or stack(notes)
-            end)
-            :outerJoin()
+         return outerJoin(thing:fmap(function(chord)
+            local notes = parseChord(chord)
+            return arp and fastcat(notes) or stack(notes)
+         end))
       else
          return reify(thing)
       end
@@ -1452,5 +1436,7 @@ pattern.sine = sine
 pattern.sine2 = sine2
 pattern.rand = rand
 pattern.time = time
+
+pattern.squeezeJoin = squeezeJoin
 
 return pattern
