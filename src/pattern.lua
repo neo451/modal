@@ -70,8 +70,8 @@ function mt:len()
    return #(self(0, 1))
 end
 
-function mt:__call(b, e)
-   return self:querySpan(b, e)
+function mt:__call(b, e, controls)
+   return self:querySpan(b, e, controls)
 end
 
 function mt:__tostring()
@@ -142,9 +142,9 @@ local function Pattern(query)
 end
 pattern.Pattern = Pattern
 
-local function querySpan(pat, b, e)
+local function querySpan(pat, b, e, controls)
    local span = Span(b, e)
-   -- local state = State(span)
+   span.controls = controls
    return setmetatable(pat.query(span), {
       __tostring = function(self)
          return dump(self)
@@ -1410,6 +1410,20 @@ pattern.note = function(pat, arp)
    end
    return fmap(chordToStack(pat), withVal)
 end
+
+---@param d number
+---@param s string | number
+---@return Pattern
+local function cF(d, s)
+   s = tonumber(s) and tonumber(s) or s
+   local query = function(span)
+      local val = span.controls[s]
+      local pat = pure(val or d)
+      return pat.query(span)
+   end
+   return Pattern(query)
+end
+pattern.cF = cF
 
 pattern.n = pattern.note
 mt.note = function(self, arg)
