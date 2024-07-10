@@ -48,6 +48,14 @@ do
    
    Usecolor = true
    
+   local envs = { "vim", "norns", "love", "busted" }
+   
+   for _, v in pairs(envs) do
+      if rawget(_G, v) then
+         Usecolor = false
+      end
+   end
+   
    -- from https://www.lua.org/gems/sample.pdf
    -- TODO: smarter cache over time maybe
    local function memoize(f)

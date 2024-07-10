@@ -21,7 +21,15 @@ local d_gethook = debug.gethook
 local d_getupvalue = debug.getupvalue
 local d_setupvalue = debug.setupvalue
 
-Usecolor = false
+Usecolor = true
+
+local envs = { "vim", "norns", "love", "pd" }
+
+for _, v in pairs(envs) do
+   if rawget(_G, v) then
+      Usecolor = false
+   end
+end
 
 -- from https://www.lua.org/gems/sample.pdf
 -- TODO: smarter cache over time maybe
