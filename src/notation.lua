@@ -78,13 +78,15 @@ local function pNumber(num)
    return Num(tonumber(num))
 end
 
+local bool = { ["t"] = { tag = "True" }, ["f"] = { tag = "False" } }
+
 local function pStep(chars)
    if chars == "~" then
       return Id "silence"
    elseif tonumber(chars) then
       return Num(tonumber(chars))
-   -- elseif cache[chars] then
-   --    return cache[chars]
+   elseif bool[chars] then
+      return bool[chars]
    elseif chars:sub(0, 1) == "'" then
       return Id(chars:sub(2, #chars))
    end

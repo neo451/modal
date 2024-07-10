@@ -2062,13 +2062,15 @@ do
       return Num(tonumber(num))
    end
    
+   local bool = { ["t"] = { tag = "True" }, ["f"] = { tag = "False" } }
+   
    local function pStep(chars)
       if chars == "~" then
          return Id "silence"
       elseif tonumber(chars) then
          return Num(tonumber(chars))
-      -- elseif cache[chars] then
-      --    return cache[chars]
+      elseif bool[chars] then
+         return bool[chars]
       elseif chars:sub(0, 1) == "'" then
          return Id(chars:sub(2, #chars))
       end
@@ -3760,7 +3762,10 @@ do
       mod = function(a, b) return a % b end,
       pow = function(a, b) return a ^ b end,
       concat = function (a, b) return a .. b end,
-      keepif = function (a, b) return b and a or nil end,
+      keepif = function (a, b)
+         if b == 0 then b = false end
+         return b and a or nil
+      end,
       uni = function (a, b) return union(a, b) end,
       funi = function (a, b) return flip(union)(a, b) end,
    }
@@ -4291,6 +4296,11 @@ do
       return op.keepif.Out(pat, boolpat)
    end
    register("struct :: [Pattern bool] -> Pattern a -> Pattern a", struct, false)
+   
+   local function mask(boolpat, pat)
+      return op.keepif.In(pat, boolpat)
+   end
+   register("mask :: [Pattern bool] -> Pattern a -> Pattern a", mask, false)
    
    local function euclid(n, k, pat)
       return struct(bjork(n, k, 0), pat)
