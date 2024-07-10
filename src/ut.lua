@@ -382,6 +382,9 @@ function ut.tdump(o)
          s[#s + 1] = " "
       end
       return tconcat(s)
+   elseif ut.T(o) == "string" then
+      local str = '"' .. o .. '"'
+      return Usecolor and ut.colors.green(str) or str
    else
       return tostring(Usecolor and ut.colors.red(o) or o)
    end

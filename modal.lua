@@ -46,7 +46,7 @@ do
    local d_getupvalue = debug.getupvalue
    local d_setupvalue = debug.setupvalue
    
-   Usecolor = false
+   Usecolor = true
    
    -- from https://www.lua.org/gems/sample.pdf
    -- TODO: smarter cache over time maybe
@@ -407,6 +407,9 @@ do
             s[#s + 1] = " "
          end
          return tconcat(s)
+      elseif ut.T(o) == "string" then
+         local str = '"' .. o .. '"'
+         return Usecolor and ut.colors.green(str) or str
       else
          return tostring(Usecolor and ut.colors.red(o) or o)
       end
@@ -3163,6 +3166,7 @@ do
       "sustain",
       "unit",
       "voice",
+      "vowel",
       "modwheel",
       "tremolorate",
       "fshiftnote",

@@ -23,9 +23,9 @@ describe("notifyTick", function()
 
    it("should call sendf with right value and timestamp", function()
       local clock = Clock()
-      local stream = Stream()
+      local stream = Stream(clock.callback)
       stream.pattern = s "bd"
-      local stream_spy = spy.on(stream, "sendf")
+      local stream_spy = spy.on(stream, "callback")
       local cps = (clock.sessionState:tempo() / clock.beatsPerCycle) / 60
       stream:notifyTick(0, 1, clock.sessionState, cps, clock.beatsPerCycle, 1000000, 0)
       assert.spy(stream_spy).was_called()

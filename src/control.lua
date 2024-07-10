@@ -62,6 +62,7 @@ control.genericParams = {
    "sustain",
    "unit",
    "voice",
+   "vowel",
    "modwheel",
    "tremolorate",
    "fshiftnote",
