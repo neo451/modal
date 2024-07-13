@@ -7250,7 +7250,7 @@ do
    local pairs = pairs
    
    local sleep = function(sec)
-      return socket.sleep(sec)
+      return os.execute("sleep " .. sec)
    end
    
    local target = {
