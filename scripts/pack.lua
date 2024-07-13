@@ -1,34 +1,3 @@
-local header = [==[
---[[lit-meta
-  name = "noearc/modal"
-  version = "0.0.1.1"
-  homepage = "https://github.com/noearc/modal"
-  description = "tidal cycles in lua!"
-  license = "GPL3"
-]]
-local ut = {}
-local pattern = {}
-local control = {}
-local types = {}
-local theory = {}
-local notation = {}
-local a2s = {}
-local factory = {}
-local uv = require"luv" or vim.uv
-local Timetag = require "losc.timetag"
-local Pattern = require "losc.pattern"
-local Packet = require "losc.packet"
-local has_lpeg, lpeg = pcall(require, "lpeg")
-lpeg = has_lpeg and lpeg or require("lulpeg"):register(not _ENV and _G)
-local has_socket, socket = pcall(require, "socket")
-local has_al, al = pcall(require, "abletonlink")
-local has_losc, losc = pcall(require, "losc")
-local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
-_G.struct = nil
-local has_RL, RL = pcall(require, "readline")
-local Clock
-]==]
-
 -- path = "../src/core/"
 
 files = {}
@@ -60,13 +29,18 @@ end
 
 scandir "src/"
 
-local function get_content(name, file)
+local function get_content(name, file, no_req)
+   no_req = no_req or true
    local contents = {}
    for i in file:lines() do
-      if not i:find "require" and not i:match(("local %s = {}"):format(name)) then
-         -- if i:find "M." or i:find "M " then
-         --    i = i:gsub("M", name)
-         -- end
+      if no_req then
+         if not i:find "require" and not i:match(("local %s = {}"):format(name)) then
+            -- if i:find "M." or i:find "M " then
+            --    i = i:gsub("M", name)
+            -- end
+            contents[#contents + 1] = "   " .. i
+         end
+      else
          contents[#contents + 1] = "   " .. i
       end
    end
@@ -75,18 +49,50 @@ local function get_content(name, file)
    return str
 end
 
-local function wrap(name, file)
+local function wrap(name, file, no_req)
    local format = [[do
 %s
 end
 ]]
-   return format:format(get_content(name, file))
+   return format:format(get_content(name, file, no_req))
 end
 
-function load(name)
-   header = header .. "\n" .. wrap(name, files[name])
-end
+local requires = [==[
+--[[lit-meta
+  name = "noearc/modal"
+  version = "0.0.1.1"
+  homepage = "https://github.com/noearc/modal"
+  description = "tidal cycles in lua!"
+  license = "GPL3"
+]]
+local ut = {}
+local pattern = {}
+local control = {}
+local types = {}
+local theory = {}
+local notation = {}
+local a2s = {}
+local factory = {}
+local uv = require"luv" or vim.uv
+local has_lpeg, lpeg = pcall(require, "lpeg")
+lpeg = has_lpeg and lpeg or lulpeg():register(not _ENV and _G)
+local has_socket, socket = pcall(require, "socket")
+local has_al, al = pcall(require, "abletonlink")
+losc = losc()
+local Timetag = losc.Timetag
+local Pattern = losc.Pattern
+local Packet = losc.Packet
+local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
+_G.struct = nil
+local has_RL, RL = pcall(require, "readline")
+]==]
 
+-- load("lulpeg", false)
+local header = files["lulpeg"]:read "*a" .. "\n" .. files["losc"]:read "*a" .. requires
+
+function load(name, no_req)
+   header = header .. "\n" .. wrap(name, files[name], no_req)
+end
 load "ut"
 load "types"
 load "a2s"

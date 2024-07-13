@@ -15,10 +15,10 @@ This project follows the footsteps of vortex, strudel and tranquility.]],
 
 dependencies = {
    "lua >= 5.1",
-   "losc >= 1.0.1-1",
+   -- "losc >= 1.0.1-1",
    "luasocket >= 3.1.0-1",
    "abletonlink >= 1.0.0-1",
-   "lpeg >= 1.1.0-1",
+   -- "lpeg >= 1.1.0-1",
    "readline >= 3.3-0",
 }
 

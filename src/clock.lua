@@ -1,6 +1,6 @@
 local has_socket, socket = pcall(require, "socket")
 local has_al, al = pcall(require, "abletonlink")
-local has_losc, losc = pcall(require, "losc")
+local losc = require "losc"()
 _G.struct = nil
 local types = require "types"
 local Stream = types.Stream
@@ -37,9 +37,9 @@ local typesString = function(msg)
    return ts
 end
 
-local Timetag = require "losc.timetag"
-local Pattern = require "losc.pattern"
-local Packet = require "losc.packet"
+local Timetag = losc.Timetag
+local Pattern = losc.Pattern
+local Packet = losc.Packet
 
 local M = {}
 M.__index = M
@@ -138,42 +138,36 @@ function M:send(packet, address, port)
 end
 
 local osc, sendOSC
-if has_losc then
-   local udp = M.new {
-      recvAddr = "127.0.0.1",
-      recvPort = 9001,
-      sendPort = target.port,
-      sendAddr = target.address,
-      -- ignore_late = true, -- ignore late bundles
-   }
-   osc = losc.new { plugin = udp }
-   -- osc = losc.new {
-   --    plugin = plugin.new {
-   --       sendPort = target.port,
-   --       sendAddr = target.address,
-   --    },
-   -- }
-   sendOSC = function(value, ts)
-      local msg = {}
-      for key, val in pairs(value) do
-         msg[#msg + 1] = key
-         msg[#msg + 1] = val
-      end
-      msg.types = typesString(msg)
-      msg.address = "/dirt/play"
-      -- local b = osc.new_message(msg)
-      local b = osc.new_bundle(ts, osc.new_message(msg))
-      osc:send(b)
+local udp = M.new {
+   recvAddr = "127.0.0.1",
+   recvPort = 9001,
+   sendPort = target.port,
+   sendAddr = target.address,
+   -- ignore_late = true, -- ignore late bundles
+}
+osc = losc.new { plugin = udp }
+
+sendOSC = function(value, ts)
+   local msg = {}
+   for key, val in pairs(value) do
+      msg[#msg + 1] = key
+      msg[#msg + 1] = val
    end
-
-   osc:add_handler("/ctrl", function(data)
-      print(ut.dump(data))
-   end)
-
-   osc:add_handler("/param/{x,y,z}", function(data)
-      print(ut.dump(data))
-   end)
+   msg.types = typesString(msg)
+   msg.address = "/dirt/play"
+   local b = osc.new_message(msg)
+   -- local b = osc.new_bundle(ts, osc.new_message(msg))
+   osc:send(b)
 end
+sendOSC { 1, 2, "sda" }
+
+osc:add_handler("/ctrl", function(data)
+   print(ut.dump(data))
+end)
+
+osc:add_handler("/param/{x,y,z}", function(data)
+   print(ut.dump(data))
+end)
 
 local mt = { __class = "clock" }
 
