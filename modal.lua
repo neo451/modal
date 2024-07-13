@@ -13,6 +13,10 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
+local uv = require"luv" or vim.uv
+local Timetag = require "losc.timetag"
+local Pattern = require "losc.pattern"
+local Packet = require "losc.packet"
 local has_lpeg, lpeg = pcall(require, "lpeg")
 lpeg = has_lpeg and lpeg or require("lulpeg"):register(not _ENV and _G)
 local has_socket, socket = pcall(require, "socket")
@@ -46,13 +50,13 @@ do
    local d_getupvalue = debug.getupvalue
    local d_setupvalue = debug.setupvalue
    
-   Usecolor = true
+   ut.Usecolor = true
    
-   local envs = { "vim", "norns", "love", "busted" }
+   local envs = { "vim", "norns", "love", "pd" }
    
    for _, v in pairs(envs) do
       if rawget(_G, v) then
-         Usecolor = false
+         ut.Usecolor = false
       end
    end
    
@@ -302,6 +306,11 @@ do
    
    -- general utilities
    
+   local function id(x)
+      return x
+   end
+   ut.id = id
+   
    function ut.is_array(tbl)
       return type(tbl) == "table" and (#tbl > 0 or next(tbl) == nil)
    end
@@ -402,6 +411,13 @@ do
       return list
    end
    
+   function ut.dumpf(f)
+      local fmt = "fun(%s)"
+      local args = ut.get_args(f)
+      local argstr = tconcat(args, ", ")
+      return fmt:format(argstr)
+   end
+   
    ---dump table as key value pairs
    ---@param o table
    ---@return string
@@ -417,9 +433,13 @@ do
          return tconcat(s)
       elseif ut.T(o) == "string" then
          local str = '"' .. o .. '"'
-         return Usecolor and ut.colors.green(str) or str
+         return ut.Usecolor and ut.colors.green(str) or str
+      elseif ut.T(o) == "number" then
+         return tostring(ut.Usecolor and ut.colors.yellow(o) or o)
+      elseif ut.T(o) == "function" then
+         return ut.Usecolor and ut.colors.blue(ut.dumpf(o)) or ut.dumpf(o)
       else
-         return tostring(Usecolor and ut.colors.red(o) or o)
+         return tostring(ut.Usecolor and ut.colors.red(o) or o)
       end
    end
    
@@ -430,12 +450,19 @@ do
       if ut.T(o) == "table" then
          local s = {}
          for k, v in pairs(o) do
-            s[#s + 1] = Usecolor and ut.colors.cyan(k) or k
+            s[#s + 1] = ut.Usecolor and ut.colors.cyan(k) or k
             s[#s + 1] = ": "
             s[#s + 1] = ut.dump(v)
             s[#s + 1] = (k ~= #o) and "\n" or ""
          end
          return tconcat(s)
+      elseif ut.T(o) == "string" then
+         local str = '"' .. o .. '"'
+         return ut.Usecolor and ut.colors.green(str) or str
+      elseif ut.T(o) == "number" then
+         return tostring(ut.Usecolor and ut.colors.yellow(o) or o)
+      elseif ut.T(o) == "function" then
+         return ut.Usecolor and ut.colors.blue(ut.dumpf(o)) or ut.dumpf(o)
       else
          return tostring(o)
       end
@@ -495,7 +522,7 @@ do
    ut.splitAt = splitAt
    
    ---@param step number
-   ---@param list table
+   ---@param list any[]
    ---@return table
    function ut.rotate(step, list)
       local a, b = splitAt(step, list)
@@ -503,15 +530,14 @@ do
    end
    
    ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
-   ---@param ... unknown
-   ---@return unknown
-   function ut.pipe(...)
-      local funcs = { ... }
+   ---@param fs (fun(x : any) : any)[]
+   ---@return any
+   function ut.pipe(fs)
       return reduce(function(f, g)
          return function(...)
             return f(g(...))
          end
-      end, ut.id, funcs)
+      end, id, fs)
    end
    
    local function reverse(...)
@@ -633,10 +659,6 @@ do
       end
    end
    
-   function ut.id(x)
-      return x
-   end
-   
    ---for lua5.1 compatibility
    ---@param f any
    ---@param env any
@@ -748,6 +770,71 @@ do
             return v
          end
       end
+   end
+   
+   ---@class switch
+   ---@field cachedCases string[]
+   ---@field map table<string, function>
+   ---@field _default fun(...):...
+   local switchMT = {}
+   switchMT.__index = switchMT
+   
+   ---@param name string
+   ---@return switch
+   function switchMT:case(name)
+      self.cachedCases[#self.cachedCases + 1] = name
+      return self
+   end
+   
+   ---@param callback async fun(...):...
+   ---@return switch
+   function switchMT:call(callback)
+      for i = 1, #self.cachedCases do
+         local name = self.cachedCases[i]
+         self.cachedCases[i] = nil
+         if self.map[name] then
+            error("Repeated fields:" .. tostring(name))
+         end
+         self.map[name] = callback
+      end
+      return self
+   end
+   
+   ---@param callback fun(...):...
+   ---@return switch
+   function switchMT:default(callback)
+      self._default = callback
+      return self
+   end
+   
+   function switchMT:getMap()
+      return self.map
+   end
+   
+   ---@param name string
+   ---@return boolean
+   function switchMT:has(name)
+      return self.map[name] ~= nil
+   end
+   
+   ---@param name string
+   ---@param ... any
+   ---@return ...
+   function switchMT:__call(name, ...)
+      local callback = self.map[name] or self._default
+      if not callback then
+         return
+      end
+      return callback(...)
+   end
+   
+   ---@return switch
+   function ut.switch()
+      local obj = setmetatable({
+         map = {},
+         cachedCases = {},
+      }, switchMT)
+      return obj
    end
    
 end
@@ -2935,14 +3022,119 @@ do
       return ts
    end
    
+   
+   local M = {}
+   M.__index = M
+   --- Fractional precision for bundle scheduling.
+   -- 1000 is milliseconds. 1000000 is microseconds etc. Any precision is valid
+   -- that makes sense for the plugin's scheduling function.
+   M.precision = 1000
+   
+   --- Create a new instance.
+   -- @tparam[options] table options Options.
+   -- @usage local udp = plugin.new()
+   -- @usage
+   -- local udp = plugin.new {
+   --   sendAddr = '127.0.0.1',
+   --   sendPort = 9000,
+   --   recvAddr = '127.0.0.1',
+   --   recvPort = 8000,
+   --   ignore_late = true, -- ignore late bundles
+   -- }
+   function M.new(options)
+      local self = setmetatable({}, M)
+      self.options = options or {}
+      self.handle = uv.new_udp "inet"
+      assert(self.handle, "Could not create UDP handle.")
+      return self
+   end
+   
+   --- Create a Timetag with the current time.
+   -- Precision is in milliseconds.
+   -- @return Timetag object with current time.
+   function M:now() -- luacheck: ignore
+      local s, m = uv.gettimeofday()
+      return Timetag.new(s, m / M.precision)
+   end
+   
+   --- Schedule a OSC method for dispatch.
+   --
+   -- @tparam number timestamp When to schedule the bundle.
+   -- @tparam function handler The OSC handler to call.
+   function M:schedule(timestamp, handler) -- luacheck: ignore
+      timestamp = math.max(0, timestamp)
+      if timestamp > 0 then
+         local timer = uv.new_timer()
+         timer:start(timestamp, 0, handler)
+      else
+         handler()
+      end
+   end
+   
+   --- Start UDP server.
+   -- This function is blocking.
+   -- @tparam string host IP address (e.g. '127.0.0.1').
+   -- @tparam number port The port to listen on.
+   function M:open(host, port)
+      host = host or self.options.recvAddr
+      port = port or self.options.recvPort
+      self.handle:bind(host, port, { reuseaddr = true })
+      self.handle:recv_start(function(err, data, addr)
+         assert(not err, err)
+         if data then
+            self.remote_info = addr
+            local ok, errormsg = pcall(Pattern.dispatch, data, self)
+            if not ok then
+               print(errormsg)
+            end
+         end
+      end)
+      -- updated if port 0 is passed in as default (chooses a random port)
+      self.options.recvPort = self.handle:getsockname().port
+   end
+   
+   function M:run_non_blocking()
+      print "listening"
+      -- Run the event loop once and return
+      uv.run "nowait"
+   end
+   
+   --- Close UDP server.
+   function M:close()
+      self.handle:recv_stop()
+      if not self.handle:is_closing() then
+         self.handle:close()
+      end
+      uv.walk(uv.close)
+   end
+   
+   --- Send a OSC packet.
+   -- @tparam table packet The packet to send.
+   -- @tparam[opt] string address The IP address to send to.
+   -- @tparam[opt] number port The port to send to.
+   function M:send(packet, address, port)
+      address = address or self.options.sendAddr
+      port = port or self.options.sendPort
+      packet = assert(Packet.pack(packet))
+      self.handle:try_send(packet, address, port)
+   end
+   
    local osc, sendOSC
    if has_losc then
-      osc = losc.new {
-         plugin = plugin.new {
-            sendPort = target.port,
-            sendAddr = target.address,
-         },
+      local udp = M.new {
+         recvAddr = "127.0.0.1",
+         recvPort = 9001,
+         sendPort = target.port,
+         sendAddr = target.address,
+         -- ignore_late = true, -- ignore late bundles
       }
+      osc = losc.new { plugin = udp }
+      -- osc = losc.new {
+      --    plugin = plugin.new {
+      --       sendPort = target.port,
+      --       sendAddr = target.address,
+      --    },
+      -- }
       sendOSC = function(value, ts)
          local msg = {}
          for key, val in pairs(value) do
@@ -2955,6 +3147,14 @@ do
          local b = osc.new_bundle(ts, osc.new_message(msg))
          osc:send(b)
       end
+   
+      osc:add_handler("/ctrl", function(data)
+         print(ut.dump(data))
+      end)
+   
+      osc:add_handler("/param/{x,y,z}", function(data)
+         print(ut.dump(data))
+      end)
    end
    
    local mt = { __class = "clock" }
@@ -2962,6 +3162,7 @@ do
    function mt:start()
       if not self.running then
          self.running = true
+         osc:open() -- ???
          return self:createNotifyCoroutine()
       end
    end
@@ -2999,6 +3200,7 @@ do
          local mill = 1000000
          local frame = self.sampleRate * mill
          while self.running do
+            uv.run "nowait"
             ticks = ticks + 1
             local logicalNow = floor(start + (ticks * frame))
             local logicalNext = floor(start + ((ticks + 1) * frame))
@@ -3304,21 +3506,27 @@ do
    
    local eval = notation.mini(pattern)
    local reify = memoize(function(thing)
-      local t = T(thing)
-      if "string" == t then
-         local res = eval(thing)
-         return res and res or silence
-      elseif "table" == t then
-         if is_array(thing) then
-            return fastcat(thing)
-         else
-            return pure(ValueMap(thing))
-         end
-      elseif "pattern" == t then
-         return thing
-      else
-         return pure(thing)
-      end
+      return ut.switch()
+         :case("string")
+         :call(function()
+            local res = eval(thing)
+            return res and res or silence
+         end)
+         :case("table")
+         :call(function()
+            if is_array(thing) then
+               return fastcat(thing)
+            else
+               return pure(ValueMap(thing))
+            end
+         end)
+         :case("pattern")
+         :call(function()
+            return thing
+         end)
+         :default(function()
+            return pure(thing)
+         end)(T(thing))
    end)
    pattern.reify = reify
    
@@ -4180,7 +4388,7 @@ do
    
    pattern.steady = function(value)
       return Pattern(function(span)
-         return { Event(nil, state.span, value) }
+         return { Event(nil, span, value) }
       end)
    end
    local toBipolar = function(pat)
@@ -4569,7 +4777,7 @@ do
                   local isOnset = event.whole.start == start
                   local char = nil
                   if isOnset then
-                     char = dump(event.value)
+                     char = event.value
                   else
                      char = "-"
                   end
@@ -4809,7 +5017,7 @@ do
             param = param and param or nil
             return optf[name](param)
          else
-            local fn = maxi(a)
+            local fn = modal.ut.dump(maxi(a))
             return fn
          end
       end

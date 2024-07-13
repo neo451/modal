@@ -58,5 +58,6 @@ setmetatable(modal, {
       end
    end,
 })
+require("modedebug").start()
 
 return modal

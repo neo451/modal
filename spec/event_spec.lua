@@ -5,6 +5,8 @@ local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
 
+ut.Usecolor = false
+
 describe("Event", function()
    describe("constructors", function()
       it("shoud new with default values", function()

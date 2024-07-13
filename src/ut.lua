@@ -21,13 +21,13 @@ local d_gethook = debug.gethook
 local d_getupvalue = debug.getupvalue
 local d_setupvalue = debug.setupvalue
 
-Usecolor = true
+ut.Usecolor = true
 
 local envs = { "vim", "norns", "love", "pd" }
 
 for _, v in pairs(envs) do
    if rawget(_G, v) then
-      Usecolor = false
+      ut.Usecolor = false
    end
 end
 
@@ -277,6 +277,11 @@ end
 
 -- general utilities
 
+local function id(x)
+   return x
+end
+ut.id = id
+
 function ut.is_array(tbl)
    return type(tbl) == "table" and (#tbl > 0 or next(tbl) == nil)
 end
@@ -377,6 +382,13 @@ function ut.map(f, list)
    return list
 end
 
+function ut.dumpf(f)
+   local fmt = "fun(%s)"
+   local args = ut.get_args(f)
+   local argstr = tconcat(args, ", ")
+   return fmt:format(argstr)
+end
+
 ---dump table as key value pairs
 ---@param o table
 ---@return string
@@ -392,9 +404,13 @@ function ut.tdump(o)
       return tconcat(s)
    elseif ut.T(o) == "string" then
       local str = '"' .. o .. '"'
-      return Usecolor and ut.colors.green(str) or str
+      return ut.Usecolor and ut.colors.green(str) or str
+   elseif ut.T(o) == "number" then
+      return tostring(ut.Usecolor and ut.colors.yellow(o) or o)
+   elseif ut.T(o) == "function" then
+      return ut.Usecolor and ut.colors.blue(ut.dumpf(o)) or ut.dumpf(o)
    else
-      return tostring(Usecolor and ut.colors.red(o) or o)
+      return tostring(ut.Usecolor and ut.colors.red(o) or o)
    end
 end
 
@@ -405,12 +421,19 @@ function ut.dump(o)
    if ut.T(o) == "table" then
       local s = {}
       for k, v in pairs(o) do
-         s[#s + 1] = Usecolor and ut.colors.cyan(k) or k
+         s[#s + 1] = ut.Usecolor and ut.colors.cyan(k) or k
          s[#s + 1] = ": "
          s[#s + 1] = ut.dump(v)
          s[#s + 1] = (k ~= #o) and "\n" or ""
       end
       return tconcat(s)
+   elseif ut.T(o) == "string" then
+      local str = '"' .. o .. '"'
+      return ut.Usecolor and ut.colors.green(str) or str
+   elseif ut.T(o) == "number" then
+      return tostring(ut.Usecolor and ut.colors.yellow(o) or o)
+   elseif ut.T(o) == "function" then
+      return ut.Usecolor and ut.colors.blue(ut.dumpf(o)) or ut.dumpf(o)
    else
       return tostring(o)
    end
@@ -470,7 +493,7 @@ end
 ut.splitAt = splitAt
 
 ---@param step number
----@param list table
+---@param list any[]
 ---@return table
 function ut.rotate(step, list)
    local a, b = splitAt(step, list)
@@ -478,15 +501,14 @@ function ut.rotate(step, list)
 end
 
 ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
----@param ... unknown
----@return unknown
-function ut.pipe(...)
-   local funcs = { ... }
+---@param fs (fun(x : any) : any)[]
+---@return any
+function ut.pipe(fs)
    return reduce(function(f, g)
       return function(...)
          return f(g(...))
       end
-   end, ut.id, funcs)
+   end, id, fs)
 end
 
 local function reverse(...)
@@ -608,10 +630,6 @@ function ut.curry_wrap(arity, f)
    end
 end
 
-function ut.id(x)
-   return x
-end
-
 ---for lua5.1 compatibility
 ---@param f any
 ---@param env any
@@ -723,6 +741,71 @@ function ut.getlocal(name, level)
          return v
       end
    end
+end
+
+---@class switch
+---@field cachedCases string[]
+---@field map table<string, function>
+---@field _default fun(...):...
+local switchMT = {}
+switchMT.__index = switchMT
+
+---@param name string
+---@return switch
+function switchMT:case(name)
+   self.cachedCases[#self.cachedCases + 1] = name
+   return self
+end
+
+---@param callback async fun(...):...
+---@return switch
+function switchMT:call(callback)
+   for i = 1, #self.cachedCases do
+      local name = self.cachedCases[i]
+      self.cachedCases[i] = nil
+      if self.map[name] then
+         error("Repeated fields:" .. tostring(name))
+      end
+      self.map[name] = callback
+   end
+   return self
+end
+
+---@param callback fun(...):...
+---@return switch
+function switchMT:default(callback)
+   self._default = callback
+   return self
+end
+
+function switchMT:getMap()
+   return self.map
+end
+
+---@param name string
+---@return boolean
+function switchMT:has(name)
+   return self.map[name] ~= nil
+end
+
+---@param name string
+---@param ... any
+---@return ...
+function switchMT:__call(name, ...)
+   local callback = self.map[name] or self._default
+   if not callback then
+      return
+   end
+   return callback(...)
+end
+
+---@return switch
+function ut.switch()
+   local obj = setmetatable({
+      map = {},
+      cachedCases = {},
+   }, switchMT)
+   return obj
 end
 
 return ut

@@ -4,6 +4,7 @@ local pat = require "modal"
 local describe = require("busted").describe
 local it = require("busted").it
 local assert = require("busted").assert
+M.Usecolor = false
 
 describe("compare", function()
    return it("should deeply compare table values", function()

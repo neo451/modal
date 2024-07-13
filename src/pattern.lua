@@ -46,21 +46,27 @@ setmetatable(pattern, { __index = _G })
 
 local eval = notation.mini(pattern)
 local reify = memoize(function(thing)
-   local t = T(thing)
-   if "string" == t then
-      local res = eval(thing)
-      return res and res or silence
-   elseif "table" == t then
-      if is_array(thing) then
-         return fastcat(thing)
-      else
-         return pure(ValueMap(thing))
-      end
-   elseif "pattern" == t then
-      return thing
-   else
-      return pure(thing)
-   end
+   return ut.switch()
+      :case("string")
+      :call(function()
+         local res = eval(thing)
+         return res and res or silence
+      end)
+      :case("table")
+      :call(function()
+         if is_array(thing) then
+            return fastcat(thing)
+         else
+            return pure(ValueMap(thing))
+         end
+      end)
+      :case("pattern")
+      :call(function()
+         return thing
+      end)
+      :default(function()
+         return pure(thing)
+      end)(T(thing))
 end)
 pattern.reify = reify
 
@@ -922,7 +928,7 @@ end
 
 pattern.steady = function(value)
    return Pattern(function(span)
-      return { Event(nil, state.span, value) }
+      return { Event(nil, span, value) }
    end)
 end
 local toBipolar = function(pat)
@@ -1311,7 +1317,7 @@ local function drawLine(pat, chars)
                local isOnset = event.whole.start == start
                local char = nil
                if isOnset then
-                  char = dump(event.value)
+                  char = event.value
                else
                   char = "-"
                end

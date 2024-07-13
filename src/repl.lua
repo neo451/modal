@@ -52,7 +52,7 @@ local function repl()
          param = param and param or nil
          return optf[name](param)
       else
-         local fn = maxi(a)
+         local fn = modal.ut.dump(maxi(a))
          return fn
       end
    end

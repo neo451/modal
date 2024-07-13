@@ -11,7 +11,6 @@
 ---@alias ValueMap table<string, any>
 ---@alias Int number | Pattern
 ---@alias State table
----@alias Event {value: any, }
 
 ---@param value any
 ---@return Pattern
@@ -278,9 +277,12 @@ uid = function(v) end
 val = function(v) end
 cps = function(v) end
 
----@class Pattern
+---@class Event<T>: { [string] : T }
+
+---@generic T
+---@alias query fun(st: State) : Event<T>
+---@class Pattern: {query : query}
 ---@operator add(Pattern) : Pattern
----@field query fun(st: State): Event[]
 ---@field scale fun(self: Pattern, name: Scales): Pattern
 ---@field fast fun(self: Pattern, factor: Time): Pattern
 ---@field slow fun(self: Pattern, factor: Time): Pattern
