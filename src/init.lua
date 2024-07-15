@@ -38,6 +38,8 @@ for name, func in pairs(pattern) do
    modal[name] = func
 end
 
+modal.maxi = notation.maxi(modal)
+
 setmetatable(modal, {
    __index = _G,
 })

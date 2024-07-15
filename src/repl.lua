@@ -1,7 +1,13 @@
 local function repl()
-   local socket = require "socket"
-   local host = "localhost"
+   local uv = require "luv" or vim.uv
+   local client = uv.new_tcp()
+   local host = "127.0.0.1"
    local port = 9000
+   local stream = uv.tcp_connect(client, host, port, function(err)
+      assert(not err, err)
+   end)
+
+   RL = require "readline"
    local has_RL, RL = pcall(require, "readline")
    local modal = require "modal"
    local notation = require "modal.notation"
@@ -17,8 +23,6 @@ local function repl()
       RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
       RL.set_readline_name "modal"
    end
-
-   local ok, c = pcall(socket.connect, host, port)
 
    local optf = {
       ["?"] = function()
@@ -37,8 +41,8 @@ local function repl()
       --    return dump(doc[name])
       -- end,
       q = function()
-         if c then
-            c:close()
+         if client then
+            client:close()
          end
          os.exit()
       end,
@@ -84,8 +88,9 @@ local function repl()
             RL.add_history(line)
             -- RL.save_history()
          end
-         if c then
-            c:send(line .. "\n")
+         if stream then
+            uv.write(client, line .. "\n")
+            uv.run "once"
          end
       end
    end
