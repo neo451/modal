@@ -41,32 +41,25 @@ local fast, pure, fastcat, slowcat, stack, silence, focus, range, rev, compress
 local TYPES = {}
 local op = {}
 
--- give mini access to global vars
-setmetatable(pattern, { __index = _G })
+setmetatable(pattern, { __index = _G }) -- give mini access to global vars
 
 local eval = notation.mini(pattern)
 local reify = memoize(function(thing)
-   return ut.switch()
-      :case("string")
-      :call(function()
-         local res = eval(thing)
-         return res and res or silence
-      end)
-      :case("table")
-      :call(function()
-         if is_array(thing) then
-            return fastcat(thing)
-         else
-            return pure(ValueMap(thing))
-         end
-      end)
-      :case("pattern")
-      :call(function()
-         return thing
-      end)
-      :default(function()
-         return pure(thing)
-      end)(T(thing))
+   local t = T(thing)
+   if t == "string" then
+      local res = eval(thing)
+      return res and res or silence
+   elseif t == "table" then
+      if is_array(thing) then
+         return fastcat(thing)
+      else
+         return pure(ValueMap(thing))
+      end
+   elseif t == "pattern" then
+      return thing
+   else
+      return pure(thing)
+   end
 end)
 pattern.reify = reify
 
@@ -654,13 +647,13 @@ local function register(type_sig, f, nify)
       TYPES[name] = tdef
       local f_p = patternify(arity, f)
       local f_p_t = type_wrap(f_p, name)
-      local f_c_p_t = curry_wrap(arity, f_p_t)
+      local f_c_p_t = curry(f_p_t, arity)
       pattern[name] = f_c_p_t
       rawset(mt, name, method_wrap(f_p_t))
    else
       TYPES[name] = tdef
       local f_t = type_wrap(f, name)
-      local f_t_c = curry_wrap(arity, f_t)
+      local f_t_c = curry(f_t, arity)
       pattern[name] = f_t_c
       rawset(mt, name, method_wrap(f_t))
    end
@@ -680,12 +673,15 @@ function stack(pats)
 end
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
-function pattern.polymeter(steps, pats)
+--- TODO:
+function pattern.polymeter(pats, steps)
+   steps = steps or pats[1]:len()
    for i, pat in ipairs(pats) do
       pats[i] = pattern.fast(steps / pat:len(), pat)
    end
    return stack(pats)
 end
+pattern.pm = pattern.polymeter
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
 function slowcat(pats)

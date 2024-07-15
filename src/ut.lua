@@ -511,40 +511,32 @@ function ut.pipe(fs)
    end, id, fs)
 end
 
-local function reverse(...)
-   local function reverse_h(acc, v, ...)
-      if 0 == select("#", ...) then
-         return v, acc()
-      else
-         return reverse_h(function()
-            return v, acc()
-         end, ...)
-      end
+local function rev_unpack(t, n)
+   for i = 1, floor(n / 2) do
+      t[i], t[n - i + 1] = t[n - i + 1], t[i]
    end
-   return reverse_h(function() end, ...)
+   return unpack(t, 1, n)
 end
 
----curry given function -> f(a, b, c) -> f(a)(b)(c)
----@param func function
----@param num_args number
----@return function
-local function curry(func, num_args)
-   num_args = num_args or 2
-   if num_args <= 1 then
+local function curry(func, nparams)
+   nparams = nparams or ut.nparams(func)
+   if nparams < 2 then
       return func
    end
-   local function curry_h(argtrace, n)
-      if 0 == n then
-         return func(reverse(argtrace()))
+   local function aux(argtrace, n)
+      if n < 1 then
+         return func(rev_unpack(argtrace, nparams))
       else
-         return function(onearg)
-            return curry_h(function()
-               return onearg, argtrace()
-            end, n - 1)
+         return function(...)
+            local len = select("#", ...)
+            for i = 1, len do
+               argtrace[n - i + 1] = select(i, ...)
+            end
+            return aux(argtrace, n - len)
          end
       end
    end
-   return curry_h(function() end, num_args)
+   return aux({}, nparams)
 end
 ut.curry = curry
 
@@ -608,25 +600,6 @@ function ut.method_wrap(f)
       local pat = tremove(args, 1)
       args[#args + 1] = pat
       return f(unpack(args))
-   end
-end
-
----if f gets less args then arity, then curry the f and pass the current amount of args into it
----@param arity number
----@param f function
----@return function
-function ut.curry_wrap(arity, f)
-   return function(...)
-      local args = { ... }
-      if #args < arity then
-         local cf = curry(f, arity)
-         for _, v in ipairs(args) do
-            cf = cf(v)
-         end
-         return cf
-      else
-         return f(...)
-      end
    end
 end
 
@@ -741,71 +714,6 @@ function ut.getlocal(name, level)
          return v
       end
    end
-end
-
----@class switch
----@field cachedCases string[]
----@field map table<string, function>
----@field _default fun(...):...
-local switchMT = {}
-switchMT.__index = switchMT
-
----@param name string
----@return switch
-function switchMT:case(name)
-   self.cachedCases[#self.cachedCases + 1] = name
-   return self
-end
-
----@param callback async fun(...):...
----@return switch
-function switchMT:call(callback)
-   for i = 1, #self.cachedCases do
-      local name = self.cachedCases[i]
-      self.cachedCases[i] = nil
-      if self.map[name] then
-         error("Repeated fields:" .. tostring(name))
-      end
-      self.map[name] = callback
-   end
-   return self
-end
-
----@param callback fun(...):...
----@return switch
-function switchMT:default(callback)
-   self._default = callback
-   return self
-end
-
-function switchMT:getMap()
-   return self.map
-end
-
----@param name string
----@return boolean
-function switchMT:has(name)
-   return self.map[name] ~= nil
-end
-
----@param name string
----@param ... any
----@return ...
-function switchMT:__call(name, ...)
-   local callback = self.map[name] or self._default
-   if not callback then
-      return
-   end
-   return callback(...)
-end
-
----@return switch
-function ut.switch()
-   local obj = setmetatable({
-      map = {},
-      cachedCases = {},
-   }, switchMT)
-   return obj
 end
 
 return ut

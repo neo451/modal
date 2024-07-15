@@ -4794,40 +4794,32 @@ do
       end, id, fs)
    end
    
-   local function reverse(...)
-      local function reverse_h(acc, v, ...)
-         if 0 == select("#", ...) then
-            return v, acc()
-         else
-            return reverse_h(function()
-               return v, acc()
-            end, ...)
-         end
+   local function rev_unpack(t, n)
+      for i = 1, floor(n / 2) do
+         t[i], t[n - i + 1] = t[n - i + 1], t[i]
       end
-      return reverse_h(function() end, ...)
+      return unpack(t, 1, n)
    end
    
-   ---curry given function -> f(a, b, c) -> f(a)(b)(c)
-   ---@param func function
-   ---@param num_args number
-   ---@return function
-   local function curry(func, num_args)
-      num_args = num_args or 2
-      if num_args <= 1 then
+   local function curry(func, nparams)
+      nparams = nparams or ut.nparams(func)
+      if nparams < 2 then
          return func
       end
-      local function curry_h(argtrace, n)
-         if 0 == n then
-            return func(reverse(argtrace()))
+      local function aux(argtrace, n)
+         if n < 1 then
+            return func(rev_unpack(argtrace, nparams))
          else
-            return function(onearg)
-               return curry_h(function()
-                  return onearg, argtrace()
-               end, n - 1)
+            return function(...)
+               local len = select("#", ...)
+               for i = 1, len do
+                  argtrace[n - i + 1] = select(i, ...)
+               end
+               return aux(argtrace, n - len)
             end
          end
       end
-      return curry_h(function() end, num_args)
+      return aux({}, nparams)
    end
    ut.curry = curry
    
@@ -4891,25 +4883,6 @@ do
          local pat = tremove(args, 1)
          args[#args + 1] = pat
          return f(unpack(args))
-      end
-   end
-   
-   ---if f gets less args then arity, then curry the f and pass the current amount of args into it
-   ---@param arity number
-   ---@param f function
-   ---@return function
-   function ut.curry_wrap(arity, f)
-      return function(...)
-         local args = { ... }
-         if #args < arity then
-            local cf = curry(f, arity)
-            for _, v in ipairs(args) do
-               cf = cf(v)
-            end
-            return cf
-         else
-            return f(...)
-         end
       end
    end
    
@@ -5024,71 +4997,6 @@ do
             return v
          end
       end
-   end
-   
-   ---@class switch
-   ---@field cachedCases string[]
-   ---@field map table<string, function>
-   ---@field _default fun(...):...
-   local switchMT = {}
-   switchMT.__index = switchMT
-   
-   ---@param name string
-   ---@return switch
-   function switchMT:case(name)
-      self.cachedCases[#self.cachedCases + 1] = name
-      return self
-   end
-   
-   ---@param callback async fun(...):...
-   ---@return switch
-   function switchMT:call(callback)
-      for i = 1, #self.cachedCases do
-         local name = self.cachedCases[i]
-         self.cachedCases[i] = nil
-         if self.map[name] then
-            error("Repeated fields:" .. tostring(name))
-         end
-         self.map[name] = callback
-      end
-      return self
-   end
-   
-   ---@param callback fun(...):...
-   ---@return switch
-   function switchMT:default(callback)
-      self._default = callback
-      return self
-   end
-   
-   function switchMT:getMap()
-      return self.map
-   end
-   
-   ---@param name string
-   ---@return boolean
-   function switchMT:has(name)
-      return self.map[name] ~= nil
-   end
-   
-   ---@param name string
-   ---@param ... any
-   ---@return ...
-   function switchMT:__call(name, ...)
-      local callback = self.map[name] or self._default
-      if not callback then
-         return
-      end
-      return callback(...)
-   end
-   
-   ---@return switch
-   function ut.switch()
-      local obj = setmetatable({
-         map = {},
-         cachedCases = {},
-      }, switchMT)
-      return obj
    end
    
 end
@@ -6364,7 +6272,6 @@ do
    local op = V "op"
    local fast = V "fast"
    local slow = V "slow"
-   local rand = V "rand"
    local replicate = V "replicate"
    local degrade = V "degrade"
    local weight = V "weight"
@@ -6474,14 +6381,6 @@ do
          return Call("slow", a, x)
       end
    end
-   
-   -- local function pRand(a)
-   --    lower = a[1] or 0
-   --    return function(x)
-   --       -- TODO: idea rand run
-   --       return Num(math.random(lower, x[1]))
-   --    end
-   -- end
    
    local function pDegrade(a)
       if a == "?" then
@@ -6748,13 +6647,11 @@ do
       slow_sequence = P "<" * ws * (dotStack + choose + sequence) * ws * P ">" / pSlowSeq,
       polymeter = P "{" * ws * stack * ws * P "}" * polymeter_steps * ws / pPolymeter,
       polymeter_steps = (P "%" * slice) ^ -1 / pPolymeterSteps,
-      -- op = fast + slow + tail + range + replicate + degrade + weight + euclid + rand,
       op = fast + slow + tail + range + replicate + degrade + weight + euclid,
       fast = P "*" * slice / pFast,
       slow = P "/" * slice / pSlow,
       tail = P ":" * slice / pTail,
       range = P ".." * ws * slice / pRange,
-      -- rand = P "#" * (number ^ -1) / pRand,
       degrade = P "?" * (number ^ -1) / pDegrade,
       replicate = ws * P "!" * (number ^ -1) / pReplicate,
       weight = ws * (P "@" + P "_") * (number ^ -1) / pWeight,
@@ -6809,7 +6706,8 @@ do
       end
    end
    
-   notation = { maxi = make_gen(true), mini = make_gen(false) }
+   notation.maxi = make_gen(true)
+   notation.mini = make_gen(false)
    
 end
 
@@ -7752,32 +7650,25 @@ do
    local TYPES = {}
    local op = {}
    
-   -- give mini access to global vars
-   setmetatable(pattern, { __index = _G })
+   setmetatable(pattern, { __index = _G }) -- give mini access to global vars
    
    local eval = notation.mini(pattern)
    local reify = memoize(function(thing)
-      return ut.switch()
-         :case("string")
-         :call(function()
-            local res = eval(thing)
-            return res and res or silence
-         end)
-         :case("table")
-         :call(function()
-            if is_array(thing) then
-               return fastcat(thing)
-            else
-               return pure(ValueMap(thing))
-            end
-         end)
-         :case("pattern")
-         :call(function()
-            return thing
-         end)
-         :default(function()
-            return pure(thing)
-         end)(T(thing))
+      local t = T(thing)
+      if t == "string" then
+         local res = eval(thing)
+         return res and res or silence
+      elseif t == "table" then
+         if is_array(thing) then
+            return fastcat(thing)
+         else
+            return pure(ValueMap(thing))
+         end
+      elseif t == "pattern" then
+         return thing
+      else
+         return pure(thing)
+      end
    end)
    pattern.reify = reify
    
@@ -8365,13 +8256,13 @@ do
          TYPES[name] = tdef
          local f_p = patternify(arity, f)
          local f_p_t = type_wrap(f_p, name)
-         local f_c_p_t = curry_wrap(arity, f_p_t)
+         local f_c_p_t = curry(f_p_t, arity)
          pattern[name] = f_c_p_t
          rawset(mt, name, method_wrap(f_p_t))
       else
          TYPES[name] = tdef
          local f_t = type_wrap(f, name)
-         local f_t_c = curry_wrap(arity, f_t)
+         local f_t_c = curry(f_t, arity)
          pattern[name] = f_t_c
          rawset(mt, name, method_wrap(f_t))
       end
@@ -8391,12 +8282,15 @@ do
    end
    register("stack :: [Pattern a] -> Pattern a", stack, false)
    
-   function pattern.polymeter(steps, pats)
+   --- TODO:
+   function pattern.polymeter(pats, steps)
+      steps = steps or pats[1]:len()
       for i, pat in ipairs(pats) do
          pats[i] = pattern.fast(steps / pat:len(), pat)
       end
       return stack(pats)
    end
+   pattern.pm = pattern.polymeter
    -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
    
    function slowcat(pats)
@@ -9196,6 +9090,8 @@ end
       modal[name] = func
    end
    
+   modal.maxi = notation.maxi(modal)
+   
    setmetatable(modal, {
       __index = _G,
    })
@@ -9219,8 +9115,13 @@ end
    
 do
    local function repl()
-      local host = "localhost"
+      local client = uv.new_tcp()
+      local host = "127.0.0.1"
       local port = 9000
+      local stream = uv.tcp_connect(client, host, port, function(err)
+         assert(not err, err)
+      end)
+   
       local maxi = notation.maxi(modal)
    
       local keywords = {}
@@ -9233,8 +9134,6 @@ do
          RL.set_options { keeplines = 1000, histfile = "~/.synopsis_history" }
          RL.set_readline_name "modal"
       end
-   
-      local ok, c = pcall(socket.connect, host, port)
    
       local optf = {
          ["?"] = function()
@@ -9253,8 +9152,8 @@ do
          --    return dump(doc[name])
          -- end,
          q = function()
-            if c then
-               c:close()
+            if client then
+               client:close()
             end
             os.exit()
          end,
@@ -9300,8 +9199,9 @@ do
                RL.add_history(line)
                -- RL.save_history()
             end
-            if c then
-               c:send(line .. "\n")
+            if stream then
+               uv.write(client, line .. "\n")
+               uv.run "once"
             end
          end
       end
@@ -9314,24 +9214,12 @@ do
 end
 
 do
-   local function server()
+   local function server(port)
       local maxi = notation.maxi(modal)
       local log = ut.log
    
       local clock = modal.DefaultClock
       clock:start()
-   
-      local host = "*"
-      local port = arg[1] or 9000
-      local sock = assert(socket.bind(host, port))
-      local i, p = sock:getsockname()
-      assert(i, p)
-   
-      print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
-      local c = assert(sock:accept())
-      c:settimeout(0)
-   
-      print "Connected"
    
       local eval = function(a)
          local ok, fn = pcall(maxi, a)
@@ -9342,18 +9230,45 @@ do
          end
       end
    
-      local l, e
+      port = port or 9000
+      -- local sock = assert(socket.bind(host, port))
+      -- local i, p = sock:getsockname()
+      -- assert(i, p)
+      --
+      -- print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
+      -- local c = assert(sock:accept())
+      -- c:settimeout(0)
+      local tcp = uv.new_tcp()
+      tcp:bind("127.0.0.1", 9000)
+      tcp:listen(128, function(err)
+         assert(not err, err)
+         local client = uv.new_tcp()
+         tcp:accept(client)
+         client:read_start(function(err, chunk)
+            assert(not err, err)
+            if chunk then
+               eval(chunk)
+            else
+               client:shutdown()
+               client:close()
+            end
+         end)
+      end)
    
-      local listen = function()
-         l, e = c:receive()
-         if not e then
-            eval(l)
-         end
-      end
+      -- local l, e
    
-      repeat
-         coroutine.resume(clock.co, listen)
-      until false
+      -- local listen = function()
+      --    l, e = c:receive()
+      --    if not e then
+      --       eval(l)
+      --    end
+      -- end
+      --
+      local timer = uv.new_timer()
+      timer:start(0, 10, function()
+         coroutine.resume(clock.co)
+      end)
+      uv.run()
    end
    
    modal.server = server
