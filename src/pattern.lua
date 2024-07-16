@@ -535,8 +535,8 @@ local op_set = {
    pow = "^",
    keepif = "?",
    concat = "..", -- ?
-   uni = "<",
-   funi = ">",
+   uni = ">",
+   funi = "<",
 }
 
 local how_format = {
@@ -563,14 +563,13 @@ silence = Pattern()
 pattern.silence = silence
 
 function pure(value)
-   local query = function(span)
+   return Pattern(function(span)
       local cycles = span:spanCycles()
       for i, v in ipairs(cycles) do
          cycles[i] = Event(v.start:wholeCycle(), v, value)
       end
       return cycles
-   end
-   return Pattern(query)
+   end)
 end
 pattern.pure = pure
 
@@ -1357,7 +1356,9 @@ local create = function(name)
       name = name[1]
    else
       f = function(arg)
-         return reify { [name] = arg }
+         return reify(arg):fmap(function(a)
+            return { [name] = a }
+         end)
       end
    end
    pattern[name] = f
@@ -1409,10 +1410,16 @@ end
 ---@param s string | number
 ---@return Pattern
 local function cF(d, s)
+   print(s)
    s = tonumber(s) and tonumber(s) or s
    local query = function(span)
+      if not span.controls then
+         return silence
+      end
       local val = span.controls[s]
+      print(val)
       local pat = pure(val or d)
+      print(pat.query(span))
       return pat.query(span)
    end
    return Pattern(query)

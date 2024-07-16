@@ -140,7 +140,7 @@ end
 local osc, sendOSC
 local udp = M.new {
    recvAddr = "127.0.0.1",
-   recvPort = 9001,
+   recvPort = 6010,
    sendPort = target.port,
    sendAddr = target.address,
    -- ignore_late = true, -- ignore late bundles
@@ -159,13 +159,16 @@ sendOSC = function(value, ts)
    -- local b = osc.new_bundle(ts, osc.new_message(msg))
    osc:send(b)
 end
-sendOSC { 1, 2, "sda" }
+
+State = {}
 
 osc:add_handler("/ctrl", function(data)
-   print(ut.dump(data))
+   State[1] = data.message[2]
+   -- print(State[1])
+   -- print(ut.dump(data))
 end)
 
-osc:add_handler("/param/{x,y,z}", function(data)
+osc:add_handler("/dirt/handshake/reply", function(data)
    print(ut.dump(data))
 end)
 
@@ -175,6 +178,7 @@ function mt:start()
    if not self.running then
       self.running = true
       osc:open() -- ???
+      osc:send { addr = "/dirt/handshake" }
       return self:createNotifyCoroutine()
    end
 end
@@ -233,7 +237,7 @@ function mt:createNotifyCoroutine()
             f()
          end
          for _, sub in pairs(self.subscribers) do
-            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
+            sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now, State)
          end
          coroutine.yield()
       end

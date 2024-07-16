@@ -5475,11 +5475,11 @@ do
    
    local stream = { __class = "stream" }
    
-   function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
+   function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now, State)
       if not self.pattern then
          return
       end
-      local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo)
+      local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo, State)
       for _, ev in ipairs(events) do
          local cycleOn = ev.whole.start
          local cycleOff = ev.whole.stop
@@ -7277,7 +7277,7 @@ do
    local osc, sendOSC
    local udp = M.new {
       recvAddr = "127.0.0.1",
-      recvPort = 9001,
+      recvPort = 6010,
       sendPort = target.port,
       sendAddr = target.address,
       -- ignore_late = true, -- ignore late bundles
@@ -7296,13 +7296,16 @@ do
       -- local b = osc.new_bundle(ts, osc.new_message(msg))
       osc:send(b)
    end
-   sendOSC { 1, 2, "sda" }
+   
+   State = {}
    
    osc:add_handler("/ctrl", function(data)
-      print(ut.dump(data))
+      State[1] = data.message[2]
+      -- print(State[1])
+      -- print(ut.dump(data))
    end)
    
-   osc:add_handler("/param/{x,y,z}", function(data)
+   osc:add_handler("/dirt/handshake/reply", function(data)
       print(ut.dump(data))
    end)
    
@@ -7312,6 +7315,7 @@ do
       if not self.running then
          self.running = true
          osc:open() -- ???
+         osc:send { addr = "/dirt/handshake" }
          return self:createNotifyCoroutine()
       end
    end
@@ -7370,7 +7374,7 @@ do
                f()
             end
             for _, sub in pairs(self.subscribers) do
-               sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now)
+               sub:notifyTick(cycleFrom, cycleTo, self.sessionState, cps, self.beatsPerCycle, mill, now, State)
             end
             coroutine.yield()
          end
@@ -8144,8 +8148,8 @@ do
       pow = "^",
       keepif = "?",
       concat = "..", -- ?
-      uni = "<",
-      funi = ">",
+      uni = ">",
+      funi = "<",
    }
    
    local how_format = {
@@ -8965,7 +8969,9 @@ do
          name = name[1]
       else
          f = function(arg)
-            return reify { [name] = arg }
+            return reify(arg):fmap(function(a)
+               return { [name] = a }
+            end)
          end
       end
       pattern[name] = f
@@ -9017,10 +9023,16 @@ do
    ---@param s string | number
    ---@return Pattern
    local function cF(d, s)
+      print(s)
       s = tonumber(s) and tonumber(s) or s
       local query = function(span)
+         if not span.controls then
+            return silence
+         end
          local val = span.controls[s]
+         print(val)
          local pat = pure(val or d)
+         print(pat.query(span))
          return pat.query(span)
       end
       return Pattern(query)

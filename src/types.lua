@@ -474,11 +474,11 @@ end
 
 local stream = { __class = "stream" }
 
-function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now)
+function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now, State)
    if not self.pattern then
       return
    end
-   local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo)
+   local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo, State)
    for _, ev in ipairs(events) do
       local cycleOn = ev.whole.start
       local cycleOff = ev.whole.stop
