@@ -3,14 +3,19 @@ local function repl()
    local client = uv.new_tcp()
    local host = "127.0.0.1"
    local port = 9000
-   local stream = uv.tcp_connect(client, host, port, function(err)
-      assert(not err, err)
+   local connected = false
+   uv.tcp_connect(client, host, port, function(err)
+      print "connecting"
+      print(err)
+      if err == "" then
+         connected = true
+      end
    end)
 
    RL = require "readline"
    local has_RL, RL = pcall(require, "readline")
    local modal = require "modal"
-   local notation = require "modal.notation"
+   local notation = require("modal").notation
    local maxi = notation.maxi(modal)
 
    local keywords = {}
@@ -72,13 +77,6 @@ local function repl()
    print "modal repl   :? for help"
    while true do
       line = read "> "
-      if line == "exit" then
-         if c then
-            c:close()
-         end
-         break
-      end
-
       if line ~= "" then
          local res = eval(line)
          if res then
@@ -88,15 +86,13 @@ local function repl()
             RL.add_history(line)
             -- RL.save_history()
          end
-         if stream then
+         if connected then
+            print "connected"
             uv.write(client, line .. "\n")
             uv.run "once"
          end
       end
    end
-
-   c:close()
-   os.exit()
 end
 modal.repl = repl
 

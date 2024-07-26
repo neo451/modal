@@ -1,4 +1,3 @@
-local has_socket, socket = pcall(require, "socket")
 local has_al, al = pcall(require, "abletonlink")
 local losc = require "losc"()
 _G.struct = nil
@@ -41,12 +40,12 @@ local Timetag = losc.Timetag
 local Pattern = losc.Pattern
 local Packet = losc.Packet
 
-local M = {}
-M.__index = M
+local udp = {}
+udp.__index = udp
 --- Fractional precision for bundle scheduling.
 -- 1000 is milliseconds. 1000000 is microseconds etc. Any precision is valid
 -- that makes sense for the plugin's scheduling function.
-M.precision = 1000
+udp.precision = 1000
 
 --- Create a new instance.
 -- @tparam[options] table options Options.
@@ -59,8 +58,8 @@ M.precision = 1000
 --   recvPort = 8000,
 --   ignore_late = true, -- ignore late bundles
 -- }
-function M.new(options)
-   local self = setmetatable({}, M)
+function udp.new(options)
+   local self = setmetatable({}, udp)
    self.options = options or {}
    self.handle = uv.new_udp "inet"
    assert(self.handle, "Could not create UDP handle.")
@@ -70,16 +69,16 @@ end
 --- Create a Timetag with the current time.
 -- Precision is in milliseconds.
 -- @return Timetag object with current time.
-function M:now() -- luacheck: ignore
+function udp:now() -- luacheck: ignore
    local s, m = uv.gettimeofday()
-   return Timetag.new(s, m / M.precision)
+   return Timetag.new(s, m / udp.precision)
 end
 
 --- Schedule a OSC method for dispatch.
 --
 -- @tparam number timestamp When to schedule the bundle.
 -- @tparam function handler The OSC handler to call.
-function M:schedule(timestamp, handler) -- luacheck: ignore
+function udp:schedule(timestamp, handler) -- luacheck: ignore
    timestamp = math.max(0, timestamp)
    if timestamp > 0 then
       local timer = uv.new_timer()
@@ -93,7 +92,7 @@ end
 -- This function is blocking.
 -- @tparam string host IP address (e.g. '127.0.0.1').
 -- @tparam number port The port to listen on.
-function M:open(host, port)
+function udp:open(host, port)
    host = host or self.options.recvAddr
    port = port or self.options.recvPort
    self.handle:bind(host, port, { reuseaddr = true })
@@ -111,14 +110,13 @@ function M:open(host, port)
    self.options.recvPort = self.handle:getsockname().port
 end
 
-function M:run_non_blocking()
-   print "listening"
+function udp:run_non_blocking()
    -- Run the event loop once and return
    uv.run "nowait"
 end
 
 --- Close UDP server.
-function M:close()
+function udp:close()
    self.handle:recv_stop()
    if not self.handle:is_closing() then
       self.handle:close()
@@ -130,7 +128,7 @@ end
 -- @tparam table packet The packet to send.
 -- @tparam[opt] string address The IP address to send to.
 -- @tparam[opt] number port The port to send to.
-function M:send(packet, address, port)
+function udp:send(packet, address, port)
    address = address or self.options.sendAddr
    port = port or self.options.sendPort
    packet = assert(Packet.pack(packet))
@@ -138,14 +136,14 @@ function M:send(packet, address, port)
 end
 
 local osc, sendOSC
-local udp = M.new {
-   recvAddr = "127.0.0.1",
-   recvPort = 6010,
+local plugin = udp.new {
+   -- recvAddr = "127.0.0.1",
+   -- recvPort = 6010,
    sendPort = target.port,
    sendAddr = target.address,
    -- ignore_late = true, -- ignore late bundles
 }
-osc = losc.new { plugin = udp }
+osc = losc.new { plugin = plugin }
 
 sendOSC = function(value, ts)
    local msg = {}
@@ -177,8 +175,7 @@ local mt = { __class = "clock" }
 function mt:start()
    if not self.running then
       self.running = true
-      osc:open() -- ???
-      osc:send { addr = "/dirt/handshake" }
+      -- osc:open() -- ???
       return self:createNotifyCoroutine()
    end
 end

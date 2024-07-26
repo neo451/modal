@@ -3122,9 +3122,26 @@ end
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
-local function losc()
-   local Serializer = {}
+--[[lit-meta
+  name = "noearc/modal"
+  version = "0.0.1.1"
+  homepage = "https://github.com/noearc/modal"
+  description = "tidal cycles in lua!"
+  license = "GPL3"
+]]
+local ut = {}
+local pattern = {}
+local control = {}
+local types = {}
+local theory = {}
+local notation = {}
+local a2s = {}
+local factory = {}
+local losc = {}
 
+do
+   local Serializer = {}
+   
    --- Require a function for packing.
    -- @return A suitable packing function as explained in the header of this file.
    function Serializer.pack()
@@ -3139,7 +3156,7 @@ local function losc()
          -- return require(relpath .. ".lib.struct").pack
       end
    end
-
+   
    --- Require a function for unpacking.
    -- @return A suitable unpacking function as explained in the header of this file.
    function Serializer.unpack()
@@ -3153,18 +3170,18 @@ local function losc()
          -- return require(relpath .. ".lib.struct").unpack
       end
    end
-
+   
    local _pack = Serializer.pack()
    local _unpack = Serializer.unpack()
    local has_string_pack = string.pack and true or false
-
+   
    local Timetag = {}
-
+   
    -- 70 years in seconds (1970 - 1900)
    local NTP_SEC_OFFSET = 2208988800
    -- 2^32
    local TWO_POW_32 = 4294967296
-
+   
    local function tt_add(timetag, seconds)
       local sec = math.floor(seconds)
       local frac = math.floor(TWO_POW_32 * (seconds - sec) + 0.5)
@@ -3172,9 +3189,9 @@ local function losc()
       frac = frac + timetag.content.fractions
       return Timetag.new_raw(sec, frac)
    end
-
+   
    Timetag.__index = Timetag
-
+   
    --- Add a time offset to a Timetag.
    -- This overloads the `+` operator for Timetags and should not be called directly.
    -- @usage local tt = Timetag.new(os.time()) + 0.25
@@ -3186,10 +3203,10 @@ local function losc()
          return tt_add(a, b)
       end
    end
-
+   
    --- Low level API
    -- @section low-level-api
-
+   
    --- Create a new Timetag.
    --
    -- @param[opt] tbl Table with timetag content.
@@ -3214,9 +3231,9 @@ local function losc()
       end
       return self
    end
-
+   
    local Types = {}
-
+   
    --- Type pack functions.
    --
    -- Custom pack functions can be added to this table and standard functions can
@@ -3233,7 +3250,7 @@ local function losc()
          return pcall(self[type], value)
       end,
    })
-
+   
    --- Type unpack functions.
    --
    -- Custom unpack functions can be added to this table and standard functions
@@ -3250,7 +3267,7 @@ local function losc()
          return pcall(self[type], data, offset)
       end,
    })
-
+   
    --- Get available types.
    -- @tparam table tbl `Types.unpack` or `Types.pack`
    -- @return Table with available types.
@@ -3263,25 +3280,25 @@ local function losc()
       end
       return types
    end
-
+   
    local function strsize(s)
       return 4 * (math.floor(#s / 4) + 1)
    end
-
+   
    local function blobsize(b)
       return 4 * (math.floor((#b + 3) / 4))
    end
-
+   
    --- Atomic types.
    -- @section atomic-types
-
+   
    --- 32-bit big-endian two's complement integer.
    -- @param value The value to pack.
    -- @return Binary string buffer.
    Types.pack.i = function(value)
       return _pack(">i4", value)
    end
-
+   
    --- 32-bit big-endian two's complement integer.
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3289,14 +3306,14 @@ local function losc()
    Types.unpack.i = function(data, offset)
       return _unpack(">i4", data, offset)
    end
-
+   
    --- 32-bit big-endian IEEE 754 floating point number.
    -- @param value The value to pack.
    -- @return Binary string buffer.
    Types.pack.f = function(value)
       return _pack(">f", value)
    end
-
+   
    --- 32-bit big-endian IEEE 754 floating point number.
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3304,7 +3321,7 @@ local function losc()
    Types.unpack.f = function(data, offset)
       return _unpack(">f", data, offset)
    end
-
+   
    --- String (null terminated)
    -- @param value The value to pack.
    -- @return Binary string buffer.
@@ -3314,7 +3331,7 @@ local function losc()
       value = value .. string.rep(string.char(0), len - #value)
       return _pack(">" .. fmt, value)
    end
-
+   
    --- String (null terminated)
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3324,7 +3341,7 @@ local function losc()
       local str = _unpack(">" .. fmt, data, offset)
       return str, strsize(str) + (offset or 1)
    end
-
+   
    --- Blob (arbitrary binary data)
    -- @param value The value to pack.
    -- @return Binary string buffer.
@@ -3335,7 +3352,7 @@ local function losc()
       value = value .. string.rep(string.char(0), aligned - size)
       return _pack(">I4" .. fmt, size, value)
    end
-
+   
    --- Blob (arbitrary binary data)
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3346,10 +3363,10 @@ local function losc()
       blob, offset = _unpack(">c" .. size, data, offset)
       return blob, offset + blobsize(blob) - size
    end
-
+   
    --- Extended types.
    -- @section extended-types
-
+   
    if has_string_pack then
       --- 64 bit big-endian two's complement integer.
       --
@@ -3360,7 +3377,7 @@ local function losc()
          return _pack(">i8", value)
       end
    end
-
+   
    if has_string_pack then
       --- 64 bit big-endian two's complement integer.
       --
@@ -3372,7 +3389,7 @@ local function losc()
          return _unpack(">i8", data, offset)
       end
    end
-
+   
    --- Timetag (64-bit integer divided into upper and lower part)
    -- @param value Table with seconds and fractions.
    -- @return Binary string buffer.
@@ -3380,7 +3397,7 @@ local function losc()
    Types.pack.t = function(value)
       return Timetag.pack(value)
    end
-
+   
    --- Timetag (64-bit integer divided into upper and lower part)
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3389,14 +3406,14 @@ local function losc()
    Types.unpack.t = function(data, offset)
       return Timetag.unpack(data, offset)
    end
-
+   
    --- 64-bit big-endian IEEE 754 floating point number.
    -- @param value The value to pack.
    -- @return Binary string buffer.
    Types.pack.d = function(value)
       return _pack(">d", value)
    end
-
+   
    --- 64-bit big-endian IEEE 754 floating point number.
    -- @param data The data to unpack.
    -- @param[opt] offset Initial offset into data.
@@ -3404,7 +3421,7 @@ local function losc()
    Types.unpack.d = function(data, offset)
       return _unpack(">d", data, offset)
    end
-
+   
    --- Boolean true.
    -- This type does not have a corresponding `pack` method.
    -- @param _ Not used.
@@ -3413,7 +3430,7 @@ local function losc()
    Types.unpack.T = function(_, offset)
       return true, offset or 0
    end
-
+   
    --- Boolean false.
    -- This type does not have a corresponding `pack` method.
    -- @param _ Not used.
@@ -3422,7 +3439,7 @@ local function losc()
    Types.unpack.F = function(_, offset)
       return false, offset or 0
    end
-
+   
    --- Nil.
    -- This type does not have a corresponding `pack` method.
    -- @param _ Not used.
@@ -3432,7 +3449,7 @@ local function losc()
       -- TODO: decide on what to return here..
       return false, offset or 0
    end
-
+   
    --- Infinitum.
    -- This type does not have a corresponding `pack` method.
    -- @param _ Not used.
@@ -3443,10 +3460,10 @@ local function losc()
    end
    -- local _pack = Serializer.pack()
    -- local _unpack = Serializer.unpack()
-
+   
    --- High level API
    -- @section high-level-api
-
+   
    --- New using a seconds and fractions.
    --
    -- Given nil arguments will return a timetag with special value "immediate".
@@ -3468,7 +3485,7 @@ local function losc()
       frac = math.floor((fractions or 0) * (TWO_POW_32 / precision) + 0.5)
       return Timetag.new_raw(secs, frac)
    end
-
+   
    --- Create a new OSC Timetag from a timestamp.
    --
    -- @param time The timestamp to use.
@@ -3481,7 +3498,7 @@ local function losc()
       local fracs = math.floor(precision * (time / precision - seconds) + 0.5)
       return Timetag.new(seconds, fracs)
    end
-
+   
    --- Get a timestamp value with arbitrary precision.
    -- @param precision The precision to use. default 1000 (`milliseconds`)
    -- @return Timestamp value.
@@ -3491,22 +3508,22 @@ local function losc()
    function Timetag:timestamp(precision)
       return Timetag.get_timestamp(self.content, precision)
    end
-
+   
    --- Get seconds.
    -- @return Timetag seconds.
    function Timetag:seconds()
       return self.content.seconds
    end
-
+   
    --- Get fractions.
    -- @return Timetag fractions.
    function Timetag:fractions()
       return self.content.fractions
    end
-
+   
    --- Low level API
    -- @section low-level-api
-
+   
    --- Get a timestamp with arbitrary precision.
    -- @param tbl Table with seconds and fractions.
    -- @param[opt] precision The fraction precision. default 1000
@@ -3517,7 +3534,7 @@ local function losc()
       local fractions = math.floor(precision * (tbl.fractions / TWO_POW_32) + 0.5)
       return seconds + fractions
    end
-
+   
    --- Pack an OSC Timetag.
    --
    -- The returned object is suitable for sending via a transport layer such as
@@ -3534,7 +3551,7 @@ local function losc()
       data[#data + 1] = _pack(">I4", tbl.fractions)
       return table.concat(data, "")
    end
-
+   
    --- Unpack an OSC Timetag.
    --
    -- @param data The data to unpack.
@@ -3548,10 +3565,10 @@ local function losc()
    end
    local Message = {}
    Message.__index = Message
-
+   
    --- High level API
    -- @section high-level-api
-
+   
    --- Create a new OSC message.
    --
    -- @tparam[opt] string|table msg OSC address or table constructor.
@@ -3584,7 +3601,7 @@ local function losc()
       end
       return self
    end
-
+   
    --- Add arguments to the message.
    --
    -- @param type OSC type string.
@@ -3606,7 +3623,7 @@ local function losc()
          end
       end
    end
-
+   
    --- Message iterator.
    --
    -- Iterate over message types and arguments.
@@ -3628,19 +3645,19 @@ local function losc()
       end
       return msg_it, tbl, 0
    end
-
+   
    --- Get the OSC address.
    -- @return The OSC address.
    function Message:address()
       return self.content.address
    end
-
+   
    --- Get the OSC type string.
    -- @return OSC type string or empty string.
    function Message:types()
       return self.content.types
    end
-
+   
    --- Get the OSC arguments.
    -- @return Table with arguments.
    function Message:args()
@@ -3650,7 +3667,7 @@ local function losc()
       end
       return args
    end
-
+   
    --- Validate a message.
    -- @tparam table|string message The message to validate. Can be in packed or unpacked form.
    function Message.validate(message)
@@ -3661,16 +3678,16 @@ local function losc()
          Message.tbl_validate(message.content or message)
       end
    end
-
+   
    --- Low level API
    -- @section low-level-api
-
+   
    --- Validate an OSC message address.
    -- @tparam string addr The address to validate.
    function Message.address_validate(addr)
       assert(not addr:find "[%s#*,%[%]{}%?]", "Invalid characters found in address.")
    end
-
+   
    --- Validate a table to be used as a message constructor.
    -- @tparam table tbl The table to validate.
    function Message.tbl_validate(tbl)
@@ -3679,7 +3696,7 @@ local function losc()
       assert(tbl.types, 'Missing "types" field.')
       assert(#tbl.types == #tbl, "Types and arguments mismatch")
    end
-
+   
    --- Validate a binary string to see if it is a valid OSC message.
    -- @tparam string bytes The byte string to validate.
    -- @tparam[opt] integer offset Byte offset.
@@ -3691,7 +3708,7 @@ local function losc()
       value = Types.unpack.s(bytes, offset)
       assert(value:sub(1, 1) == ",", "Error: malformed type tag.")
    end
-
+   
    --- Pack a table to a byte string.
    --
    -- The returned object is suitable for sending via a transport layer such as
@@ -3722,7 +3739,7 @@ local function losc()
       end
       return table.concat(packet, "")
    end
-
+   
    --- Unpack OSC message byte string.
    --
    -- Call `Message.validate()` before passing arguments to this function to
@@ -3750,12 +3767,12 @@ local function losc()
       end
       return message, offset
    end
-
+   
    local Bundle = {}
    Bundle.__index = Bundle
-
+   
    local ts = Timetag.get_timestamp
-
+   
    --- Pack a Bundle recursively.
    local function _pack(bundle, packet)
       packet[#packet + 1] = Types.pack.s "#bundle"
@@ -3776,7 +3793,7 @@ local function losc()
       end
       return table.concat(packet, "")
    end
-
+   
    --- Unpack a Bundle recursively.
    local function _unpack(data, bundle, offset, length)
       local value, _
@@ -3798,10 +3815,10 @@ local function losc()
       end
       return bundle, offset
    end
-
+   
    --- High level API
    -- @section high-level-api
-
+   
    --- Create a new OSC bundle.
    --
    -- Arguments can be one form of:
@@ -3824,13 +3841,13 @@ local function losc()
       end
       return self
    end
-
+   
    --- Adds an item to the bundle.
    -- @param item Can be a Message or another bundle.
    function Bundle:add(item)
       self.content[#self.content + 1] = item.content
    end
-
+   
    --- Get or set the bundle Timetag.
    -- @param[opt] tt A Timetag object.
    -- If no parameter is given it returns the current Timetag.
@@ -3841,7 +3858,7 @@ local function losc()
          return Timetag.new_raw(self.content.timetag)
       end
    end
-
+   
    --- Validate a bundle.
    -- @tparam table|string bundle The bundle to validate. Can be in packed or unpacked form.
    function Bundle.validate(bundle)
@@ -3852,16 +3869,16 @@ local function losc()
          Bundle.tbl_validate(bundle.content or bundle)
       end
    end
-
+   
    --- Low level API
    -- @section low-level-api
-
+   
    --- Validate a table that can be used as an OSC bundle.
    -- @param tbl The table to validate.
    function Bundle.tbl_validate(tbl)
       assert(type(tbl.timetag) == "table", "Missing OSC Timetag.")
    end
-
+   
    --- Validate a byte string that can be unpacked to an OSC bundle.
    -- @param data The byte string to validate.
    -- @param[opt] offset Byte offset.
@@ -3873,7 +3890,7 @@ local function losc()
       value = Types.unpack.t(data, offset)
       assert(type(value) == "table", "Missing bundle timetag")
    end
-
+   
    --- Pack an OSC bundle.
    --
    -- The returned object is suitable for sending via a transport layer such as
@@ -3885,7 +3902,7 @@ local function losc()
       local packet = {}
       return _pack(tbl, packet)
    end
-
+   
    --- Unpack an OSC bundle byte string.
    --
    -- @param data The data to unpack.
@@ -3895,9 +3912,9 @@ local function losc()
       local bundle = {}
       return _unpack(data, bundle, offset or 1)
    end
-
+   
    local Packet = {}
-
+   
    --- Check if a packet is a bundle or a message.
    -- @tparam string|table packet The packet to check.
    -- @return True if packet is a bundle otherwise false.
@@ -3910,7 +3927,7 @@ local function losc()
          return type(packet.timetag) == "table"
       end
    end
-
+   
    --- Validate a packet. Can be a message or a bundle.
    -- @tparam string|table packet The packet to validate.
    function Packet.validate(packet)
@@ -3920,7 +3937,7 @@ local function losc()
          Message.validate(packet)
       end
    end
-
+   
    --- Pack a Bundle or Message.
    -- @param tbl The table to pack.
    -- @return OSC data packet (byte string).
@@ -3933,7 +3950,7 @@ local function losc()
          return Message.pack(tbl.content or tbl)
       end
    end
-
+   
    --- Unpack an OSC packet.
    -- @tparam string data The data to unpack.
    -- @return table with the content of the OSC message (bundle or message).
@@ -3946,11 +3963,11 @@ local function losc()
          return Message.unpack(data)
       end
    end
-
+   
    local Pattern = {}
-
+   
    -- local ts = Timetag.get_timestamp
-
+   
    --- Escape magic lua characters from a pattern.
    -- @tparam string pattern The pattern to escape.
    -- @return A string with all magic lua characters escaped and OSC wildcards
@@ -3970,7 +3987,7 @@ local function losc()
       pattern = pattern:gsub("%]", "]+")
       return pattern
    end
-
+   
    local function match(key, address)
       local result = address:match(key) == address
       -- try and match group instead
@@ -3988,7 +4005,7 @@ local function losc()
       end
       return result
    end
-
+   
    local function invoke(message, timestamp, plugin)
       local address = message.address
       local now = plugin:now():timestamp(plugin.precision)
@@ -4010,7 +4027,7 @@ local function losc()
          end
       end
    end
-
+   
    local function dispatch(packet, plugin)
       if Packet.is_bundle(packet) then
          for _, item in ipairs(packet) do
@@ -4028,7 +4045,7 @@ local function losc()
          invoke(packet, 0, plugin)
       end
    end
-
+   
    --- Dispatch OSC packets.
    -- @tparam string data Packed OSC data byte string.
    -- @tparam table plugin The plugin to dispatch the message through.
@@ -4036,37 +4053,37 @@ local function losc()
       local packet = Packet.unpack(data)
       dispatch(packet, plugin)
    end
-
-   local losc = {
-      _VERSION = "losc v1.0.1",
-      _URL = "https://github.com/davidgranstrom/losc",
-      _DESCRIPTION = "Open Sound Control (OSC) library for lua/luajit.",
-      _LICENSE = [[
-    MIT License
-
-    Copyright (c) 2021 David Granström
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-  ]],
-   }
+   
+   -- local losc = {
+   --    _VERSION = "losc v1.0.1",
+   --    _URL = "https://github.com/davidgranstrom/losc",
+   --    _DESCRIPTION = "Open Sound Control (OSC) library for lua/luajit.",
+   --    _LICENSE = [[
+   --     MIT License
+   --
+   --     Copyright (c) 2021 David Granström
+   --
+   --     Permission is hereby granted, free of charge, to any person obtaining a copy
+   --     of this software and associated documentation files (the "Software"), to deal
+   --     in the Software without restriction, including without limitation the rights
+   --     to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   --     copies of the Software, and to permit persons to whom the Software is
+   --     furnished to do so, subject to the following conditions:
+   --
+   --     The above copyright notice and this permission notice shall be included in all
+   --     copies or substantial portions of the Software.
+   --
+   --     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   --     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   --     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   --     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   --     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   --     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   --     SOFTWARE.
+   --   ]],
+   -- }
    losc.__index = losc
-
+   
    --- Create a new instance.
    -- @tparam[options] table options Options.
    -- @usage local osc = losc.new()
@@ -4081,7 +4098,7 @@ local function losc()
       end
       return self
    end
-
+   
    --- Create a new Message.
    -- @tparam[opt] string|table args OSC address or table constructor.
    -- @return message object
@@ -4096,7 +4113,7 @@ local function losc()
       end
       return message
    end
-
+   
    --- Create a new OSC bundle.
    -- @param[opt] ... arguments.
    -- @return bundle object
@@ -4121,7 +4138,7 @@ local function losc()
       end
       return bundle
    end
-
+   
    --- Specify a plugin to use as transport layer.
    -- @param plugin The plugin to use, pass nil to disable current plugin.
    function losc:use(plugin)
@@ -4130,7 +4147,7 @@ local function losc()
          self.plugin.handlers = self.handlers
       end
    end
-
+   
    --- Get an OSC timetag with the current timestamp.
    -- Will fall back to `os.time()` if `now()` is not implemented by the plugin
    -- in use.
@@ -4144,7 +4161,7 @@ local function losc()
       end
       return Timetag.new(os.time(), 0)
    end
-
+   
    --- Opens an OSC server.
    -- This function might be blocking depending on the plugin in use.
    -- @param[opt] ... Plugin specific arguments.
@@ -4156,7 +4173,7 @@ local function losc()
       end
       return pcall(self.plugin.open, self.plugin, ...)
    end
-
+   
    --- Closes an OSC server.
    -- @param[opt] ... Plugin specific arguments.
    -- @return status, nil or error
@@ -4167,7 +4184,7 @@ local function losc()
       end
       return pcall(self.plugin.close, self.plugin, ...)
    end
-
+   
    --- Send an OSC packet.
    -- @param[opt] ... Plugin specific arguments.
    -- @return status, nil or error
@@ -4183,7 +4200,7 @@ local function losc()
       end
       return pcall(self.plugin.send, self.plugin, ...)
    end
-
+   
    --- Add an OSC handler.
    -- @param pattern The pattern to match on.
    -- @param func The callback to run if a message is received.
@@ -4226,7 +4243,7 @@ local function losc()
          self.plugin.handlers = self.handlers
       end
    end
-
+   
    --- Remove an OSC handler.
    -- @param pattern The pattern for the handler to remove.
    -- @usage losc:remove_handler('/handler/to/remove')
@@ -4236,7 +4253,7 @@ local function losc()
          self.plugin.handlers[pattern] = nil
       end
    end
-
+   
    --- Remove all registered OSC handlers.
    -- @usage losc:remove_all()
    function losc:remove_all()
@@ -4250,36 +4267,8 @@ local function losc()
    losc.Message = Message
    losc.Pattern = Pattern
    losc.Packet = Packet
-
-   return losc
+   
 end
---[[lit-meta
-  name = "noearc/modal"
-  version = "0.0.1.1"
-  homepage = "https://github.com/noearc/modal"
-  description = "tidal cycles in lua!"
-  license = "GPL3"
-]]
-local ut = {}
-local pattern = {}
-local control = {}
-local types = {}
-local theory = {}
-local notation = {}
-local a2s = {}
-local factory = {}
-local uv = require"luv" or vim.uv
-local has_lpeg, lpeg = pcall(require, "lpeg")
-lpeg = has_lpeg and lpeg or lulpeg():register(not _ENV and _G)
-local has_socket, socket = pcall(require, "socket")
-local has_al, al = pcall(require, "abletonlink")
-losc = losc()
-local Timetag = losc.Timetag
-local Pattern = losc.Pattern
-local Packet = losc.Packet
-local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
-_G.struct = nil
-local has_RL, RL = pcall(require, "readline")
 
 do
    local pairs = pairs
@@ -5505,6 +5494,7 @@ do
       return setmetatable({ latency = 0.2, callback = callback }, stream)
    end
    
+   local lpeg = require "lpeg"
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
    
    local function pId(...)
@@ -6247,6 +6237,7 @@ end
 
 do
    
+   local lpeg = require "lpeg"
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
    
    
@@ -6603,6 +6594,7 @@ do
       return { tag = "Return", a }
    end
    
+   -- require "moon.all"
    local function pSet(lhs, rhs)
       lhs.tag = "Id"
       return { tag = "Set", { lhs }, { rhs } }
@@ -6712,6 +6704,7 @@ do
 end
 
 do
+   local lpeg = require "lpeg"
    local P, S, V, R, C, Ct, Cc = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct, lpeg.Cc
    
    local concat, map = ut.concat, ut.map
@@ -7140,8 +7133,10 @@ do
 end
 
 do
+   local has_al, al = pcall(require, "abletonlink")
    _G.struct = nil
    local Stream = types.Stream
+   local uv = require "luv"
    
    local floor = math.floor
    local type = type
@@ -7178,12 +7173,12 @@ do
    local Pattern = losc.Pattern
    local Packet = losc.Packet
    
-   local M = {}
-   M.__index = M
+   local udp = {}
+   udp.__index = udp
    --- Fractional precision for bundle scheduling.
    -- 1000 is milliseconds. 1000000 is microseconds etc. Any precision is valid
    -- that makes sense for the plugin's scheduling function.
-   M.precision = 1000
+   udp.precision = 1000
    
    --- Create a new instance.
    -- @tparam[options] table options Options.
@@ -7196,8 +7191,8 @@ do
    --   recvPort = 8000,
    --   ignore_late = true, -- ignore late bundles
    -- }
-   function M.new(options)
-      local self = setmetatable({}, M)
+   function udp.new(options)
+      local self = setmetatable({}, udp)
       self.options = options or {}
       self.handle = uv.new_udp "inet"
       assert(self.handle, "Could not create UDP handle.")
@@ -7207,16 +7202,16 @@ do
    --- Create a Timetag with the current time.
    -- Precision is in milliseconds.
    -- @return Timetag object with current time.
-   function M:now() -- luacheck: ignore
+   function udp:now() -- luacheck: ignore
       local s, m = uv.gettimeofday()
-      return Timetag.new(s, m / M.precision)
+      return Timetag.new(s, m / udp.precision)
    end
    
    --- Schedule a OSC method for dispatch.
    --
    -- @tparam number timestamp When to schedule the bundle.
    -- @tparam function handler The OSC handler to call.
-   function M:schedule(timestamp, handler) -- luacheck: ignore
+   function udp:schedule(timestamp, handler) -- luacheck: ignore
       timestamp = math.max(0, timestamp)
       if timestamp > 0 then
          local timer = uv.new_timer()
@@ -7230,7 +7225,7 @@ do
    -- This function is blocking.
    -- @tparam string host IP address (e.g. '127.0.0.1').
    -- @tparam number port The port to listen on.
-   function M:open(host, port)
+   function udp:open(host, port)
       host = host or self.options.recvAddr
       port = port or self.options.recvPort
       self.handle:bind(host, port, { reuseaddr = true })
@@ -7248,14 +7243,13 @@ do
       self.options.recvPort = self.handle:getsockname().port
    end
    
-   function M:run_non_blocking()
-      print "listening"
+   function udp:run_non_blocking()
       -- Run the event loop once and return
       uv.run "nowait"
    end
    
    --- Close UDP server.
-   function M:close()
+   function udp:close()
       self.handle:recv_stop()
       if not self.handle:is_closing() then
          self.handle:close()
@@ -7267,7 +7261,7 @@ do
    -- @tparam table packet The packet to send.
    -- @tparam[opt] string address The IP address to send to.
    -- @tparam[opt] number port The port to send to.
-   function M:send(packet, address, port)
+   function udp:send(packet, address, port)
       address = address or self.options.sendAddr
       port = port or self.options.sendPort
       packet = assert(Packet.pack(packet))
@@ -7275,14 +7269,14 @@ do
    end
    
    local osc, sendOSC
-   local udp = M.new {
-      recvAddr = "127.0.0.1",
-      recvPort = 6010,
+   local plugin = udp.new {
+      -- recvAddr = "127.0.0.1",
+      -- recvPort = 6010,
       sendPort = target.port,
       sendAddr = target.address,
       -- ignore_late = true, -- ignore late bundles
    }
-   osc = losc.new { plugin = udp }
+   osc = losc.new { plugin = plugin }
    
    sendOSC = function(value, ts)
       local msg = {}
@@ -7314,8 +7308,7 @@ do
    function mt:start()
       if not self.running then
          self.running = true
-         osc:open() -- ???
-         osc:send { addr = "/dirt/handshake" }
+         -- osc:open() -- ???
          return self:createNotifyCoroutine()
       end
    end
@@ -7643,7 +7636,6 @@ do
    local concat = ut.concat
    local flip = ut.flip
    local method_wrap = ut.method_wrap
-   local curry_wrap = ut.curry_wrap
    local get_args = ut.get_args
    local timeToRand = ut.timeToRand
    local memoize = ut.memoize
@@ -8176,14 +8168,13 @@ do
    pattern.silence = silence
    
    function pure(value)
-      local query = function(span)
+      return Pattern(function(span)
          local cycles = span:spanCycles()
          for i, v in ipairs(cycles) do
             cycles[i] = Event(v.start:wholeCycle(), v, value)
          end
          return cycles
-      end
-      return Pattern(query)
+      end)
    end
    pattern.pure = pure
    
@@ -9072,6 +9063,8 @@ do
 end
 
    local mt = pattern.mt
+   -- local Clock = require "clock"
+   -- require "modal.ui"
    
    local modal = {}
    modal.version = "modal dev-1"
@@ -9102,7 +9095,9 @@ end
       modal[name] = func
    end
    
-   modal.maxi = notation.maxi(modal)
+   modal.notation = notation
+   
+   -- modal.maxi = notation.maxi(modal)
    
    setmetatable(modal, {
       __index = _G,
@@ -9124,16 +9119,27 @@ end
          end
       end,
    })
+   -- require("modedebug").start()
    
 do
    local function repl()
+      local uv = require "luv" or vim.uv
       local client = uv.new_tcp()
       local host = "127.0.0.1"
       local port = 9000
-      local stream = uv.tcp_connect(client, host, port, function(err)
-         assert(not err, err)
+      local connected = false
+      uv.tcp_connect(client, host, port, function(err)
+         print "connecting"
+         print(err)
+         if err == "" then
+            connected = true
+         end
       end)
    
+      RL = require "readline"
+      local has_RL, RL = pcall(require, "readline")
+      local modal = require "modal"
+      local notation = require("modal").notation
       local maxi = notation.maxi(modal)
    
       local keywords = {}
@@ -9195,13 +9201,6 @@ do
       print "modal repl   :? for help"
       while true do
          line = read "> "
-         if line == "exit" then
-            if c then
-               c:close()
-            end
-            break
-         end
-   
          if line ~= "" then
             local res = eval(line)
             if res then
@@ -9211,15 +9210,13 @@ do
                RL.add_history(line)
                -- RL.save_history()
             end
-            if stream then
+            if connected then
+               print "connected"
                uv.write(client, line .. "\n")
                uv.run "once"
             end
          end
       end
-   
-      c:close()
-      os.exit()
    end
    modal.repl = repl
    
@@ -9227,6 +9224,10 @@ end
 
 do
    local function server(port)
+      local uv = require "luv" or vim.uv
+      local ut = require "modal.utils"
+      local modal = require "modal"
+      local notation = require "modal.notation"
       local maxi = notation.maxi(modal)
       local log = ut.log
    
@@ -9243,22 +9244,18 @@ do
       end
    
       port = port or 9000
-      -- local sock = assert(socket.bind(host, port))
-      -- local i, p = sock:getsockname()
-      -- assert(i, p)
-      --
-      -- print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
-      -- local c = assert(sock:accept())
-      -- c:settimeout(0)
+   
       local tcp = uv.new_tcp()
       tcp:bind("127.0.0.1", 9000)
       tcp:listen(128, function(err)
          assert(not err, err)
+         print "listening"
          local client = uv.new_tcp()
          tcp:accept(client)
          client:read_start(function(err, chunk)
-            assert(not err, err)
+            -- assert(not err, err)
             if chunk then
+               print(chunk)
                eval(chunk)
             else
                client:shutdown()
@@ -9267,15 +9264,6 @@ do
          end)
       end)
    
-      -- local l, e
-   
-      -- local listen = function()
-      --    l, e = c:receive()
-      --    if not e then
-      --       eval(l)
-      --    end
-      -- end
-      --
       local timer = uv.new_timer()
       timer:start(0, 10, function()
          coroutine.resume(clock.co)

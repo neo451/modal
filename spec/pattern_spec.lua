@@ -4,6 +4,7 @@ local assert = require("busted").assert
 
 local M = require "modal"
 M()
+ut.Usecolor = false
 local Span, Event = M.Span, M.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
 

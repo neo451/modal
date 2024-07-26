@@ -1,4 +1,4 @@
-local Clock = require "clock"
+-- local clock = require "clock"
 local DefaultClock = Clock()
 local factory = {}
 

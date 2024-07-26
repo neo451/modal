@@ -1,13 +1,13 @@
 local pattern = require "pattern"
 local notation = require "notation"
-local ut = require "utils"
 local factory = require "factory"
 local theory = require "theory"
+local ut = require "ut"
 local control = require "control"
 local mt = pattern.mt
 local types = require "types"
-local Clock = require "clock"
-require "modal.ui"
+-- local Clock = require "clock"
+-- require "modal.ui"
 
 local modal = {}
 modal.version = "modal dev-1"
@@ -38,7 +38,9 @@ for name, func in pairs(pattern) do
    modal[name] = func
 end
 
-modal.maxi = notation.maxi(modal)
+modal.notation = notation
+
+-- modal.maxi = notation.maxi(modal)
 
 setmetatable(modal, {
    __index = _G,
@@ -60,6 +62,6 @@ setmetatable(modal, {
       end
    end,
 })
-require("modedebug").start()
+-- require("modedebug").start()
 
 return modal

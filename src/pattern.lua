@@ -30,7 +30,6 @@ local union = ut.union
 local concat = ut.concat
 local flip = ut.flip
 local method_wrap = ut.method_wrap
-local curry_wrap = ut.curry_wrap
 local get_args = ut.get_args
 local timeToRand = ut.timeToRand
 local memoize = ut.memoize

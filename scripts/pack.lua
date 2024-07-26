@@ -29,19 +29,27 @@ end
 
 scandir "src/"
 
+local modules = { "ut", "types", "a2s", "notation", "theory", "clock", "factory", "control", "pattern", "losc" }
+
+local function not_modname(line)
+   for _, name in ipairs(modules) do
+      if line:match(('local %s = require "%s"'):format(name, name)) then
+         return false
+      end
+   end
+   return true
+end
+
 local function get_content(name, file, no_req)
    no_req = no_req or true
    local contents = {}
-   for i in file:lines() do
+   for line in file:lines() do
       if no_req then
-         if not i:find "require" and not i:match(("local %s = {}"):format(name)) then
-            -- if i:find "M." or i:find "M " then
-            --    i = i:gsub("M", name)
-            -- end
-            contents[#contents + 1] = "   " .. i
+         if not_modname(line) and not line:match(("local %s = {}"):format(name)) then
+            contents[#contents + 1] = "   " .. line
          end
       else
-         contents[#contents + 1] = "   " .. i
+         contents[#contents + 1] = "   " .. line
       end
    end
    contents[#contents] = nil
@@ -73,26 +81,17 @@ local theory = {}
 local notation = {}
 local a2s = {}
 local factory = {}
-local uv = require"luv" or vim.uv
-local has_lpeg, lpeg = pcall(require, "lpeg")
-lpeg = has_lpeg and lpeg or lulpeg():register(not _ENV and _G)
-local has_socket, socket = pcall(require, "socket")
-local has_al, al = pcall(require, "abletonlink")
-losc = losc()
-local Timetag = losc.Timetag
-local Pattern = losc.Pattern
-local Packet = losc.Packet
-local has_plugin, plugin = pcall(require, "losc.plugins.udp-socket")
-_G.struct = nil
-local has_RL, RL = pcall(require, "readline")
+local losc = {}
 ]==]
 
 -- load("lulpeg", false)
-local header = files["lulpeg"]:read "*a" .. "\n" .. files["losc"]:read "*a" .. requires
+local header = files["lulpeg"]:read "*a" .. "\n" .. requires
+-- .. files["losc"]:read "*a" .. requires
 
 function load(name, no_req)
    header = header .. "\n" .. wrap(name, files[name], no_req)
 end
+load "losc"
 load "ut"
 load "types"
 load "a2s"
