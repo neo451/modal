@@ -5,23 +5,34 @@ Lua port of tidal, this project is at early alpha stage, all kinds of things can
 See [Wiki](https://github.com/noearc/modal/wiki) for more desgin highlights and future plans.
 
 ## Dependencies
+
 May need to manually install `libasio-dev` for abletonlink to work
 
 ## Install
+
 ### Copy
+
 If you are familiar with lua and just want to experiment right away, copy [modal.lua](https://github.com/noearc/modal/blob/main/modal.lua) and use seqerate lua instance to run repl and server.
 Install or build missing dependencies ...
+
 ### Luarocks
+
 Install luarocks **this one is not ready yet**
+
 ```
 sudo luarocks install modal 
 ```
+
 ### Luvit
+
 1. Install [lit](https://github.com/luvit/lit) and
+
 ```
 lit install noearc/modal
 ```
+
 this installs modal.lua into a deps/ directory. later should be able to build a binary with lit as well.
+
 ## Build and Develop
 
 1. Clone or download the project zip from github
@@ -37,7 +48,7 @@ this installs modal.lua into a deps/ directory. later should be able to build a 
 
 ## History
 
-This porject works on top of the working prototype port of [tranquility]( https://github.com/XiNNiW/tranquility ), the og lua port. I originally intended this as a moonscript port, because it has a more tarse syntax. But as this project grew larger, lua tooling is obviously better. Plus I wrote the custom parser to replace it as the user code parser. So this project is the current lua port of Tidal that went the furtherest for now :)
+This porject works on top of the working prototype port of [tranquility](https://github.com/XiNNiW/tranquility), the og lua port. I originally intended this as a moonscript port, because it has a more tarse syntax. But as this project grew larger, lua tooling is obviously better. Plus I wrote the custom parser to replace it as the user code parser. So this project is the current lua port of Tidal that went the furtherest for now :)
 
 ## Collaboration
 

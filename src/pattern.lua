@@ -86,7 +86,6 @@ function mt:show()
    return tostring(self)
 end
 
--- TODO: not triggered in busted
 function mt:__eq(other)
    return self:__tostring() == other:__tostring()
 end
@@ -124,10 +123,12 @@ function mt:slowcat(pats)
    return slowcat(pats)
 end
 
--- TODO: intuitive??
-function mt:fastcat(pats)
-   pats[#pats + 1] = self
-   return fastcat(pats)
+function mt:fastcat(...)
+   local pats = { self }
+   for i = 1, select("#", ...) do
+      pats[i + 1] = select(i, ...)
+   end
+   return pattern.fastcat(pats)
 end
 
 function mt:stack(pats)
@@ -252,8 +253,8 @@ mt.withEventSpan = withEventSpan
 local function withEventTime(pat, f)
    local query = function(span)
       local events = pat.query(span)
-      local time_func = function(span)
-         return span:withTime(f)
+      local time_func = function(sp)
+         return sp:withTime(f)
       end
       local event_func = function(event)
          return event:withSpan(time_func)
@@ -269,8 +270,7 @@ mt.withEventTime = withEventTime
 
 local function withTime(pat, qf, ef)
    local query = withQueryTime(pat, qf)
-   local pattern = withEventTime(query, ef)
-   return pattern
+   return withEventTime(query, ef)
 end
 mt.withTime = withTime
 
@@ -422,8 +422,8 @@ local function squeezeJoin(pat)
    local query = function(span)
       local events = discreteOnly(pat).query(span)
       local flatEvent = function(outerEvent)
-         local span = outerEvent:wholeOrPart()
-         local innerPat = pattern.focus(span.start, span.stop, outerEvent.value)
+         local n_span = outerEvent:wholeOrPart()
+         local innerPat = pattern.focus(n_span.start, n_span.stop, outerEvent.value)
          local innerEvents = innerPat.query(outerEvent.part)
          local munge = function(outer, inner)
             local whole = nil
@@ -513,13 +513,13 @@ local ops = {
    div = function(a, b) return a / b end,
    mod = function(a, b) return a % b end,
    pow = function(a, b) return a ^ b end,
-   concat = function (a, b) return a .. b end,
-   keepif = function (a, b)
+   concat = function(a, b) return a .. b end,
+   keepif = function(a, b)
       if b == 0 then b = false end
       return b and a or nil
    end,
-   uni = function (a, b) return union(a, b) end,
-   funi = function (a, b) return flip(union)(a, b) end,
+   uni = function(a, b) return union(a, b) end,
+   funi = function(a, b) return flip(union)(a, b) end,
 }
 -- stylua: ignore end
 
@@ -570,6 +570,7 @@ function pure(value)
       return cycles
    end)
 end
+
 pattern.pure = pure
 
 local function purify(value)
@@ -669,6 +670,7 @@ register("overlay :: Pattern a -> Pattern a -> Pattern a", overlay, false)
 function stack(pats)
    return reduce(overlay, silence, pats)
 end
+
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
 --- TODO:
@@ -679,6 +681,7 @@ function pattern.polymeter(pats, steps)
    end
    return stack(pats)
 end
+
 pattern.pm = pattern.polymeter
 -- register("polymeter :: Pattern Int -> [Pattern a] -> Pattern a", polymeter, false)
 
@@ -700,11 +703,13 @@ function slowcat(pats)
    end
    return splitQueries(Pattern(query))
 end
+
 register("slowcat :: [Pattern a] -> Pattern a", slowcat, false)
 
 function fastcat(pats)
    return pattern.fast(#pats, pattern.slowcat(pats))
 end
+
 register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
 
 local function timecat(tups)
@@ -769,6 +774,7 @@ function fast(factor, pat)
       end)
    end
 end
+
 register("fast :: Pattern Time -> Pattern a -> Pattern a", fast)
 
 local function slow(factor, pat)
@@ -852,12 +858,14 @@ function compress(b, e, pat)
    local fasted = fastgap((e - b):reverse(), pat)
    return late(b, fasted)
 end
+
 register("compress :: Time -> Time -> Pattern a -> Pattern a", compress, false)
 
 function focus(b, e, pat)
    local fasted = fast((e - b):reverse(), pat)
    return late(b:cyclePos(), fasted)
 end
+
 register("focus :: Time -> Time -> Pattern a -> Pattern a", focus, false)
 
 local function zoom(s, e, pat)
@@ -910,6 +918,7 @@ register("segment :: Pattern Time -> Pattern a -> Pattern a", segment)
 function range(mi, ma, pat)
    return pat * (ma - mi) + mi
 end
+
 register("range :: Pattern number -> Pattern number -> Pattern number -> Pattern a", range)
 
 local waveform = function(func)
@@ -933,35 +942,41 @@ local fromBipolar = function(pat)
    return (pat + 1) / 2
 end
 
--- stylua: ignore start
-local sine2 = waveform(function(t) return sin(t:asFloat() * pi * 2) end)
+local sine2 = waveform(function(t)
+   return sin(t:asFloat() * pi * 2)
+end)
 local sine = fromBipolar(sine2)
 local cosine2 = late(1 / 4, sine2)
 local cosine = fromBipolar(cosine2)
-local square = waveform(function(t) return floor((t * 2) % 2) end)
+local square = waveform(function(t)
+   return floor((t * 2) % 2)
+end)
 local square2 = toBipolar(square)
-local isaw = waveform(function(t) return -(t % 1) + 1 end)
+local isaw = waveform(function(t)
+   return -(t % 1) + 1
+end)
 local isaw2 = toBipolar(isaw)
-local saw = waveform(function(t) return t % 1 end)
+local saw = waveform(function(t)
+   return t % 1
+end)
 local saw2 = toBipolar(saw)
 local tri = fastcat { isaw, saw }
 local tri2 = fastcat { isaw2, saw2 }
 local time = waveform(id)
 local rand = waveform(timeToRand)
--- stylua: ignore end
 
-local _irand = function(i)
+local function _irand(i)
    return fmap(rand, function(x)
       return floor(x * i)
    end)
 end
 
-local irand = function(ipat)
+local function irand(ipat)
    return innerJoin(fmap(ipat, _irand))
 end
 register("irand :: Pattern Num -> Pattern Num", irand)
 
-local _chooseWith = function(pat, vals)
+local function _chooseWith(pat, vals)
    if #vals == 0 then
       return silence
    end
@@ -971,19 +986,19 @@ local _chooseWith = function(pat, vals)
    end)
 end
 
-local chooseWith = function(pat, ...)
-   return outerJoin(_chooseWith(pat, ...))
-end
+-- local function chooseWith(pat, ...)
+--    return outerJoin(_chooseWith(pat, ...))
+-- end
 
-local chooseInWith = function(pat, vals)
+local function chooseInWith(pat, vals)
    return innerJoin(_chooseWith(pat, vals))
 end
 
-local choose = function(vals)
+local function choose(vals)
    return chooseInWith(rand, vals)
 end
 
-local randcat = function(pats)
+local function randcat(pats)
    return pattern.segment(1, choose(pats))
 end
 register("randcat :: [Pattern a] -> Pattern a", randcat, false)
@@ -1004,7 +1019,6 @@ local function degradeByWith(prand, by, pat)
       filterValues(prand, f)
    )
 end
-
 register("degradeByWith :: Pattern Double -> Double -> Pattern a -> Pattern a", degradeByWith)
 
 local function degradeBy(by, pat)
@@ -1087,6 +1101,7 @@ function rev(pat)
    end
    return Pattern(query)
 end
+
 register("rev :: Pattern a -> Pattern a", rev)
 
 local function iter(n, pat)

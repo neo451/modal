@@ -14,8 +14,8 @@ local function repl()
 
    RL = require "readline"
    local has_RL, RL = pcall(require, "readline")
-   local modal = require "modal"
-   local notation = require("modal").notation
+   -- local modal = require "modal"
+   -- local notation = require("modal").notation
    local maxi = notation.maxi(modal)
 
    local keywords = {}

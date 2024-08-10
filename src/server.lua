@@ -1,13 +1,25 @@
-local function server(port)
-   local uv = require "luv" or vim.uv
-   local ut = require "modal.utils"
-   local modal = require "modal"
-   local notation = require "modal.notation"
+local function server()
+   local socket = require "socket"
+   -- local ut = require "modal.utils"
+   -- local modal = require "modal"
+   -- local notation = require "modal.notation"
    local maxi = notation.maxi(modal)
    local log = ut.log
 
    local clock = modal.DefaultClock
    clock:start()
+
+   local host = "*"
+   local port = 9000
+   local sock = assert(socket.bind(host, port))
+   local i, p = sock:getsockname()
+   assert(i, p)
+
+   print("Waiting connection from repl on " .. i .. ":" .. p .. "...")
+   local c = assert(sock:accept())
+   c:settimeout(0)
+
+   print "Connected"
 
    local eval = function(a)
       local ok, fn = pcall(maxi, a)
@@ -18,32 +30,19 @@ local function server(port)
       end
    end
 
-   port = port or 9000
+   local l, e
 
-   local tcp = uv.new_tcp()
-   tcp:bind("127.0.0.1", 9000)
-   tcp:listen(128, function(err)
-      assert(not err, err)
-      print "listening"
-      local client = uv.new_tcp()
-      tcp:accept(client)
-      client:read_start(function(err, chunk)
-         -- assert(not err, err)
-         if chunk then
-            print(chunk)
-            eval(chunk)
-         else
-            client:shutdown()
-            client:close()
-         end
-      end)
-   end)
+   local listen = function()
+      l, e = c:receive()
+      if not e then
+         print(l)
+         eval(l)
+      end
+   end
 
-   local timer = uv.new_timer()
-   timer:start(0, 10, function()
-      coroutine.resume(clock.co)
-   end)
-   uv.run()
+   repeat
+      coroutine.resume(clock.co, listen)
+   until false
 end
 
 modal.server = server

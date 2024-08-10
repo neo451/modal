@@ -212,6 +212,9 @@ end
 local function decimaltofraction(x0, err)
    err = err or 0.0000000001
    local num, den
+   if type(x0) == "table" then
+      print(T(x0))
+   end
    local g = abs(x0)
    local sign = x0 / g
    local a, b, c, d = 0, 1, 1, 0
@@ -498,6 +501,7 @@ function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now, State)
       self.callback(value, ts)
    end
 end
+
 stream.__index = stream
 
 local function Stream(callback)

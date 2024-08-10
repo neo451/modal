@@ -5,12 +5,9 @@ local assert = require("busted").assert
 local M = require "modal"
 M()
 ut.Usecolor = false
+
 local Span, Event = M.Span, M.Event
 local Pattern, reify, pure = M.Pattern, M.reify, M.pure
-
-assert.pat = function(a, b)
-   assert.same(a:show(), b:show())
-end
 
 describe("new", function()
    it("should initialize with defaults", function()
@@ -157,6 +154,32 @@ describe("withEventTime", function()
          Event(Span(0.5, 1.5), Span(0.5, 1.5), 5),
       }
       assert.same(expected, newPat(0, 1))
+   end)
+end)
+
+describe("transform as methods", function()
+   it("", function()
+      local pat = pure(1):fastcat { 2, 3 }
+      assert.equal(fastcat { 1, 2, 3 }, pat)
+   end)
+end)
+describe("appRight", function()
+   it("should take structure from right and appliy f", function()
+      local add = function(a)
+         return function(b)
+            return a + b
+         end
+      end
+      local left = reify({ 1, 2 }):fmap(add)
+      local right = reify { 4, 5, 6 }
+      local expected = {
+         Event(Span(0, 1 / 3), Span(0, 1 / 3), 5),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 3, 1 / 2), 6),
+         Event(Span(1 / 3, 2 / 3), Span(1 / 2, 2 / 3), 7),
+         Event(Span(2 / 3, 1), Span(2 / 3, 1), 8),
+      }
+      local pat = left:appRight(right)
+      assert.same(expected, pat(0, 1))
    end)
 end)
 
@@ -323,7 +346,7 @@ end)
 
 describe("timecat", function()
    it("should return a pattern based one the time-pat 'tuples' passed in", function()
-      local pat = timecat { 3, fast(4, pure "bd"), 1, fast(8, pure "hh") }
+      local pat = timecat { 3, fast(4, "bd"), 1, fast(8, "hh") }
       local expected = {
          Event(Span(0, 3 / 16), Span(0, 3 / 16), "bd"),
          Event(Span(3 / 16, 3 / 8), Span(3 / 16, 3 / 8), "bd"),
@@ -387,7 +410,7 @@ describe("early", function()
    it("should return a pattern whose Events moved backword in time", function()
       local pat = early(0.5, reify { "bd", "sd" })
       local expected = reify { "sd", "bd" }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -395,7 +418,7 @@ describe("fastgap", function()
    it("should bring pattern closer together", function()
       local pat = fastgap(4, reify { "bd", "sd" })
       local expected = timecat { 1, "bd", 1, "sd", 6, silence }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -403,7 +426,7 @@ describe("compress", function()
    it("should bring pattern closer together", function()
       local pat = compress(0.25, 0.75, fastcat { "bd", "sd" })
       local expected = fastcat { silence, "bd", "sd", silence }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -411,7 +434,7 @@ describe("focus", function()
    it("should bring pattern closer together, but leave no gap, and focus can be bigger than a cycle", function()
       local pat = focus(1 / 4, 3 / 4, reify { "bd", "sd" })
       local expected = fastcat { "sd", "bd", "sd", "bd" }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -419,7 +442,7 @@ describe("zoom", function()
    it("should play a portion of a pattern", function()
       local pat = zoom(1 / 4, 3 / 4, reify { "x", "bd", "sd", "x" })
       local expected = fastcat { "bd", "sd" }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -460,7 +483,7 @@ describe("euclid", function()
    it("shoudl gen euclid pats", function()
       local pat = euclidRot(3, 8, 1, "bd")
       local expected = struct(bjork(3, 8, 1), "bd")
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -512,25 +535,25 @@ describe("every", function()
       end
       local pat = every(3, inc1, 1)
       local expected = slowcat { 2, 1, 1 }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 
    it("should take pattern of functions as second param", function()
       local pat = every(3, stack { fast(2), reify "(+ 1)" }, 1)
       local expected = stack { slowcat { fast(2, 1), 1, 1 }, slowcat { 2, 1, 1 } }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 
    it("should take string lambda that gets lib funcs env", function()
       local pat = every(3, "fast 2", 1)
       local expected = slowcat { fast(2, 1), 1, 1 }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
    -- TODO:
    -- it("should take mini-notation of functions", function()
    --    local pat = every(3, "[(+ 1), (fast 2)]", 1)
    --    local expected = stack { slowcat { fast(2, 1), 1, 1 }, slowcat { 2, 1, 1 } }
-   --    assert.pat(expected, pat)
+   --    assert.equal(expected, pat)
    -- end)
 end)
 
@@ -539,25 +562,25 @@ describe("scale", function()
       -- gong : { 0, 2, 4, 7, 9 }
       local pat = note("1 2 3"):scale "gong"
       local expected = note "2 4 7"
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
    it("should do mod", function()
       local pat = note("5 6 7"):scale "gong"
       local expected = note "12 14 16" -- 0, 2, 4 + 12
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
 describe("struct", function()
    it("should give bool struct to pat", function()
-      assert.pat(reify { 1, 1 }, M.struct({ true, true }, 1))
-      assert.pat(reify { 1, silence, 1 }, M.struct({ true, false, true }, 1))
+      assert.equal(reify { 1, 1 }, M.struct({ true, true }, 1))
+      assert.equal(reify { 1, silence, 1 }, M.struct({ true, false, true }, 1))
    end)
 end)
 
 describe("ply", function()
    it("should repeat every element in the cycle with give times", function()
-      assert.pat(reify { 1, 1, 1, 2, 2, 2 }, ply(3, reify { 1, 2 }))
+      assert.equal(reify { 1, 1, 1, 2, 2, 2 }, ply(3, reify { 1, 2 }))
    end)
 end)
 
@@ -566,7 +589,7 @@ describe("Tidal operators", function()
    -- it("register ops as pattern methods", function()
    --    local pat = n(1)["|>"](s "bd")
    --    local expected = op["|>"](n(1), s "bd")
-   --    assert.pat(expected, pat)
+   --    assert.equal(expected, pat)
    -- end)
 end)
 
@@ -575,13 +598,13 @@ describe("layer", function()
       local inc1 = function(x)
          return x + 1
       end
-      assert.pat(stack { 2, 1 }, layer({ inc1, id }, 1))
+      assert.equal(stack { 2, 1 }, layer({ inc1, id }, 1))
    end)
 end)
 
 describe("juxBy", function()
    it("", function()
-      assert.pat(stack { s("bd"):pan(0.25), s("bd"):fast(2):pan(0.75) }, juxBy(0.5, fast(2), s "bd"))
+      assert.equal(stack { s("bd"):pan(0.25), s("bd"):fast(2):pan(0.75) }, juxBy(0.5, fast(2), s "bd"))
    end)
 end)
 
@@ -590,7 +613,7 @@ describe("striate", function()
       local pat = striate(2, s "bd")
       local expected =
          fastcat { reify { ["begin"] = 0, ["end"] = 0.5, s = "bd" }, { ["begin"] = 0.5, ["end"] = 1, s = "bd" } }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -603,7 +626,7 @@ describe("chop", function()
          reify { ["begin"] = 0, ["end"] = 0.5, s = "sd" },
          reify { ["begin"] = 0.5, ["end"] = 1, s = "sd" },
       }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -614,7 +637,7 @@ describe("loopAt", function()
          reify { ["begin"] = 0, ["end"] = 0.5, s = "bd", speed = 0.5, unit = "c" },
          reify { ["begin"] = 0.5, ["end"] = 1, s = "bd", speed = 0.5, unit = "c" },
       }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
 
@@ -625,7 +648,7 @@ end)
 --          reify { speed = 2, unit = "c", s = "bd" },
 --          reify { speed = 2, unit = "c", s = "sd" },
 --       }
---       assert.pat(expected, pat)
+--       assert.equal(expected, pat)
 --    end)
 -- end)
 
@@ -636,7 +659,7 @@ end)
 --          reify { speed = 2, unit = "c", s = "bd" },
 --          reify { speed = 2, unit = "c", s = "sd" },
 --       }
---       assert.pat(expected, pat)
+--       assert.equal(expected, pat)
 --    end)
 -- end)
 --
@@ -648,6 +671,6 @@ describe("slice", function()
          reify { ["begin"] = 0, ["end"] = 1 / 8, s = "bd" },
          reify { ["begin"] = 1 / 8, ["end"] = 1 / 4, s = "bd" },
       }
-      assert.pat(expected, pat)
+      assert.equal(expected, pat)
    end)
 end)
