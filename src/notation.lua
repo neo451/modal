@@ -1,6 +1,7 @@
 local ut = require "ut"
 local notation = {}
 
+local mpp = require("metalua.pprint").print
 local lpeg = require "lpeg"
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 
@@ -330,7 +331,7 @@ end
 local function pPolymeter(args, _, steps)
    steps = (steps == -1) and Num(#args[1]) or steps
    args = map(pSeq(false), args)
-   return Call("polymeter", steps, Table(args))
+   return Call("polymeter", Table(args), steps)
 end
 
 local function pSlowSeq(args, tag)
@@ -446,7 +447,6 @@ local function make_gen(top_level)
          end
          local ok, fn
          local lua_src = to_str(src)
-         -- print(lua_src)
          if not lua_src then
             return false
          end

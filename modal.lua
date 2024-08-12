@@ -6037,6 +6037,7 @@ do
    end
    
    function a2s:Call(node, f)
+      -- TODO: wrong paren condition...
       local parens
       if node[2].tag == "String" or node[2].tag == "Table" then
          parens = false
@@ -6044,9 +6045,11 @@ do
          parens = true
       end
       self:node(f)
-      self:acc(parens and "(" or " ")
+      -- self:acc(parens and "(" or " ")
+      self:acc "("
       self:list(node, ", ", 2) -- skip `f'.
-      self:acc(parens and ")")
+      self:acc ")"
+      -- self:acc(parens and ")")
    end
    
    function a2s:Invoke(node, f, method)
@@ -6241,6 +6244,7 @@ end
 
 do
    
+   local mpp = require("metalua.pprint").print
    local lpeg = require "lpeg"
    local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
    
@@ -6569,7 +6573,7 @@ do
    local function pPolymeter(args, _, steps)
       steps = (steps == -1) and Num(#args[1]) or steps
       args = map(pSeq(false), args)
-      return Call("polymeter", steps, Table(args))
+      return Call("polymeter", Table(args), steps)
    end
    
    local function pSlowSeq(args, tag)
@@ -6685,7 +6689,6 @@ do
             end
             local ok, fn
             local lua_src = to_str(src)
-            -- print(lua_src)
             if not lua_src then
                return false
             end
@@ -7728,24 +7731,6 @@ do
       return op["|^"](self, other)
    end
    
-   function mt:slowcat(pats)
-      pats[#pats + 1] = self
-      return slowcat(pats)
-   end
-   
-   function mt:fastcat(...)
-      local pats = { self }
-      for i = 1, select("#", ...) do
-         pats[i + 1] = select(i, ...)
-      end
-      return pattern.fastcat(pats)
-   end
-   
-   function mt:stack(pats)
-      pats[#pats + 1] = self
-      return stack(pats)
-   end
-   
    mt.__index = mt
    
    ---@class Pattern
@@ -8229,9 +8214,10 @@ do
                   v = Time(v)
                end
                if tc then
-                  if tc == "Pattern" and tvar == "f" and type(v) == "string" then
-                     v = reify("(" .. v .. ")")
-                  elseif tc == "Pattern" then
+                  -- if tc == "Pattern" and tvar == "f" and type(v) == "string" then
+                  --    v = reify("(" .. v .. ")")
+                  if tc == "Pattern" then
+                     print(v)
                      v = reify(v)
                   end
                end
@@ -8283,10 +8269,10 @@ do
    
    register("stack :: [Pattern a] -> Pattern a", stack, false)
    
-   --- TODO:
    function pattern.polymeter(pats, steps)
       steps = steps or pats[1]:len()
       for i, pat in ipairs(pats) do
+         pat = reify(pat)
          pats[i] = pattern.fast(steps / pat:len(), pat)
       end
       return stack(pats)
@@ -8321,6 +8307,30 @@ do
    end
    
    register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
+   
+   function mt:slowcat(...)
+      local pats = { self }
+      for i = 1, select("#", ...) do
+         pats[i + 1] = select(i, ...)
+      end
+      return slowcat(pats)
+   end
+   
+   function mt:fastcat(...)
+      local pats = { self }
+      for i = 1, select("#", ...) do
+         pats[i + 1] = select(i, ...)
+      end
+      return fastcat(pats)
+   end
+   
+   function mt:stack(...)
+      local pats = { self }
+      for i = 1, select("#", ...) do
+         pats[i + 1] = select(i, ...)
+      end
+      return stack(pats)
+   end
    
    local function timecat(tups)
       local total = 0
@@ -8596,9 +8606,9 @@ do
       end)
    end
    
-   -- local function chooseWith(pat, ...)
-   --    return outerJoin(_chooseWith(pat, ...))
-   -- end
+   local function chooseWith(pat, ...)
+      return outerJoin(_chooseWith(pat, ...))
+   end
    
    local function chooseInWith(pat, vals)
       return innerJoin(_chooseWith(pat, vals))
@@ -8764,6 +8774,7 @@ do
    end
    
    local function every(n, f, pat)
+      print(n, f, pat)
       local acc = {}
       for i = 1, n do
          acc[i] = (i == 1) and f(pat) or pat
@@ -9033,16 +9044,16 @@ do
    ---@param s string | number
    ---@return Pattern
    local function cF(d, s)
-      print(s)
+      -- print(s)
       s = tonumber(s) and tonumber(s) or s
       local query = function(span)
          if not span.controls then
             return silence
          end
          local val = span.controls[s]
-         print(val)
+         -- print(val)
          local pat = pure(val or d)
-         print(pat.query(span))
+         -- print(pat.query(span))
          return pat.query(span)
       end
       return Pattern(query)

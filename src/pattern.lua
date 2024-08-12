@@ -118,24 +118,6 @@ function mt:__pow(other)
    return op["|^"](self, other)
 end
 
-function mt:slowcat(pats)
-   pats[#pats + 1] = self
-   return slowcat(pats)
-end
-
-function mt:fastcat(...)
-   local pats = { self }
-   for i = 1, select("#", ...) do
-      pats[i + 1] = select(i, ...)
-   end
-   return pattern.fastcat(pats)
-end
-
-function mt:stack(pats)
-   pats[#pats + 1] = self
-   return stack(pats)
-end
-
 mt.__index = mt
 
 ---@class Pattern
@@ -619,9 +601,10 @@ local function type_wrap(f, name)
                v = Time(v)
             end
             if tc then
-               if tc == "Pattern" and tvar == "f" and type(v) == "string" then
-                  v = reify("(" .. v .. ")")
-               elseif tc == "Pattern" then
+               -- if tc == "Pattern" and tvar == "f" and type(v) == "string" then
+               --    v = reify("(" .. v .. ")")
+               if tc == "Pattern" then
+                  print(v)
                   v = reify(v)
                end
             end
@@ -673,10 +656,10 @@ end
 
 register("stack :: [Pattern a] -> Pattern a", stack, false)
 
---- TODO:
 function pattern.polymeter(pats, steps)
    steps = steps or pats[1]:len()
    for i, pat in ipairs(pats) do
+      pat = reify(pat)
       pats[i] = pattern.fast(steps / pat:len(), pat)
    end
    return stack(pats)
@@ -711,6 +694,30 @@ function fastcat(pats)
 end
 
 register("fastcat :: [Pattern a] -> Pattern a", fastcat, false)
+
+function mt:slowcat(...)
+   local pats = { self }
+   for i = 1, select("#", ...) do
+      pats[i + 1] = select(i, ...)
+   end
+   return slowcat(pats)
+end
+
+function mt:fastcat(...)
+   local pats = { self }
+   for i = 1, select("#", ...) do
+      pats[i + 1] = select(i, ...)
+   end
+   return fastcat(pats)
+end
+
+function mt:stack(...)
+   local pats = { self }
+   for i = 1, select("#", ...) do
+      pats[i + 1] = select(i, ...)
+   end
+   return stack(pats)
+end
 
 local function timecat(tups)
    local total = 0
@@ -986,9 +993,9 @@ local function _chooseWith(pat, vals)
    end)
 end
 
--- local function chooseWith(pat, ...)
---    return outerJoin(_chooseWith(pat, ...))
--- end
+local function chooseWith(pat, ...)
+   return outerJoin(_chooseWith(pat, ...))
+end
 
 local function chooseInWith(pat, vals)
    return innerJoin(_chooseWith(pat, vals))
@@ -1154,6 +1161,7 @@ local slowcatPrime = function(pats)
 end
 
 local function every(n, f, pat)
+   print(n, f, pat)
    local acc = {}
    for i = 1, n do
       acc[i] = (i == 1) and f(pat) or pat
@@ -1424,16 +1432,16 @@ end
 ---@param s string | number
 ---@return Pattern
 local function cF(d, s)
-   print(s)
+   -- print(s)
    s = tonumber(s) and tonumber(s) or s
    local query = function(span)
       if not span.controls then
          return silence
       end
       local val = span.controls[s]
-      print(val)
+      -- print(val)
       local pat = pure(val or d)
-      print(pat.query(span))
+      -- print(pat.query(span))
       return pat.query(span)
    end
    return Pattern(query)

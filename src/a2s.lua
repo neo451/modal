@@ -414,6 +414,7 @@ function a2s:Localrec(_, lhs, rhs)
 end
 
 function a2s:Call(node, f)
+   -- TODO: wrong paren condition...
    local parens
    if node[2].tag == "String" or node[2].tag == "Table" then
       parens = false
@@ -421,9 +422,11 @@ function a2s:Call(node, f)
       parens = true
    end
    self:node(f)
-   self:acc(parens and "(" or " ")
+   -- self:acc(parens and "(" or " ")
+   self:acc "("
    self:list(node, ", ", 2) -- skip `f'.
-   self:acc(parens and ")")
+   self:acc ")"
+   -- self:acc(parens and ")")
 end
 
 function a2s:Invoke(node, f, method)
