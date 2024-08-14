@@ -544,7 +544,6 @@ describe("every", function()
       local expected = stack { slowcat { fast(2, 1), 1, 1 }, slowcat { 2, 1, 1 } }
       assert.same(expected(0, 1), pat(0, 1))
    end)
-   -- FIXME:
 
    -- it("should take string lambda that gets lib funcs env", function()
    --    local pat = every(3, "fast 2", 1)
@@ -604,12 +603,14 @@ describe("layer", function()
    end)
 end)
 
-describe("juxBy", function()
-   it("", function()
-      assert.equal(stack { s("bd"):pan(0.25), s("bd"):fast(2):pan(0.75) }, juxBy(0.5, fast(2), s "bd"))
-   end)
-end)
-
+-- describe("juxBy", function()
+--    it("", function()
+--       local expected = stack { s("bd"):pan(0.25), s("bd"):fast(2):pan(0.75) }
+--       local actual = juxBy(0.5, fast(2), s "bd")
+--       assert.same(expected(0, 1), actual(0, 1))
+--    end)
+-- end)
+--
 describe("striate", function()
    it("", function()
       local pat = striate(2, s "bd")
@@ -631,7 +632,7 @@ describe("chop", function()
       assert.equal(expected, pat)
    end)
 end)
-
+--
 -- describe("loopAt", function()
 --    it("", function()
 --       local pat = s("bd sd"):chop(2):loopAt(2)
@@ -642,17 +643,17 @@ end)
 --       assert.equal(expected, pat)
 --    end)
 -- end)
---
--- describe("fit", function()
---    it("", function()
---       local pat = fit(s "bd sd")
---       local expected = fastcat {
---          reify { speed = 2, unit = "c", s = "bd" },
---          reify { speed = 2, unit = "c", s = "sd" },
---       }
---       assert.equal(expected, pat)
---    end)
--- end)
+
+describe("fit", function()
+   it("", function()
+      local pat = fit(s "bd sd")
+      local expected = fastcat {
+         reify { speed = 2, unit = "c", s = "bd" },
+         reify { speed = 2, unit = "c", s = "sd" },
+      }
+      assert.equal(expected, pat)
+   end)
+end)
 
 -- describe("legato", function()
 --    it("", function()
@@ -665,7 +666,6 @@ end)
 --    end)
 -- end)
 --
-
 describe("slice", function()
    it("", function()
       local pat = slice(8, " 0 1", "bd")

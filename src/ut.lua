@@ -364,6 +364,7 @@ function ut.filter(f, list)
 end
 
 local function reduce(f, acc, list)
+   -- local acc = list[1]
    for i = 1, #list do
       acc = f(acc, list[i])
    end
@@ -511,11 +512,17 @@ function ut.pipe(fs)
    end, id, fs)
 end
 
-local function rev_unpack(t, n)
-   for i = 1, floor(n / 2) do
-      t[i], t[n - i + 1] = t[n - i + 1], t[i]
+local function rev(t)
+   local reversed = {}
+   local n = #t
+   for k, v in ipairs(t) do
+      reversed[n + 1 - k] = v
    end
-   return unpack(t, 1, n)
+   return reversed
+end
+
+local function rev_unpack(t, n)
+   return unpack(rev(t), 1, n)
 end
 
 local function curry(func, nparams)
@@ -579,6 +586,7 @@ function nparams(func)
    local info = d_getinfo(func)
    return info.nparams, info.isvararg
 end
+
 if _VERSION == "Lua 5.1" and not jit then
    function nparams(func)
       local s = str_dump(func)
@@ -655,6 +663,7 @@ function ut.get_args(f)
    end
    return args
 end
+
 if _VERSION == "Lua 5.1" and not jit then
    ut.get_args = function(f)
       local args = {}

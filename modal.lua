@@ -4636,6 +4636,7 @@ do
    end
    
    local function reduce(f, acc, list)
+      -- local acc = list[1]
       for i = 1, #list do
          acc = f(acc, list[i])
       end
@@ -4783,11 +4784,17 @@ do
       end, id, fs)
    end
    
-   local function rev_unpack(t, n)
-      for i = 1, floor(n / 2) do
-         t[i], t[n - i + 1] = t[n - i + 1], t[i]
+   local function rev(t)
+      local reversed = {}
+      local n = #t
+      for k, v in ipairs(t) do
+         reversed[n + 1 - k] = v
       end
-      return unpack(t, 1, n)
+      return reversed
+   end
+   
+   local function rev_unpack(t, n)
+      return unpack(rev(t), 1, n)
    end
    
    local function curry(func, nparams)
@@ -4851,6 +4858,7 @@ do
       local info = d_getinfo(func)
       return info.nparams, info.isvararg
    end
+   
    if _VERSION == "Lua 5.1" and not jit then
       function nparams(func)
          local s = str_dump(func)
@@ -4927,6 +4935,7 @@ do
       end
       return args
    end
+   
    if _VERSION == "Lua 5.1" and not jit then
       ut.get_args = function(f)
          local args = {}
@@ -8176,6 +8185,34 @@ do
       end
    end
    
+   moon = require "moon"
+   
+   local function patternify(arity, func)
+      return function(...)
+         local pats = { ... }
+         local pat = pats[#pats]
+         if arity == 1 then
+            return func(pat)
+         end
+         local left = tremove(pats, 1)
+         -- print(left)
+         -- for i, v in ipairs(pats) do
+         --    print(v)
+         -- end
+         -- print(pats[1])
+         -- local mapFn = function(...)
+         --    local args = { ... }
+         --    args[#args + 1] = pat
+         --    return func(unpack(args))
+         -- end
+         func = curry(func, arity)
+         -- return func(left, unpack(pats))
+         return func(...)
+   
+         -- return innerJoin(reduce(appLeft, fmap(left, func), pats))
+      end
+   end
+   
    local function patternify(arity, func)
       return function(...)
          local pats = { ... }
@@ -8217,7 +8254,6 @@ do
                   -- if tc == "Pattern" and tvar == "f" and type(v) == "string" then
                   --    v = reify("(" .. v .. ")")
                   if tc == "Pattern" then
-                     print(v)
                      v = reify(v)
                   end
                end
@@ -8774,7 +8810,7 @@ do
    end
    
    local function every(n, f, pat)
-      print(n, f, pat)
+      -- print(n, f, pat)
       local acc = {}
       for i = 1, n do
          acc[i] = (i == 1) and f(pat) or pat
@@ -8813,8 +8849,12 @@ do
    -- CONTROLS
    local function juxBy(n, f, pat)
       n = n / 2
-      local left = pattern.pan(0.5) - n + pat
-      local right = pattern.pan(0.5) + n + pat
+      local left = pat + { pan = 0.5 - n }
+      local right = pat + { pan = 0.5 + n }
+      -- print("right", right)
+      -- print("left", left)
+      -- print("right f", f(right))
+      -- print("f", f { pan = 0.75, s = "bd" })
       return overlay(left, f(right))
    end
    -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
@@ -9102,6 +9142,7 @@ end
    
    local pairs = pairs
    
+   -- FIXME: later use this, not directly in global scope if not imported
    modal.Clock = Clock
    
    for name, func in pairs(notation) do
@@ -9134,11 +9175,13 @@ end
    })
    
    setmetatable(modal, {
-      __call = function(t, override)
+      __call = function(t, verb, override)
          for k, v in pairs(t) do
             if _G[k] ~= nil then
                local msg = "function " .. k .. " already exists in global scope."
-               print("WARNING: " .. msg)
+               if verb then
+                  print("WARNING: " .. msg)
+               end
                if override then
                   _G[k] = v
                   print("WARNING: " .. msg .. " Overwritten.")

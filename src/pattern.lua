@@ -563,6 +563,34 @@ local function purify(value)
    end
 end
 
+moon = require "moon"
+
+local function patternify(arity, func)
+   return function(...)
+      local pats = { ... }
+      local pat = pats[#pats]
+      if arity == 1 then
+         return func(pat)
+      end
+      local left = tremove(pats, 1)
+      -- print(left)
+      -- for i, v in ipairs(pats) do
+      --    print(v)
+      -- end
+      -- print(pats[1])
+      -- local mapFn = function(...)
+      --    local args = { ... }
+      --    args[#args + 1] = pat
+      --    return func(unpack(args))
+      -- end
+      func = curry(func, arity)
+      -- return func(left, unpack(pats))
+      return func(...)
+
+      -- return innerJoin(reduce(appLeft, fmap(left, func), pats))
+   end
+end
+
 local function patternify(arity, func)
    return function(...)
       local pats = { ... }
@@ -604,7 +632,6 @@ local function type_wrap(f, name)
                -- if tc == "Pattern" and tvar == "f" and type(v) == "string" then
                --    v = reify("(" .. v .. ")")
                if tc == "Pattern" then
-                  print(v)
                   v = reify(v)
                end
             end
@@ -1161,7 +1188,7 @@ local slowcatPrime = function(pats)
 end
 
 local function every(n, f, pat)
-   print(n, f, pat)
+   -- print(n, f, pat)
    local acc = {}
    for i = 1, n do
       acc[i] = (i == 1) and f(pat) or pat
@@ -1200,8 +1227,12 @@ register("chain :: Pattern ValueMap -> Pattern ValueMap -> Pattern ValueMap", ch
 -- CONTROLS
 local function juxBy(n, f, pat)
    n = n / 2
-   local left = pattern.pan(0.5) - n + pat
-   local right = pattern.pan(0.5) + n + pat
+   local left = pat + { pan = 0.5 - n }
+   local right = pat + { pan = 0.5 + n }
+   -- print("right", right)
+   -- print("left", left)
+   -- print("right f", f(right))
+   -- print("f", f { pan = 0.75, s = "bd" })
    return overlay(left, f(right))
 end
 -- "juxBy :: Pattern Double -> (Pattern ValueMap -> Pattern ValueMap) -> Pattern ValueMap -> Pattern ValueMap",
