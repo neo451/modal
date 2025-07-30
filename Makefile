@@ -15,8 +15,8 @@ test:
 
 build:
 	luajit ./scripts/pack.lua > modal.lua
-	echo "#!/usr/bin/luajit\nrequire'modal'.repl()" > modal
-	echo "#!/usr/bin/luajit\nrequire'modal'.server()" > mods
+	printf "#!/usr/bin/luajit\nrequire'modal'.repl()" > modal
+	printf "#!/usr/bin/luajit\nrequire'modal'.server()" > mods
 	chmod +x modal
 # doc:
 # 	ldoc .

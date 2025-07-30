@@ -725,4 +725,15 @@ function ut.getlocal(name, level)
    end
 end
 
+function ut.resolve_lpeg()
+   local lpeg, m = pcall(require, "lpeg")
+   if lpeg then
+      return m
+   elseif vim and vim.lepg then
+      return vim.lpeg
+   else
+      return require "lulpeg"
+   end
+end
+
 return ut

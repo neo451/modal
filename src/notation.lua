@@ -1,8 +1,7 @@
 local ut = require "ut"
 local notation = {}
 
-local mpp = require("metalua.pprint").print
-local lpeg = require "lpeg"
+local lpeg = ut.resolve_lpeg()
 local P, S, V, R, C, Ct = lpeg.P, lpeg.S, lpeg.V, lpeg.R, lpeg.C, lpeg.Ct
 
 local a2s = require "a2s"

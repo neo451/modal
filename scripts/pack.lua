@@ -1,5 +1,3 @@
--- path = "../src/core/"
-
 files = {}
 
 local fs = {
@@ -84,13 +82,15 @@ local factory = {}
 local losc = {}
 ]==]
 
--- load("lulpeg", false)
-local header = files["lulpeg"]:read "*a" .. "\n" .. requires
--- .. files["losc"]:read "*a" .. requires
-
+-- local header =
+--    -- files["lulpeg"]:read "*a" .. "\n" ..
+--    requires .. files["losc"]:read "*a" .. requires
+local header = requires
 function load(name, no_req)
    header = header .. "\n" .. wrap(name, files[name], no_req)
 end
+
+-- load("lulpeg", false)
 load "losc"
 load "ut"
 load "types"

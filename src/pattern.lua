@@ -563,8 +563,6 @@ local function purify(value)
    end
 end
 
-moon = require "moon"
-
 local function patternify(arity, func)
    return function(...)
       local pats = { ... }
