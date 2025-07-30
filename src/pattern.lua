@@ -43,6 +43,7 @@ local op = {}
 setmetatable(pattern, { __index = _G }) -- give mini access to global vars
 
 local eval = notation.mini(pattern)
+
 local reify = memoize(function(thing)
    local t = T(thing)
    if t == "string" then
@@ -60,6 +61,7 @@ local reify = memoize(function(thing)
       return pure(thing)
    end
 end)
+
 pattern.reify = reify
 
 local mt = { __class = "pattern" }
@@ -563,31 +565,31 @@ local function purify(value)
    end
 end
 
-local function patternify(arity, func)
-   return function(...)
-      local pats = { ... }
-      local pat = pats[#pats]
-      if arity == 1 then
-         return func(pat)
-      end
-      local left = tremove(pats, 1)
-      -- print(left)
-      -- for i, v in ipairs(pats) do
-      --    print(v)
-      -- end
-      -- print(pats[1])
-      -- local mapFn = function(...)
-      --    local args = { ... }
-      --    args[#args + 1] = pat
-      --    return func(unpack(args))
-      -- end
-      func = curry(func, arity)
-      -- return func(left, unpack(pats))
-      return func(...)
-
-      -- return innerJoin(reduce(appLeft, fmap(left, func), pats))
-   end
-end
+-- local function patternify(arity, func)
+--    return function(...)
+--       local pats = { ... }
+--       local pat = pats[#pats]
+--       if arity == 1 then
+--          return func(pat)
+--       end
+--       local left = tremove(pats, 1)
+--       -- print(left)
+--       -- for i, v in ipairs(pats) do
+--       --    print(v)
+--       -- end
+--       -- print(pats[1])
+--       -- local mapFn = function(...)
+--       --    local args = { ... }
+--       --    args[#args + 1] = pat
+--       --    return func(unpack(args))
+--       -- end
+--       func = curry(func, arity)
+--       -- return func(left, unpack(pats))
+--       return func(...)
+--
+--       -- return innerJoin(reduce(appLeft, fmap(left, func), pats))
+--    end
+-- end
 
 local function patternify(arity, func)
    return function(...)

@@ -1,3 +1,5 @@
+--- TODO: quit if client detach?
+
 local function server()
    local socket = require "socket"
    -- local ut = require "modal.utils"
@@ -35,7 +37,7 @@ local function server()
    local listen = function()
       l, e = c:receive()
       if not e then
-         print(l)
+         print("recieved: ", l)
          eval(l)
       end
    end
