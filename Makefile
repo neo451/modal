@@ -14,9 +14,9 @@ test:
 	# sudo luarocks build --lua-version 5.4 && busted --lua=/usr/bin/lua5.4
 
 build:
-	luajit ./scripts/pack.lua > modal.lua
-	printf "#!/usr/bin/luajit\nrequire'modal'.repl()" > modal
-	printf "#!/usr/bin/luajit\nrequire'modal'.server()" > mods
+	lua ./scripts/pack.lua > modal.lua
+	printf "#!/usr/bin/lua\nrequire'modal'.repl()" > modal
+	printf "#!/usr/bin/lua\nrequire'modal'.server()" > mods
 	chmod +x modal
 # doc:
 # 	ldoc .
