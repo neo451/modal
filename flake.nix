@@ -23,7 +23,8 @@
             p.luv
             p.luarocks
             p.luasocket
-            p.abletonlink
+            p.busted
+            p.readline
           ]))
 
           pkgs.pkg-config
