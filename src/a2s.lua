@@ -9,7 +9,7 @@ local unpack = unpack or rawget(table, "unpack")
 
 -- TODO: check AST
 
--- Instanciate a new AST->source synthetizer
+-- Instantiate a new AST->source synthesizer
 function a2s.new()
    local self = {
       _acc = {}, -- Accumulates pieces of source as strings
@@ -20,9 +20,9 @@ function a2s.new()
 end
 
 --------------------------------------------------------------------------------
--- Run a synthetizer on the `ast' arg and return the source as a string.
+-- Run a synthesizer on the `ast' arg and return the source as a string.
 -- Can also be used as a static method `M.run (ast)'; in this case,
--- a temporary Metizer is instanciated on the fly.
+-- a temporary Metizer is instantiated on the fly.
 --------------------------------------------------------------------------------
 function a2s:run(ast)
    if not ast then
@@ -34,7 +34,7 @@ function a2s:run(ast)
 end
 
 --------------------------------------------------------------------------------
--- Accumulate a piece of source file in the synthetizer.
+-- Accumulate a piece of source file in the synthesizer.
 --------------------------------------------------------------------------------
 function a2s:acc(x)
    if x then
@@ -171,7 +171,7 @@ local op_symbol = {
    unm = "-",
 }
 -- Accumulate the source representation of AST `node' in
--- the synthetizer. Most of the work is done by delegating to
+-- the synthesizer. Most of the work is done by delegating to
 -- the method having the name of the AST tag.
 -- If something can't be converted to normal sources, it's
 -- instead dumped as a `-{ ... }' splice in the source accumulator.
@@ -198,7 +198,7 @@ end
 -- `sep' is an optional separator to be accumulated between each list element,
 -- it can be a string or a synth method.
 -- `start' is an optional number (default == 1), indicating which is the
--- first element of list to be converted, so that we can skip the begining
+-- first element of list to be converted, so that we can skip the beginning
 -- of a list.
 --------------------------------------------------------------------------------
 function a2s:list(list, sep, start)

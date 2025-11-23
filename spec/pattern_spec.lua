@@ -408,7 +408,7 @@ describe("slow", function()
 end)
 
 describe("early", function()
-   it("should return a pattern whose Events moved backword in time", function()
+   it("should return a pattern whose Events moved backward in time", function()
       local pat = early(0.5, reify { "bd", "sd" })
       local expected = reify { "sd", "bd" }
       assert.equal(expected, pat)
@@ -481,7 +481,7 @@ describe("run", function()
 end)
 
 describe("euclid", function()
-   it("shoudl gen euclid pats", function()
+   it("should gen euclid pats", function()
       local pat = euclidRot(3, 8, 1, "bd")
       local expected = struct(bjork(3, 8, 1), "bd")
       assert.equal(expected, pat)

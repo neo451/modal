@@ -28,7 +28,7 @@ end
 --=============================================================================
 do
    local _ENV = _ENV
-   packages["analizer"] = function(...)
+   packages["analyzer"] = function(...)
       local u = require "util"
       local nop, weakkey = u.nop, u.weakkey
       local hasVcache, hasCmtcache, lengthcache = weakkey {}, weakkey {}, weakkey {}

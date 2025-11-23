@@ -501,7 +501,7 @@ function ut.rotate(step, list)
    return concat(b, a)
 end
 
----pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
+---pipe functions: pipe(f, g, h)(x) -> f(g(h(x)))
 ---@param fs (fun(x : any) : any)[]
 ---@return any
 function ut.pipe(fs)

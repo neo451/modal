@@ -1080,7 +1080,7 @@ do
    --- Add an OSC handler.
    -- @param pattern The pattern to match on.
    -- @param func The callback to run if a message is received.
-   -- The callback will get a single argument `data` from where the messsage can be retrived.
+   -- The callback will get a single argument `data` from where the message can be retrieved.
    -- @usage
    -- osc:add_handler('/pattern', function(data)
    --   -- message table, can be converted to Message if needed.
@@ -1649,7 +1649,7 @@ do
       return concat(b, a)
    end
    
-   ---pipe fuctions: pipe(f, g, h)(x) -> f(g(h(x)))
+   ---pipe functions: pipe(f, g, h)(x) -> f(g(h(x)))
    ---@param fs (fun(x : any) : any)[]
    ---@return any
    function ut.pipe(fs)
@@ -2528,7 +2528,7 @@ do
    
    -- TODO: check AST
    
-   -- Instanciate a new AST->source synthetizer
+   -- Instantiate a new AST->source synthesizer
    function a2s.new()
       local self = {
          _acc = {}, -- Accumulates pieces of source as strings
@@ -2539,9 +2539,9 @@ do
    end
    
    --------------------------------------------------------------------------------
-   -- Run a synthetizer on the `ast' arg and return the source as a string.
+   -- Run a synthesizer on the `ast' arg and return the source as a string.
    -- Can also be used as a static method `M.run (ast)'; in this case,
-   -- a temporary Metizer is instanciated on the fly.
+   -- a temporary Metizer is instantiated on the fly.
    --------------------------------------------------------------------------------
    function a2s:run(ast)
       if not ast then
@@ -2553,7 +2553,7 @@ do
    end
    
    --------------------------------------------------------------------------------
-   -- Accumulate a piece of source file in the synthetizer.
+   -- Accumulate a piece of source file in the synthesizer.
    --------------------------------------------------------------------------------
    function a2s:acc(x)
       if x then
@@ -2690,7 +2690,7 @@ do
       unm = "-",
    }
    -- Accumulate the source representation of AST `node' in
-   -- the synthetizer. Most of the work is done by delegating to
+   -- the synthesizer. Most of the work is done by delegating to
    -- the method having the name of the AST tag.
    -- If something can't be converted to normal sources, it's
    -- instead dumped as a `-{ ... }' splice in the source accumulator.
@@ -2717,7 +2717,7 @@ do
    -- `sep' is an optional separator to be accumulated between each list element,
    -- it can be a string or a synth method.
    -- `start' is an optional number (default == 1), indicating which is the
-   -- first element of list to be converted, so that we can skip the begining
+   -- first element of list to be converted, so that we can skip the beginning
    -- of a list.
    --------------------------------------------------------------------------------
    function a2s:list(list, sep, start)
@@ -3574,7 +3574,7 @@ do
             if not ok then
                return false
             end
-            local lua_src = a2s.run(ast) -- TODO: imporve api
+            local lua_src = a2s.run(ast) -- TODO: improve api
             return lua_src
          end
    
@@ -6215,7 +6215,7 @@ do
       local listen = function()
          l, e = c:receive()
          if not e then
-            print("recieved: ", l)
+            print("received: ", l)
             eval(l)
          end
       end
