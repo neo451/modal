@@ -436,7 +436,7 @@ local function make_gen(top_level)
          if not ok then
             return false
          end
-         local lua_src = a2s.run(ast) -- TODO: imporve api
+         local lua_src = a2s.run(ast) -- TODO: improve api
          return lua_src
       end
 

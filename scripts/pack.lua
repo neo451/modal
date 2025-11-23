@@ -110,4 +110,4 @@ header = header .. "\n" .. "return modal"
 print(header)
 
 -- TODO: lfs
--- TODO: stylua the result if avaliable
+-- TODO: stylua the result if available

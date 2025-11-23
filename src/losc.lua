@@ -1062,7 +1062,7 @@ end
 --- Add an OSC handler.
 -- @param pattern The pattern to match on.
 -- @param func The callback to run if a message is received.
--- The callback will get a single argument `data` from where the messsage can be retrived.
+-- The callback will get a single argument `data` from where the message can be retrieved.
 -- @usage
 -- osc:add_handler('/pattern', function(data)
 --   -- message table, can be converted to Message if needed.

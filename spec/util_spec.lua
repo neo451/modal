@@ -74,7 +74,7 @@ end)
 -- end)
 
 describe("auto curry", function()
-   it("shoudl do felixable curry", function()
+   it("should do felixable curry", function()
       assert.same(pat.fast(2, 1)(0, 1), pat.fast(2)(1)(0, 1))
       assert.same(pat.fast(2, 1)(0, 1), pat.fast(2)(1)(0, 1))
    end)

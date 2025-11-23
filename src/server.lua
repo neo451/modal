@@ -37,7 +37,7 @@ local function server()
    local listen = function()
       l, e = c:receive()
       if not e then
-         print("recieved: ", l)
+         print("received: ", l)
          eval(l)
       end
    end
