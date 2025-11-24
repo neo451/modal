@@ -912,11 +912,6 @@ function Pattern.dispatch(data, plugin)
    dispatch(packet, plugin)
 end
 
--- local losc = {
---    _VERSION = "losc v1.0.1",
---    _URL = "https://github.com/davidgranstrom/losc",
---    _DESCRIPTION = "Open Sound Control (OSC) library for lua/luajit.",
---    _LICENSE = [[
 --     MIT License
 --
 --     Copyright (c) 2021 David Granström
@@ -938,8 +933,7 @@ end
 --     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --     SOFTWARE.
---   ]],
--- }
+local losc = {}
 losc.__index = losc
 
 --- Create a new instance.

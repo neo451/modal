@@ -25,6 +25,7 @@
             p.luasocket
             p.busted
             p.readline
+            p.lpeg
           ]))
 
           pkgs.pkg-config

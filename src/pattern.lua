@@ -766,22 +766,6 @@ local function timecat(tups)
 end
 pattern.timecat = timecat
 
-local function arrange(tups)
-   local total = 0
-   for i, v in ipairs(tups) do
-      if i % 2 == 1 then
-         total = total + v
-      end
-   end
-   local cycles, pat
-   for i = 1, #tups, 2 do
-      cycles, pat = tups[i], reify(tups[i + 1])
-      tups[i + 1] = pattern.fast(cycles, pat)
-   end
-   return slow(total, timecat(tups))
-end
-pattern.arrange = arrange
-
 local function superimpose(f, pat)
    return overlay(pat, f(pat))
 end
@@ -819,6 +803,22 @@ local function slow(factor, pat)
    end
 end
 register("slow :: Pattern Time -> Pattern a -> Pattern a", slow)
+
+local function arrange(tups)
+   local total = 0
+   for i, v in ipairs(tups) do
+      if i % 2 == 1 then
+         total = total + v
+      end
+   end
+   local cycles, pat
+   for i = 1, #tups, 2 do
+      cycles, pat = tups[i], reify(tups[i + 1])
+      tups[i + 1] = pattern.fast(cycles, pat)
+   end
+   return slow(total, timecat(tups))
+end
+pattern.arrange = arrange
 
 -- rotL
 local function early(offset, pat)
@@ -1020,9 +1020,9 @@ local function _chooseWith(pat, vals)
    end)
 end
 
-local function chooseWith(pat, ...)
-   return outerJoin(_chooseWith(pat, ...))
-end
+-- local function chooseWith(pat, ...)
+--    return outerJoin(_chooseWith(pat, ...))
+-- end
 
 local function chooseInWith(pat, vals)
    return innerJoin(_chooseWith(pat, vals))

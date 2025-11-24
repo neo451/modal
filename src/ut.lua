@@ -226,16 +226,16 @@ local round = function(x, increment)
    return (x > 0 and floor(x + 0.5) or ceil(x - 0.5)) * increment
 end
 
-local _tostring = tostring
+-- local _tostring = tostring
 
-local tostring = function(...)
+local _tostring = function(...)
    local t = {}
    for i = 1, select("#", ...) do
       local x = select(i, ...)
       if type(x) == "number" then
          x = round(x, 0.01)
       end
-      t[#t + 1] = _tostring(x)
+      t[#t + 1] = tostring(x)
    end
    return table.concat(t, " ")
 end
@@ -248,7 +248,7 @@ for i, x in ipairs(modes) do
          return
       end
 
-      local msg = tostring(...)
+      local msg = _tostring(...)
       local info = debug.getinfo(2, "Sl")
       local lineinfo = info.short_src .. ":" .. info.currentline
 

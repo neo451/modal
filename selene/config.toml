@@ -1,0 +1,5 @@
+std = "selene/globals"
+exclude = ["src/lulpeg.lua", "src/luacats.lua", "src/ideas/*.lua"]
+
+[lints]
+mixed_table = "allow"

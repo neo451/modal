@@ -7,6 +7,11 @@
 
 modal:
 
+.PHONY: lint
+lint: ## Lint the code with selene and typos
+	selene --config selene/config.toml src/
+	typos lua
+
 test:
 	sudo luarocks-5.1 build && busted --lua=/usr/bin/lua5.1
 	# sudo luarocks-5.2 build && busted --lua=/usr/bin/lua5.2
