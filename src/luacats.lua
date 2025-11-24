@@ -1,7 +1,7 @@
 ---@meta
 
 ---@class Fraction
----@field denomenator number
+---@field denominator number
 ---@field numerator number
 ---@field reverse function
 ---@field cyclePos function

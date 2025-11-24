@@ -296,7 +296,7 @@ local tsize = function(t)
    return size
 end
 
----structually compare two table, TODO: needed?
+---structurally compare two table, TODO: needed?
 ---@param rhs table
 ---@param lhs table
 ---@return boolean
