@@ -12,11 +12,20 @@ lint: ## Lint the code with selene and typos
 	selene --config selene/config.toml src/
 	typos lua
 
-test:
-	sudo luarocks-5.1 build && busted --lua=/usr/bin/lua5.1
-	# sudo luarocks-5.2 build && busted --lua=/usr/bin/lua5.2
-	# sudo luarocks-5.3 build && busted --lua=/usr/bin/lua5.3
-	# sudo luarocks build --lua-version 5.4 && busted --lua=/usr/bin/lua5.4
+LUA ?= lua
+LUA_VERSION := $(shell $(LUA) -e 'print(_VERSION:match("%d+%.%d+"))')
+
+.PHONY: test
+test: build
+	LUA_PATH="./?.lua;./?/init.lua;$$(luarocks --lua-version=$(LUA_VERSION) path --lr-path 2>/dev/null);;" \
+	LUA_CPATH="./?.so;$$(luarocks --lua-version=$(LUA_VERSION) path --lr-cpath 2>/dev/null);;" \
+	busted --lua=$(LUA)
+
+.PHONY: test-file
+test-file: build
+	LUA_PATH="./?.lua;./?/init.lua;$$(luarocks --lua-version=$(LUA_VERSION) path --lr-path 2>/dev/null);;" \
+	LUA_CPATH="./?.so;$$(luarocks --lua-version=$(LUA_VERSION) path --lr-cpath 2>/dev/null);;" \
+	busted --lua=$(LUA) $(FILE)
 
 build:
 	lua ./scripts/pack.lua > modal.lua
