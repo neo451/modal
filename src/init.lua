@@ -14,6 +14,7 @@ local pairs = pairs
 
 -- FIXME: later use this, not directly in global scope if not imported
 modal.Clock = Clock
+modal.Stream = Stream
 
 for name, func in pairs(notation) do
    modal[name] = func

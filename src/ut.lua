@@ -119,7 +119,7 @@ local bit_memo = function(f)
    local t = setmetatable({}, mt)
    mt.__index = function(self, k)
       local v = f(k)
-      self.k = v
+      self[k] = v
       return v
    end
    return t

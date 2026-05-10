@@ -8,7 +8,7 @@ local function server()
    local maxi = notation.maxi(modal)
    local log = ut.log
 
-   local clock = modal.DefaultClock
+   local clock = modal.default_clock()
    clock:start()
 
    local host = "*"

@@ -1,5 +1,4 @@
 local ut = require "ut"
-local losc = require "losc" -- TODO: get rid of ??? core should be pure
 local types = {}
 
 local T = ut.T
@@ -259,13 +258,13 @@ function time:__add(f2)
    local db = f2.denominator
    local g = gcd(da, db)
    if g == 1 then
-      Time(na * db + da * nb, da * db, false)
+      return Time(na * db + da * nb, da * db, false)
    end
    local s = floor(da / g)
    local t = na * floor(db / g) + nb * s
    local g2 = gcd(t, g)
    if g2 == 1 then
-      Time(t, s * db, false)
+      return Time(t, s * db, false)
    end
    return Time(floor(t / g2), s * floor(db / g2), false)
 end
@@ -278,13 +277,13 @@ function time:__sub(f2)
    local db = f2.denominator
    local g = gcd(da, db)
    if g == 1 then
-      Time(na * db - da * nb, da * db, false)
+      return Time(na * db - da * nb, da * db, false)
    end
    local s = floor(da / g)
    local t = na * floor(db / g) - nb * s
    local g2 = gcd(t, g)
    if g2 == 1 then
-      Time(t, s * db, false)
+      return Time(t, s * db, false)
    end
    return Time(floor(t / g2), s * floor(db / g2), false)
 end
@@ -370,7 +369,7 @@ function time:__lt(rhs)
    return self.numerator / self.denominator < rhs.numerator / rhs.denominator
 end
 
-function time:__lte(rhs)
+function time:__le(rhs)
    return self.numerator / self.denominator <= rhs.numerator / rhs.denominator
 end
 
@@ -391,7 +390,7 @@ function time:lte(rhs)
 end
 
 function time:gte(rhs)
-   return self <= Time(rhs)
+   return self >= Time(rhs)
 end
 
 function time:reverse()
@@ -473,39 +472,6 @@ function Time(n, d, normalize)
       numerator = n,
       denominator = d,
    }, time)
-end
-
-local stream = { __class = "stream" }
-
-function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now, State)
-   if not self.pattern then
-      return
-   end
-   local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo, State)
-   for _, ev in ipairs(events) do
-      local cycleOn = ev.whole.start
-      local cycleOff = ev.whole.stop
-      local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)
-      local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
-      local deltaSeconds = (linkOff - linkOn) / mill
-      local value = ev.value
-      value.cps = ev.value.cps or cps
-      value.cycle = cycleOn:asFloat()
-      value.delta = deltaSeconds
-      local link_secs = now / mill
-      local nudge = 0
-      local diff = losc:now() + -link_secs
-      -- print(link_secs)
-      -- print(diff:seconds())
-      local ts = diff + (linkOn / mill) + self.latency + nudge
-      self.callback(value, ts)
-   end
-end
-
-stream.__index = stream
-
-local function Stream(callback)
-   return setmetatable({ latency = 0.2, callback = callback }, stream)
 end
 
 local lpeg = require "lpeg"
@@ -627,6 +593,6 @@ local function ValueMap(valmap)
    return setmetatable(valmap, valuemap)
 end
 
-types = { Span = Span, Event = Event, Time = Time, Stream = Stream, TDef = TDef, ValueMap = ValueMap }
+types = { Span = Span, Event = Event, Time = Time, TDef = TDef, ValueMap = ValueMap }
 
 return types

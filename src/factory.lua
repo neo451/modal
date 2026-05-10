@@ -1,31 +1,39 @@
--- local clock = require "clock"
-local DefaultClock = Clock()
 local factory = {}
 
+local _default_clock
+local function default_clock()
+   if not _default_clock then
+      _default_clock = Clock()
+   end
+   return _default_clock
+end
+
+factory.default_clock = default_clock
+
 function factory.p(key, pattern)
-   DefaultClock:subscribe(key, pattern)
+   default_clock():subscribe(key, pattern)
    return pattern
 end
 
 -- TODO: cause server to freeze ...
 function factory._p(key)
-   DefaultClock:unsubscribe(key)
+   default_clock():unsubscribe(key)
 end
 
 factory.p_ = factory._p
 
 function factory.hush()
-   for i, _ in pairs(DefaultClock.subscribers) do
-      DefaultClock:unsubscribe(i)
+   if not _default_clock then
+      return
+   end
+   local keys = {}
+   for k in pairs(_default_clock.subscribers) do
+      keys[#keys + 1] = k
+   end
+   for _, k in ipairs(keys) do
+      _default_clock:unsubscribe(k)
    end
 end
-
--- function M.panic()
---    M.hush()
---    once(s "superpanic")
--- end
--- panic :: Tidally => IO ()
--- panic = hush >> once (sound "superpanic")
 
 for i = 1, 16 do
    if i <= 12 then
@@ -45,14 +53,12 @@ for i = 1, 16 do
    end
 end
 
-factory.DefaultClock = DefaultClock
-
 function factory.setcps(cps)
-   DefaultClock:setcps(cps)
+   default_clock():setcps(cps)
 end
 
 function factory.setbpm(bpm)
-   DefaultClock:setbpm(bpm)
+   default_clock():setbpm(bpm)
 end
 
 factory.bpm = factory.setbpm

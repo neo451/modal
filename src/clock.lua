@@ -1,9 +1,8 @@
 local has_al, al = pcall(require, "abletonlink")
-local losc = require "losc"()
+local losc = require "losc"
 _G.struct = nil
-local types = require "types"
-local Stream = types.Stream
 local uv = require "luv"
+local ipairs = ipairs
 
 local floor = math.floor
 local type = type
@@ -153,9 +152,38 @@ sendOSC = function(value, ts)
    end
    msg.types = typesString(msg)
    msg.address = "/dirt/play"
-   local b = osc.new_message(msg)
-   -- local b = osc.new_bundle(ts, osc.new_message(msg))
+   local b = osc.new_bundle(ts, osc.new_message(msg))
    osc:send(b)
+end
+
+local stream = { __class = "stream" }
+stream.__index = stream
+
+function stream:notifyTick(cycleFrom, cycleTo, s, cps, bpc, mill, now, State)
+   if not self.pattern then
+      return
+   end
+   local events = self.pattern:onsetsOnly()(cycleFrom, cycleTo, State)
+   for _, ev in ipairs(events) do
+      local cycleOn = ev.whole.start
+      local cycleOff = ev.whole.stop
+      local linkOn = s:time_at_beat(cycleOn:asFloat() * bpc, 0)
+      local linkOff = s:time_at_beat(cycleOff:asFloat() * bpc, 0)
+      local deltaSeconds = (linkOff - linkOn) / mill
+      local value = ev.value
+      value.cps = ev.value.cps or cps
+      value.cycle = cycleOn:asFloat()
+      value.delta = deltaSeconds
+      local link_secs = now / mill
+      local nudge = 0
+      local diff = osc:now() + -link_secs
+      local ts = diff + (linkOn / mill) + self.latency + nudge
+      self.callback(value, ts)
+   end
+end
+
+function Stream(callback)
+   return setmetatable({ latency = 0.2, callback = callback or sendOSC }, stream)
 end
 
 State = {}
